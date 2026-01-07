@@ -81,65 +81,65 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
   }, [searchTokenId, bus?.ResultIndex]);
 
   // Process seat layout data from API
-  const processedSeats = React.useMemo(() => {
-    if (!seatLayout?.SeatDetails) return [];
+  // The API returns SeatDetails as a 2D array where each array is a row/section
+  // Each row contains seats that should be displayed together
+  const { lowerSeatGrid, upperSeatGrid } = React.useMemo(() => {
+    if (!seatLayout?.SeatDetails) return { lowerSeatGrid: [], upperSeatGrid: [] };
     
-    const allSeats = [];
+    const lowerGrid = [];
+    const upperGrid = [];
+    
+    // Process each row from the API
     seatLayout.SeatDetails.forEach((row, rowIndex) => {
-      row.forEach((seat, colIndex) => {
-        // Parse RowNo and ColumnNo properly - they come as strings like "000", "002"
-        // Use rowIndex from the array structure as the actual row position
-        const parsedRowNo = rowIndex + 1; // 1-indexed row based on array position
-        const parsedColNo = parseInt(seat.ColumnNo, 10) + 1; // 1-indexed column
+      // Separate this row into upper and lower deck seats
+      const lowerRowSeats = [];
+      const upperRowSeats = [];
+      
+      row.forEach((seat, seatIndex) => {
+        // Detect aisle spaces: seats with very low price (0 or near 0) and SeatStatus false
+        // or seats positioned in typical aisle locations
+        const isAisle = !seat.SeatStatus && (
+          seat.SeatFare === 0 || 
+          seat.Price?.PublishedPrice === 0 ||
+          seat.SeatName?.toLowerCase().includes('aisle') ||
+          // Aisle detection: typically middle seats in a row with SeatStatus false
+          (!seat.IsLadiesSeat && !seat.IsMalesSeat && seat.SeatFare < 100)
+        );
         
-        allSeats.push({
-          id: `${seat.SeatName}`,
+        const processedSeat = {
+          id: `${seat.SeatName}-${rowIndex}-${seatIndex}`,
           seatName: seat.SeatName,
           price: seat.SeatFare || seat.Price?.PublishedPrice || 0,
-          status: seat.SeatStatus ? "available" : "booked",
+          status: isAisle ? "aisle" : (seat.SeatStatus ? "available" : "booked"),
           isLadiesSeat: seat.IsLadiesSeat,
           isMalesSeat: seat.IsMalesSeat,
           isUpper: seat.IsUpper,
-          rowNo: parsedRowNo,
-          columnNo: parsedColNo,
           seatType: seat.SeatType,
           seatIndex: seat.SeatIndex,
+          height: seat.Height || 1,
+          width: seat.Width || 1,
+          isAisle: isAisle,
           fullData: seat,
-        });
+        };
+        
+        if (seat.IsUpper) {
+          upperRowSeats.push(processedSeat);
+        } else {
+          lowerRowSeats.push(processedSeat);
+        }
       });
-    });
-    return allSeats;
-  }, [seatLayout]);
-
-  // Separate upper and lower deck seats
-  const upperSeats = processedSeats.filter(s => s.isUpper);
-  const lowerSeats = processedSeats.filter(s => !s.isUpper);
-
-  // Organize seats into a grid layout based on rowNo and columnNo
-  // This creates a 2D array where each cell contains a seat or null (empty space)
-  const organizeSeatsInGrid = (seats) => {
-    if (seats.length === 0) return { grid: [], maxRow: 0, maxCol: 0 };
-    
-    const maxRow = Math.max(...seats.map(s => s.rowNo));
-    const maxCol = Math.max(...seats.map(s => s.columnNo));
-    
-    // Create 2D grid initialized with null (maxRow rows, maxCol columns)
-    const grid = Array(maxRow).fill(null).map(() => Array(maxCol).fill(null));
-    
-    // Place each seat in its correct position (convert to 0-indexed)
-    seats.forEach(seat => {
-      const row = seat.rowNo - 1;
-      const col = seat.columnNo - 1;
-      if (row >= 0 && row < maxRow && col >= 0 && col < maxCol) {
-        grid[row][col] = seat;
+      
+      // Add non-empty rows to their respective grids
+      if (lowerRowSeats.length > 0) {
+        lowerGrid.push(lowerRowSeats);
+      }
+      if (upperRowSeats.length > 0) {
+        upperGrid.push(upperRowSeats);
       }
     });
     
-    return { grid, maxRow, maxCol };
-  };
-
-  const lowerSeatGrid = organizeSeatsInGrid(lowerSeats);
-  const upperSeatGrid = organizeSeatsInGrid(upperSeats);
+    return { lowerSeatGrid: lowerGrid, upperSeatGrid: upperGrid };
+  }, [seatLayout]);
 
   // Filter boarding and dropping points based on search
   const filteredBoardingPoints = React.useMemo(() => {
@@ -355,14 +355,21 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
           </div>
 
           {/* SEAT LAYOUT FROM API */}
-          {upperSeatGrid.maxRow > 0 && (
+          {upperSeatGrid.length > 0 && (
             <div className="deck">
               <div className="deck-label">Upper Deck</div>
               <div className={isSleeper ? "sleeper-grid" : "seater-grid"}>
-                {upperSeatGrid.grid.map((row, rowIdx) => (
+                {upperSeatGrid.map((row, rowIdx) => (
                   <div key={`upper-row-${rowIdx}`} className={`seat-row ${rowIdx === 0 ? 'front-row' : ''}`}>
                     {row.map((seat, colIdx) => (
-                      seat ? (
+                      seat.isAisle ? (
+                        <div
+                          key={seat.id}
+                          className={`seat-wrapper ${!isSleeper ? 'seater-wrapper' : ''} aisle-space`}
+                        >
+                          <div className="aisle"></div>
+                        </div>
+                      ) : (
                         <div
                           key={seat.id}
                           className={`seat-wrapper ${!isSleeper ? 'seater-wrapper' : ''}`}
@@ -375,8 +382,6 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
                             <span className="seat-tooltip">{seat.seatName}</span>
                           </div>
                         </div>
-                      ) : (
-                        <div key={`empty-upper-${rowIdx}-${colIdx}`} className="seat-wrapper empty-seat"></div>
                       )
                     ))}
                   </div>
@@ -391,10 +396,17 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
               <GiSteeringWheel size={28} />
             </div>
             <div className={isSleeper ? "sleeper-grid" : "seater-grid"}>
-              {lowerSeatGrid.grid.map((row, rowIdx) => (
+              {lowerSeatGrid.map((row, rowIdx) => (
                 <div key={`lower-row-${rowIdx}`} className={`seat-row ${rowIdx === 0 ? 'front-row' : ''}`}>
                   {row.map((seat, colIdx) => (
-                    seat ? (
+                    seat.isAisle ? (
+                      <div
+                        key={seat.id}
+                        className={`seat-wrapper ${!isSleeper ? 'seater-wrapper' : ''} aisle-space`}
+                      >
+                        <div className="aisle"></div>
+                      </div>
+                    ) : (
                       <div
                         key={seat.id}
                         className={`seat-wrapper ${!isSleeper ? 'seater-wrapper' : ''}`}
@@ -407,8 +419,6 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
                           <span className="seat-tooltip">{seat.seatName}</span>
                         </div>
                       </div>
-                    ) : (
-                      <div key={`empty-lower-${rowIdx}-${colIdx}`} className="seat-wrapper empty-seat"></div>
                     )
                   ))}
                 </div>
