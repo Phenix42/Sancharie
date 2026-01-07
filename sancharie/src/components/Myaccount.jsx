@@ -5,7 +5,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import './MyAccount.css';
+import './Myaccount.css';
 
 export default function MyAccount({ onClose }) {
   const { user, logout, isAuthenticated } = useAuth();
