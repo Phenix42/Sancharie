@@ -4,8 +4,8 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.bdsd.technology/api/";
 
 // API Authentication credentials - configure in environment variables
-const API_USERNAME = import.meta.env.VITE_API_USERNAME || "TTS";
-const API_PASSWORD = import.meta.env.VITE_API_PASSWORD || "TTS@@!@001";
+const API_USERNAME = import.meta.env.VITE_API_USERNAME || "DKWPP4556F";
+const API_PASSWORD = import.meta.env.VITE_API_PASSWORD || "5727246";
 
 // Common headers for all API requests
 const getHeaders = () => ({
