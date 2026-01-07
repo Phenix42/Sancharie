@@ -103,7 +103,8 @@
    ========================================== */
 .why-choose-section {
   padding: 80px;
-  background: #ffffff;
+  background: #ffffff url('../assets/sec1.svg') no-repeat right center;
+  background-size: contain;
   position: relative;
 }
 
@@ -228,7 +229,8 @@
    ========================================== */
 .online-booking-section {
   padding: 80px;
-  background: #f2f2f8;
+  background: #f2f2f8 url('../assets/sec2.svg') no-repeat left center;
+  background-size: contain;
 }
 
 .online-booking-content {
@@ -281,6 +283,10 @@
 .how-to-book-section {
   padding: 80px;
   background: linear-gradient(180deg, #fff0f5 0%, #e8f4ff 50%, #fff0f5 100%);
+  background-image: url('../assets/sec3.svg');
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: contain;
   position: relative;
 }
 

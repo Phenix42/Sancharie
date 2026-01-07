@@ -1,6 +1,7 @@
 import React from 'react'
 import './Hero.css'
-import busImage from '../assets/busimage.png'
+import busImage from '../assets/bus1.png'
+import busLightImage from '../assets/buslight.png'
 import bgImage from '../assets/bgimage.png'
 
 function Hero() {
@@ -25,6 +26,11 @@ function Hero() {
           src={busImage}
           alt="Sancharie Bus" 
           className="hero-bus-image" 
+        />
+        <img 
+          src={busLightImage}
+          alt="Bus Light Effect" 
+          className="hero-bus-light" 
         />
       </div>
 

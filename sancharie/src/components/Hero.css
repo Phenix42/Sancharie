@@ -82,10 +82,46 @@
 }
 
 .hero-bus-image {
+  position: absolute;
   max-width: 100%;
   height: 115%;
   object-fit: contain;
   filter: drop-shadow(0 20px 45px rgba(0, 0, 0, 0.3));
+  z-index: 2;
+}
+
+.hero-bus-light {
+  position: absolute;
+  max-width: 100%;
+  height: 115%;
+  object-fit: contain;
+  z-index: 3;
+  animation: lightBlink 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Smooth blinking animation for bus lights */
+@keyframes lightBlink {
+  0% {
+    opacity: 0.3;
+    filter: brightness(0.8) drop-shadow(0 0 10px rgba(255, 220, 100, 0.3));
+  }
+  25% {
+    opacity: 0.7;
+    filter: brightness(1) drop-shadow(0 0 20px rgba(255, 220, 100, 0.5));
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.3) drop-shadow(0 0 35px rgba(255, 220, 100, 0.8));
+  }
+  75% {
+    opacity: 0.7;
+    filter: brightness(1) drop-shadow(0 0 20px rgba(255, 220, 100, 0.5));
+  }
+  100% {
+    opacity: 0.3;
+    filter: brightness(0.8) drop-shadow(0 0 10px rgba(255, 220, 100, 0.3));
+  }
 }
 
 /* ================= HEADLIGHT EFFECT ================= */
@@ -170,6 +206,11 @@
     height: 450px;
   }
 
+  .hero-bus-image,
+  .hero-bus-light {
+    height: 110%;
+  }
+
   .headlight {
     width: 90px;
     height: 90px;
@@ -203,6 +244,11 @@
     height: 350px;
   }
 
+  .hero-bus-image,
+  .hero-bus-light {
+    height: 105%;
+  }
+
   .headlight {
     width: 70px;
     height: 70px;
@@ -226,6 +272,11 @@
 
   .bus-image-container {
     height: 260px;
+  }
+
+  .hero-bus-image,
+  .hero-bus-light {
+    height: 100%;
   }
 
   .headlight {

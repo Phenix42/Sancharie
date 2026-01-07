@@ -5,7 +5,7 @@ import { FaWind, FaClock } from "react-icons/fa";
 import { SiGooglemaps } from "react-icons/si";
 import SelectSeat from "./selectseat";
 import NoResult from "./noresult";
-import Logo from "../assets/logosancharie.svg";
+import Logo from "../assets/logosan.svg";
 import { useBooking } from "../context/BookingContext";
 import { searchBuses } from "../services/busApi";
 

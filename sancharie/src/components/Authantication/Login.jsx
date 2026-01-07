@@ -3,7 +3,7 @@ import "./Login.css";
 import { IoClose } from "react-icons/io5";
 import { FaPhone, FaMobileAlt } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
-import Logo from "../../assets/logosancharie.svg";
+import Logo from "../../assets/logosan.svg";
 // Import our secure API service
 // SECURITY: This service calls our backend ONLY, never the SMS provider directly
 import { sendOTP, verifyOTP, resendOTP } from "../../services/authApi";
@@ -204,8 +204,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     <div className="auth-modal-overlay" onClick={handleOverlayClick}>
       <div className="auth-modal">
         {/* Close Button */}
-        <button className="auth-close-btn" onClick={onClose}>
-          <IoClose />
+        <button className="auth-close-btn" onClick={onClose} aria-label="Close">
+          ✕
         </button>
 
         {/* Modal Header */}

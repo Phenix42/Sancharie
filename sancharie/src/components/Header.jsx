@@ -4,7 +4,7 @@ import './Header.css'
 import AuthModal from './Authantication/Login'
 import MyAccount from './Myaccount'
 import ProfileCompletion from './ProfileCompletion'
-import Logo from '../assets/logosancharie.svg'
+import Logo from '../assets/logosan.svg'
 import { useAuth } from '../context/AuthContext'
 
 function Header({ onBackToHome }) {

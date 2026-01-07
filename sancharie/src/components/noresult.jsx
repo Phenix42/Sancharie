@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import "./noresult.css";
-import Logo from "../assets/logosancharie.svg";
+import Logo from "../assets/logosan.svg";
 
 export default function NoResult({ searchParams }) {
   const navigate = useNavigate();
