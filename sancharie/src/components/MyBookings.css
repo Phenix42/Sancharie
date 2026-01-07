@@ -615,6 +615,245 @@
   background: #003d57;
 }
 
+/* Cancel Ticket Button */
+.cancel-ticket-btn {
+  padding: 12px 32px;
+  background: transparent;
+  color: #c53030;
+  border: 2px solid #c53030;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-ticket-btn:hover {
+  background: #c53030;
+  color: #fff;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 20px;
+}
+
+/* Cancel Modal Styles */
+.cancel-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.cancel-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.cancel-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.cancel-modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #002C3F;
+  font-weight: 600;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-modal-btn svg {
+  width: 24px;
+  height: 24px;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.close-modal-btn:hover svg {
+  color: #c53030;
+}
+
+.cancel-modal-body {
+  padding: 24px;
+}
+
+.cancel-warning {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.cancel-trip-details {
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.cancel-trip-details p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.cancel-trip-details p strong {
+  color: #002C3F;
+  margin-right: 8px;
+}
+
+.cancellation-policy {
+  background: #fff9e6;
+  border: 1px solid #f0d58c;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.cancellation-policy h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #8a6d3b;
+  font-weight: 600;
+}
+
+.cancellation-policy ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.cancellation-policy li {
+  font-size: 13px;
+  color: #8a6d3b;
+  margin-bottom: 6px;
+}
+
+.cancel-error-message {
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.cancel-error-message p {
+  margin: 0;
+  font-size: 14px;
+  color: #c53030;
+}
+
+.cancel-success-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+}
+
+.cancel-success-message svg {
+  width: 60px;
+  height: 60px;
+  color: #38a169;
+  margin-bottom: 16px;
+}
+
+.cancel-success-message p {
+  font-size: 16px;
+  color: #38a169;
+  margin: 0;
+}
+
+.cancel-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.keep-ticket-btn {
+  flex: 1;
+  padding: 14px 24px;
+  background: #f0f0f0;
+  color: #333;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.keep-ticket-btn:hover {
+  background: #e0e0e0;
+}
+
+.keep-ticket-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirm-cancel-btn {
+  flex: 1;
+  padding: 14px 24px;
+  background: #c53030;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.confirm-cancel-btn:hover {
+  background: #9c2626;
+}
+
+.confirm-cancel-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 /* Mobile Responsive */
 @media (max-width: 992px) {
   .page-layout {
@@ -734,5 +973,38 @@
   .sidebar-nav {
     flex-wrap: wrap;
     gap: 16px;
+  }
+
+  /* Cancel modal mobile */
+  .cancel-modal {
+    max-width: 100%;
+    margin: 10px;
+    border-radius: 12px;
+  }
+
+  .cancel-modal-header {
+    padding: 16px 20px;
+  }
+
+  .cancel-modal-header h3 {
+    font-size: 18px;
+  }
+
+  .cancel-modal-body {
+    padding: 20px;
+  }
+
+  .cancel-modal-actions {
+    flex-direction: column;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .download-ticket-btn,
+  .cancel-ticket-btn {
+    width: 100%;
   }
 }

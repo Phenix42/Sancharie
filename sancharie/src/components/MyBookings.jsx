@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import Header from './Header';
 import Footer from './Footer';
 import { generateTicketPDF } from '../services/ticketPdf';
+import { cancelBooking } from '../services/busApi';
 import './MyBookings.css';
 
 export default function MyBookings() {
@@ -22,6 +23,13 @@ export default function MyBookings() {
   const [activeTab, setActiveTab] = useState('All');
   const [expandedCard, setExpandedCard] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Cancel ticket states
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingBooking, setCancellingBooking] = useState(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+  const [cancelSuccess, setCancelSuccess] = useState('');
 
   const tabs = ['All', 'Upcoming', 'Completed', 'Failed', 'Cancelled'];
 
@@ -169,6 +177,72 @@ export default function MyBookings() {
       navigate('/profile');
     } else if (item === 'wallet') {
       // Future: navigate to wallet page
+    }
+  };
+
+  // Open cancel confirmation modal
+  const openCancelModal = (booking) => {
+    setCancellingBooking(booking);
+    setCancelError('');
+    setCancelSuccess('');
+    setShowCancelModal(true);
+  };
+
+  // Close cancel modal
+  const closeCancelModal = () => {
+    setShowCancelModal(false);
+    setCancellingBooking(null);
+    setCancelError('');
+  };
+
+  // Handle ticket cancellation
+  const handleCancelTicket = async () => {
+    if (!cancellingBooking) return;
+
+    setIsCancelling(true);
+    setCancelError('');
+
+    try {
+      // Get seat IDs from the booking
+      const seatIds = cancellingBooking.passengers?.map(p => p.seatId || p.seatNumber) || 
+                      cancellingBooking.selectedSeats || 
+                      cancellingBooking.seats || [];
+      
+      const seatId = seatIds[0] || cancellingBooking.seatId || '0';
+
+      const result = await cancelBooking(
+        cancellingBooking.searchTokenId || cancellingBooking.tokenId,
+        cancellingBooking.apiBookingId || cancellingBooking.bookingId,
+        seatId,
+        'User requested cancellation'
+      );
+
+      if (result.responseStatus === 1 || result.traceId) {
+        setCancelSuccess('Ticket cancelled successfully! Refund will be processed as per cancellation policy.');
+        
+        // Update the booking status locally
+        setBookings(prevBookings => 
+          prevBookings.map(b => 
+            b._id === cancellingBooking._id 
+              ? { ...b, status: 'cancelled' } 
+              : b
+          )
+        );
+
+        // Close modal after a delay
+        setTimeout(() => {
+          closeCancelModal();
+          setCancelSuccess('');
+          fetchBookings(); // Refresh bookings
+        }, 2000);
+      } else {
+        setCancelError('Cancellation request submitted. Please check back for status update.');
+      }
+    } catch (err) {
+      console.error('Cancel ticket error:', err);
+      setCancelError(err.message || 'Failed to cancel ticket. Please try again or contact support.');
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -383,32 +457,43 @@ export default function MyBookings() {
                       </div>
 
                       {/* Action Buttons */}
-                      {booking.status === 'confirmed' && (
+                      {(booking.status === 'confirmed' || booking.status === 'pending') && (
                         <div className="action-buttons">
+                          {booking.status === 'confirmed' && (
+                            <button 
+                              className="download-ticket-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                generateTicketPDF({
+                                  bookingId: booking.bookingId,
+                                  pnr: booking.pnr,
+                                  busName: booking.busName,
+                                  busType: booking.busType,
+                                  fromCity: booking.fromCity || booking.source,
+                                  toCity: booking.toCity || booking.destination,
+                                  journeyDate: booking.journeyDate,
+                                  boardingPoint: booking.boardingPoint,
+                                  droppingPoint: booking.droppingPoint,
+                                  departureTime: booking.departureTime,
+                                  arrivalTime: booking.arrivalTime,
+                                  seats: booking.selectedSeats || booking.seats,
+                                  passengers: booking.passengers,
+                                  totalFare: booking.totalFare,
+                                  paymentId: booking.paymentId
+                                });
+                              }}
+                            >
+                              Download Ticket
+                            </button>
+                          )}
                           <button 
-                            className="download-ticket-btn"
+                            className="cancel-ticket-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-                              generateTicketPDF({
-                                bookingId: booking.bookingId,
-                                pnr: booking.pnr,
-                                busName: booking.busName,
-                                busType: booking.busType,
-                                fromCity: booking.fromCity || booking.source,
-                                toCity: booking.toCity || booking.destination,
-                                journeyDate: booking.journeyDate,
-                                boardingPoint: booking.boardingPoint,
-                                droppingPoint: booking.droppingPoint,
-                                departureTime: booking.departureTime,
-                                arrivalTime: booking.arrivalTime,
-                                seats: booking.selectedSeats || booking.seats,
-                                passengers: booking.passengers,
-                                totalFare: booking.totalFare,
-                                paymentId: booking.paymentId
-                              });
+                              openCancelModal(booking);
                             }}
                           >
-                            Download Ticket
+                            Cancel Ticket
                           </button>
                         </div>
                       )}
@@ -421,6 +506,90 @@ export default function MyBookings() {
         </div>
         </div>
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelModal && (
+        <div className="cancel-modal-overlay" onClick={closeCancelModal}>
+          <div className="cancel-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cancel-modal-header">
+              <h3>Cancel Ticket</h3>
+              <button className="close-modal-btn" onClick={closeCancelModal}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="cancel-modal-body">
+              {cancelSuccess ? (
+                <div className="cancel-success-message">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  <p>{cancelSuccess}</p>
+                </div>
+              ) : (
+                <>
+                  <div className="cancel-booking-info">
+                    <p className="cancel-warning">Are you sure you want to cancel this ticket?</p>
+                    <div className="cancel-trip-details">
+                      <p><strong>Route:</strong> {cancellingBooking?.fromCity || cancellingBooking?.source} → {cancellingBooking?.toCity || cancellingBooking?.destination}</p>
+                      <p><strong>Date:</strong> {formatDate(cancellingBooking?.journeyDate)}</p>
+                      <p><strong>Bus:</strong> {cancellingBooking?.busName}</p>
+                      <p><strong>Booking ID:</strong> {cancellingBooking?.bookingId}</p>
+                    </div>
+                    
+                    {cancellingBooking?.cancelPolicy && cancellingBooking.cancelPolicy.length > 0 && (
+                      <div className="cancellation-policy">
+                        <h4>Cancellation Policy</h4>
+                        <ul>
+                          {cancellingBooking.cancelPolicy.map((policy, idx) => (
+                            <li key={idx}>
+                              {policy.PolicyString || policy.CancellationCharge || `${policy.ChargeType}: ${policy.ChargeAmount}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {cancelError && (
+                    <div className="cancel-error-message">
+                      <p>{cancelError}</p>
+                    </div>
+                  )}
+
+                  <div className="cancel-modal-actions">
+                    <button 
+                      className="keep-ticket-btn" 
+                      onClick={closeCancelModal}
+                      disabled={isCancelling}
+                    >
+                      Keep Ticket
+                    </button>
+                    <button 
+                      className="confirm-cancel-btn" 
+                      onClick={handleCancelTicket}
+                      disabled={isCancelling}
+                    >
+                      {isCancelling ? (
+                        <>
+                          <span className="btn-spinner"></span>
+                          Cancelling...
+                        </>
+                      ) : (
+                        'Confirm Cancel'
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   );
