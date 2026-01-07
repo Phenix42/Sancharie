@@ -69,18 +69,16 @@ const BusResults = () => {
 
   return (
     <div className="bus-results">
-      {/* Section 1: Bus Booking Discount Offers */}
-      <section className="discount-offers-section">
+      {/* Section 1: Bus Booking Discount Offers - HIDDEN */}
+      {/* <section className="discount-offers-section">
         <h2 className="section-title">Bus Booking Discount Offers</h2>
         <div className="discount-offers-wrapper">
           <div className="discount-offers-track">
-            {/* First set of offers */}
             {discountOffers.map((offer) => (
               <div key={offer.id} className="discount-offer-card">
                 <img src={offer.image} alt={offer.alt} className="discount-offer-image" />
               </div>
             ))}
-            {/* Duplicate set for seamless infinite scroll */}
             {discountOffers.map((offer) => (
               <div key={`duplicate-${offer.id}`} className="discount-offer-card">
                 <img src={offer.image} alt={offer.alt} className="discount-offer-image" />
@@ -88,7 +86,7 @@ const BusResults = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Section 2: Why Choose Sancharie for Bus Booking? */}
       <section className="why-choose-section">
