@@ -15,7 +15,7 @@
 
 // Backend API base URL
 // In production, this should be your deployed backend URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 /**
  * Send OTP to mobile number

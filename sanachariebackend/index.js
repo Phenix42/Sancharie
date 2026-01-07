@@ -46,7 +46,7 @@ mongoose.connect(MONGODB_URI)
 // CORS - Allow frontend origin
 // In production, restrict this to your actual domain
 app.use(cors({
-  origin: true, // Allow all origins in development
+  origin: ['https://sancharie.com', 'https://www.sancharie.com', 'http://localhost:5173', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

@@ -20,7 +20,7 @@
  */
 
 // Backend API URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL ;
 
 // Razorpay public key from environment variable
 // SECURITY: This is the PUBLIC key only - safe to use in frontend
