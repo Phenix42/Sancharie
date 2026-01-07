@@ -1,0 +1,1032 @@
+/* ================= PAGE ================= */
+.sr-page {
+  background: #f4f6f8;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+/* ================= LOADING STATE ================= */
+.sr-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 40px 20px;
+}
+
+.logo-loader {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.loader-logo {
+  width: 60px;
+  height: 60px;
+  animation: logoPulse 1.5s ease-in-out infinite;
+  z-index: 2;
+}
+
+.loader-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 4px solid #f0f0f0;
+  border-top: 4px solid #9c7635;
+  border-right: 4px solid #d84e55;
+  border-radius: 50%;
+  animation: ringRotate 1.2s linear infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes ringRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loader-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px;
+}
+
+.loader-subtext {
+  font-size: 14px;
+  color: #888;
+  margin: 0;
+}
+
+/* ================= ERROR STATE ================= */
+.sr-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.sr-error p {
+  font-size: 16px;
+  color: #d84e55;
+  margin: 0 0 20px;
+}
+
+.sr-error button {
+  padding: 12px 28px;
+  background: #d84e55;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sr-error button:hover {
+  background: #c43e45;
+}
+
+/* ================= NO BUSES FOUND ================= */
+.no-buses-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 40px 20px;
+}
+
+.no-buses-content {
+  text-align: center;
+  max-width: 500px;
+  background: #fff;
+  padding: 50px 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.no-buses-icon {
+  margin-bottom: 10px;
+}
+
+.no-buses-logo {
+  width: 80px;
+  height: auto;
+  opacity: 0.9;
+}
+
+.no-buses-illustration {
+  margin-bottom: 24px;
+}
+
+.bus-illustration {
+  width: 180px;
+  height: auto;
+  opacity: 0.6;
+}
+
+.no-buses-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 12px;
+}
+
+.no-buses-message {
+  font-size: 15px;
+  color: #666;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.no-buses-route {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.route-from,
+.route-to {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.route-arrow {
+  font-size: 18px;
+  color: #9c7635;
+}
+
+.no-buses-date {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 24px;
+}
+
+.no-buses-suggestions {
+  text-align: left;
+  background: #fff8e1;
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin-bottom: 28px;
+  border-left: 4px solid #ffc107;
+}
+
+.no-buses-suggestions p {
+  font-size: 14px;
+  color: #333;
+  margin: 0 0 10px;
+}
+
+.no-buses-suggestions ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.no-buses-suggestions li {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.no-buses-suggestions li:last-child {
+  margin-bottom: 0;
+}
+
+.modify-search-btn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #9c7635 0%, #b8912e 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(156, 118, 53, 0.3);
+}
+
+.modify-search-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(156, 118, 53, 0.4);
+  background: linear-gradient(135deg, #b8912e 0%, #9c7635 100%);
+}
+
+.sr-layout {
+  max-width: 1200px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+}
+
+/* ================= FILTERS ================= */
+.filters-panel {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 6px;
+}
+
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filters-header h4 {
+  font-size: 15px;
+}
+
+.clear-all {
+  font-size: 13px;
+  color: #9aa0a6;
+  cursor: pointer;
+}
+
+.filter-block {
+  margin-top: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ececec;
+}
+
+.filter-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-icon {
+  font-size: 14px;
+  color: #0f2a3a;
+}
+
+/* Price slider */
+.price-slider {
+  width: 100%;
+  height: 2px;
+  accent-color: #0f2a3a;
+}
+
+.price-values {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+  margin-top: 6px;
+}
+
+/* Bus type boxes */
+.bus-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.bus-type-box {
+  background: #f3f5f8;
+  padding: 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.bus-type-box.active {
+  background: #e6f4f1;
+  border-color: #9fd3c7;
+  color: #0f2a3a;
+}
+
+/* Departure time boxes */
+.departure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.departure-box {
+  background: #f3f5f8;
+  padding: 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+.departure-box.active {
+  background: #e6f4f1;
+  border-color: #9fd3c7;
+}
+
+/* Operator checkboxes */
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+/* ================= RESULTS ================= */
+.sr-results {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ================= DATE SELECTOR ================= */
+.date-selector {
+  display: flex;
+  align-items: stretch;
+  background: #002c3f;
+  border-radius: 0;
+  overflow: hidden;
+  border: none;
+  min-height: 70px;
+}
+
+.date-nav {
+  background: transparent;
+  border: none;
+  padding: 0 16px;
+  cursor: pointer;
+  color: #be951f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.date-nav:hover {
+  color: #ffffff;
+}
+
+.date-nav svg {
+  width: 18px;
+  height: 18px;
+}
+
+.date-items-wrapper {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+}
+
+.date-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  background: transparent;
+  border: none;
+}
+
+.date-item:hover {
+  background: rgba(190, 149, 31, 0.2);
+}
+
+.date-item.active {
+  background: #be951f;
+}
+
+.date-item .day {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 4px;
+}
+
+.date-item.active .day {
+  color: #002c3f;
+}
+
+.date-item .date {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+}
+
+.date-item.active .date {
+  color: #002c3f;
+}
+
+/* ================= BUS CARD ================= */
+.sr-card {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e4e4e4;
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: minmax(350px, 1fr) auto 1px auto;
+  align-items: stretch;
+  gap: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  position: relative;
+  min-height: 140px;
+}
+
+/* Left info */
+.sr-info {
+  padding-right: 16px;
+}
+
+.sr-info .bus-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #000000;
+  line-height: 1.3;
+}
+
+.sr-info .depart-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: #000000;
+  margin: 0 0 8px 0;
+}
+
+/* Timeline */
+.timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.time-location {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.time-location-end {
+  align-items: flex-end;
+}
+
+.time-location .time {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #000000;
+}
+
+.time-location .boarding {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.time-location .dropping {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000000;
+  text-transform: uppercase;
+}
+
+.timeline-line-segment {
+  flex: 1;
+  min-width: 40px;
+  max-width: 80px;
+  height: 0;
+  border-top: 1px solid #000000;
+  align-self: flex-start;
+  margin-top: 10px;
+}
+
+.duration-badge {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: #000000;
+  white-space: nowrap;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* ================= SEAT PREVIEW ================= */
+.seat-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.seat-layout-container {
+  border: 1px solid #c5c5c5;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  background: #ffffff;
+  min-width: 280px;
+  min-height: 100px;
+}
+
+.seat-deck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.deck-label-wrapper {
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deck-label-text {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  color: #112211;
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+}
+
+.deck-seats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.seat-row {
+  display: flex;
+  gap: 4px;
+}
+
+.seat-cell {
+  width: 28px;
+  height: 12px;
+  border-radius: 2px;
+  display: block;
+}
+
+.seat-cell.booked {
+  background: #d9d9d9;
+}
+
+.seat-cell.available {
+  background: #8dd3bb;
+}
+
+.deck-divider {
+  height: 1px;
+  background: #c5c5c5;
+  margin: 6px 0;
+  width: calc(100% - 28px);
+  margin-left: 28px;
+}
+
+.select-seat-btn {
+  background: #002c3f;
+  color: #ffffff;
+  border: none;
+  padding: 6px 20px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+  margin-top: 10px;
+  letter-spacing: 0.5px;
+  transition: background 0.2s ease;
+}
+
+.select-seat-btn:hover {
+  background: #001f2d;
+}
+
+/* Card Divider - Vertical line between seat preview and price */
+.card-divider {
+  width: 2px;
+  background: linear-gradient(180deg, 
+    transparent 0%, 
+    #c5c5c5 10%, 
+    #c5c5c5 90%, 
+    transparent 100%);
+  align-self: stretch;
+  margin: 0 10px;
+  min-height: 140px;
+}
+
+/* ================= PRICE SECTION ================= */
+.price-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 110px;
+  padding-left: 14px;
+  position: relative;
+  padding-top: 40px;
+}
+
+.discount-ribbon {
+  position: absolute;
+  top: -14px;
+  right: -18px;
+  z-index: 2;
+}
+
+.ribbon-content {
+  background: #112211;
+  color: #ffffff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  padding: 4px 10px 6px 10px;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.ribbon-content strong {
+  font-weight: 700;
+  color: #be951f;
+}
+
+.ribbon-zigzag {
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(135deg, #112211 25%, transparent 25%) -6px 0,
+              linear-gradient(225deg, #112211 25%, transparent 25%) -6px 0,
+              linear-gradient(315deg, #112211 25%, transparent 25%),
+              linear-gradient(45deg, #112211 25%, transparent 25%);
+  background-size: 6px 6px;
+  background-color: transparent;
+}
+
+.starts-from-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #000000;
+  margin: 0 0 2px 0;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.old-price {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: #666666;
+  text-decoration: line-through;
+}
+
+.current-price {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.seats-available-btn {
+  background: #be951f;
+  color: #ffffff;
+  border: none;
+  padding: 5px 14px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: default;
+  min-width: 80px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================= NO RESULTS ================= */
+.no-results {
+  text-align: center;
+  padding: 40px;
+  background: #ffffff;
+  border-radius: 6px;
+  color: #999;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1200px) {
+  .sr-card {
+    grid-template-columns: 1fr auto 1px auto;
+    gap: 0;
+    padding: 16px 20px;
+  }
+  
+  .sr-info .bus-title {
+    font-size: 16px;
+  }
+  
+  .sr-info .depart-label {
+    font-size: 18px;
+  }
+  
+  .timeline .time {
+    font-size: 18px;
+  }
+  
+  .locations .boarding,
+  .locations .dropping {
+    font-size: 18px;
+  }
+  
+  .seat-cell {
+    width: 28px;
+    height: 12px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .sr-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-panel {
+    display: none;
+  }
+
+  .sr-card {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 16px;
+  }
+  
+  .card-divider {
+    display: none;
+  }
+
+  .seat-preview {
+    order: 2;
+    padding: 16px 0;
+    border-top: 1px solid #e4e4e4;
+    border-bottom: 1px solid #e4e4e4;
+  }
+
+  .price-section {
+    align-items: center;
+    text-align: center;
+    padding-left: 0;
+    padding-top: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  
+  .discount-ribbon {
+    position: relative;
+    top: 0;
+    right: 0;
+  }
+  
+  .ribbon-content {
+    border-radius: 4px 4px 0 0;
+  }
+  
+  .ribbon-zigzag {
+    border-radius: 0 0 4px 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sr-page {
+    padding: 12px;
+  }
+
+  .date-selector {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .date-item {
+    min-width: 70px;
+    padding: 8px 6px;
+  }
+
+  .date-item .day {
+    font-size: 10px;
+  }
+
+  .date-item .date {
+    font-size: 12px;
+  }
+
+  .sr-card {
+    padding: 14px;
+    gap: 16px;
+  }
+
+  .sr-info .bus-title {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .sr-info .depart-label {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .timeline {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 10px;
+  }
+
+  .timeline .time {
+    font-size: 14px;
+  }
+
+  .timeline-connector {
+    max-width: 200px;
+    margin: 0 8px;
+  }
+
+  .duration-badge {
+    font-size: 13px;
+    padding: 2px 8px;
+  }
+
+  .locations {
+    max-width: 100%;
+  }
+
+  .locations .boarding,
+  .locations .dropping {
+    font-size: 14px;
+  }
+
+  /* Seat Preview */
+  .seat-preview {
+    width: 100%;
+  }
+
+  .seat-layout-container {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .seat-cell {
+    width: 24px;
+    height: 10px;
+  }
+  
+  .select-seat-btn {
+    width: 100%;
+    padding: 12px 24px;
+    font-size: 16px;
+  }
+
+  /* Price Section */
+  .price-section {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ribbon-content {
+    font-size: 14px;
+    padding: 6px 12px 8px 12px;
+  }
+
+  .starts-from-label {
+    font-size: 16px;
+  }
+
+  .old-price {
+    font-size: 14px;
+  }
+
+  .current-price {
+    font-size: 16px;
+  }
+
+  .seats-available-btn {
+    padding: 8px 20px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sr-page {
+    padding: 8px;
+  }
+
+  .date-selector {
+    border-radius: 4px;
+  }
+
+  .date-nav {
+    padding: 0 8px;
+    font-size: 16px;
+  }
+
+  .date-item {
+    min-width: 55px;
+    padding: 6px 4px;
+  }
+
+  .sr-card {
+    padding: 12px;
+    border-radius: 6px;
+  }
+
+  .sr-info .bus-title {
+    font-size: 13px;
+  }
+
+  .timeline {
+    justify-content: center;
+  }
+
+  .timeline-connector {
+    max-width: 120px;
+  }
+
+  .locations {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+
+  .seat-cell {
+    width: 20px;
+    height: 8px;
+  }
+
+  .select-seat-btn {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .price-section {
+    width: 100%;
+  }
+
+  .seats-available-btn {
+    width: auto;
+  }
+}

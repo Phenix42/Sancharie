@@ -1,0 +1,236 @@
+.hero {
+  position: relative;
+  width: 100%;
+  height: 900px;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: white;
+}
+
+/* ================= BACKGROUND ================= */
+
+.hero-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 650px;
+  overflow: hidden;
+  clip-path: polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%);
+}
+
+.hero-bg-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1;
+}
+
+/* ================= TEXT ================= */
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: white;
+  padding-top: 80px;
+}
+
+.hero-title {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 180px;
+  font-weight: 600;
+  color: #a37226;
+  letter-spacing: -3px;
+  margin: 0;
+  line-height: 1;
+  text-shadow: 2px 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+.hero-subtitle {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 16px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ================= BUS ================= */
+
+.bus-image-container {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  width: 100%;
+  max-width: 1100px;
+  height: 550px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.hero-bus-image {
+  max-width: 100%;
+  height: 115%;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 45px rgba(0, 0, 0, 0.3));
+}
+
+/* ================= HEADLIGHT EFFECT ================= */
+
+.headlight {
+  position: absolute;
+  bottom: 120px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 220, 0.95) 0%,
+    rgba(255, 240, 180, 0.7) 30%,
+    rgba(255, 230, 150, 0.35) 55%,
+    rgba(255, 230, 150, 0.15) 70%,
+    transparent 80%
+  );
+  border-radius: 50%;
+  filter: blur(8px);
+  opacity: 0.9;
+  animation: headlightPulse 3s infinite ease-in-out;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Light beam */
+.headlight::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320px;
+  height: 200px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 220, 0.45),
+    rgba(255, 255, 220, 0.2),
+    rgba(255, 255, 220, 0.08),
+    transparent 70%
+  );
+  filter: blur(22px);
+}
+
+/* Positions */
+.headlight.left {
+  left: 38%;
+}
+
+.headlight.right {
+  right: 38%;
+}
+
+/* Pulse animation */
+@keyframes headlightPulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 1024px) {
+  .hero {
+    height: 850px;
+  }
+
+  .hero-title {
+    font-size: 110px;
+  }
+
+  .bus-image-container {
+    height: 450px;
+  }
+
+  .headlight {
+    width: 90px;
+    height: 90px;
+    bottom: 100px;
+  }
+
+  .headlight::after {
+    width: 240px;
+    height: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    height: 700px;
+  }
+
+  .hero-background {
+    height: 420px;
+  }
+
+  .hero-title {
+    font-size: 70px;
+  }
+
+  .hero-subtitle {
+    font-size: 14px;
+  }
+
+  .bus-image-container {
+    height: 350px;
+  }
+
+  .headlight {
+    width: 70px;
+    height: 70px;
+    bottom: 85px;
+  }
+
+  .headlight::after {
+    width: 200px;
+    height: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    height: 600px;
+  }
+
+  .hero-title {
+    font-size: 50px;
+  }
+
+  .bus-image-container {
+    height: 260px;
+  }
+
+  .headlight {
+    width: 55px;
+    height: 55px;
+    bottom: 70px;
+  }
+}

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Bus Seat Layout</title>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    padding: 20px;
+  }
+
+  .outerseat {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 16px;
+    border-radius: 8px;
+    width: fit-content;
+  }
+
+  .busSeatlft {
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #444;
+  }
+
+  .lower {
+    font-size: 14px;
+  }
+
+  .seatcontainer {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+
+  .seat {
+    width: 42px;
+    height: 42px;
+    border: 2px solid #bbb;
+    border-radius: 6px;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .seat-number {
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+  }
+
+  .seat-price {
+    font-size: 10px;
+    color: #555;
+  }
+
+  /* Available seat */
+  .nseat {
+    border-color: #bdbdbd;
+  }
+</style>
+</head>
+
+<body>
+
+<h3>Lower Deck</h3>
+
+<div class="outerseat">
+  <div class="busSeatlft">
+    <div class="lower">Lower</div>
+  </div>
+
+  <div class="busSeatrgt">
+    <div class="busSeat">
+      <div class="seatcontainer">
+
+        <!-- Row 1 -->
+        <div class="seat nseat">
+          <div class="seat-number">1</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+        <div class="seat nseat">
+          <div class="seat-number">2</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+        <div class="seat nseat">
+          <div class="seat-number">3</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+        <div class="seat nseat">
+          <div class="seat-number">4</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+        <div class="seat nseat">
+          <div class="seat-number">5</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+
+        <!-- Row 2 -->
+        <div class="seat nseat">
+          <div class="seat-number">10</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+        <div class="seat nseat">
+          <div class="seat-number">9</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+        <div class="seat nseat">
+          <div class="seat-number">8</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+        <div class="seat nseat">
+          <div class="seat-number">7</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+        <div class="seat nseat">
+          <div class="seat-number">6</div>
+          <div class="seat-price">₹10.50</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

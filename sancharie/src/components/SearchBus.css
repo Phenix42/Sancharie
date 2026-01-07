@@ -1,0 +1,405 @@
+.search-bus {
+  background: #eff3f4;
+  padding: 3rem 1rem;
+}
+
+.search-container {
+  max-width: 1400px;
+  margin: auto;
+  /* Remove any background or padding that could create an extra card */
+  background: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Tabs */
+.search-tabs {
+  display: flex;
+  margin-bottom: 2rem;
+}
+
+.tab {
+  border: none;
+  background: none;
+  padding: 1rem 2.5rem;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+}
+
+.tab.active {
+  color: #9c7635;
+  border-bottom-color: #9c7635;
+}
+
+/* Search Bar */
+.search-form {
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  border-radius: 22px;
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+  margin-bottom: 2.5rem;
+  margin-top: 1.5rem;
+  border: 1.5px solid #f2f2f2;
+  transition: box-shadow 0.2s;
+}
+
+.form-fields {
+  display: grid;
+  grid-template-columns: 1.4fr 80px 1.4fr 1.2fr 200px; /* Remove extra column */
+  height: 120px; /* ⬅ Taller height as per image */
+  align-items: center;
+}
+
+.form-group.from {
+  border-right: none;
+}
+.form-group.to {
+  border-right: 1px solid #e6e6e6;
+}
+.swap-wrapper {
+  z-index: 2;
+}
+/* Sections */
+.form-group {
+  padding: 0 2rem;
+  border-right: 1px solid #e6e6e6;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+/* Autocomplete Dropdown */
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e6e6e6;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.autocomplete-dropdown li {
+  padding: 12px 2rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #333;
+  transition: background 0.2s ease;
+}
+
+.autocomplete-dropdown li:hover {
+  background: #f5f5f5;
+}
+
+.autocomplete-dropdown li:last-child {
+  border-radius: 0 0 8px 8px;
+}
+
+.form-group:last-of-type {
+  border-right: none;
+}
+
+.form-group label {
+  font-size: 0.75rem;
+  color: #999;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+/* Inputs */
+.form-group input {
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  background: transparent;
+  z-index: 2;
+}
+
+.form-group input[type="date"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+
+
+/* Fake placeholder text */
+.fake-placeholder {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Clickable date field */
+.clickable {
+  cursor: pointer;
+}
+
+/* Swap button centered */
+.swap-wrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.swap-btn {
+  width: 44px;
+  height: 44px;
+  background: #f2f2f2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  font-size: 1.1rem;
+}
+
+/* Search button */
+.search-btn {
+  height: 110px;
+  background: #9c7635;
+  border: none;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .search-bus {
+    padding: 2rem 1rem;
+  }
+
+  .form-fields {
+    grid-template-columns: 1fr 1fr;
+    height: auto;
+    gap: 0;
+  }
+
+  .form-group {
+    border-right: none;
+    border-bottom: 1px solid #e6e6e6;
+    padding: 1.2rem 1.5rem;
+    min-height: 70px;
+  }
+
+  .form-group.from {
+    border-right: 1px solid #e6e6e6;
+  }
+
+  .form-group.to {
+    border-right: none;
+  }
+
+  .swap-wrapper {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 55px;
+    z-index: 10;
+  }
+
+  .search-form {
+    position: relative;
+  }
+
+  .swap-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+  }
+
+  .form-group.clickable {
+    border-right: 1px solid #e6e6e6;
+  }
+
+  .form-group.clickable:last-of-type {
+    border-right: none;
+  }
+
+  .search-btn {
+    height: 55px;
+    grid-column: 1 / -1;
+    font-size: 0.95rem;
+  }
+
+  .autocomplete-dropdown {
+    max-height: 200px;
+  }
+}
+
+@media (max-width: 600px) {
+  .search-bus {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .search-tabs {
+    margin-bottom: 1rem;
+    justify-content: center;
+  }
+
+  .tab {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .form-fields {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .form-group {
+    padding: 1rem 1.2rem;
+    min-height: 65px;
+    border-right: none !important;
+  }
+
+  .form-group.from,
+  .form-group.to {
+    border-right: none;
+  }
+
+  .swap-wrapper {
+    position: relative;
+    left: auto;
+    transform: none;
+    top: auto;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e6e6e6;
+  }
+
+  .swap-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .form-group label {
+    font-size: 0.7rem;
+    margin-bottom: 4px;
+  }
+
+  .form-group input,
+  .value {
+    font-size: 0.95rem;
+  }
+
+  .search-btn {
+    height: 50px;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+  }
+
+  .autocomplete-dropdown {
+    max-height: 180px;
+    border-radius: 0 0 6px 6px;
+  }
+
+  .autocomplete-dropdown li {
+    padding: 10px 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Custom Validation Popup */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.popup-container {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px 40px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.popup-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.popup-message {
+  font-size: 1.1rem;
+  color: #333;
+  margin-bottom: 24px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.popup-btn {
+  background: #9c7635;
+  color: #fff;
+  border: none;
+  padding: 12px 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.popup-btn:hover {
+  background: #7d5e2a;
+  transform: scale(1.02);
+}
+
+.popup-btn:active {
+  transform: scale(0.98);
+}

@@ -1,0 +1,164 @@
+/* ---------- PRIVACY POLICY CONTAINER ---------- */
+.privacy-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 60px 24px;
+  background: #fff;
+}
+
+.privacy-content {
+  line-height: 1.8;
+  color: #333;
+}
+
+/* ---------- HEADINGS ---------- */
+.privacy-content h1 {
+  font-size: 2.5rem;
+  color: #9c7635;
+  margin-bottom: 10px;
+  padding-bottom: 16px;
+  border-bottom: 3px solid #9c7635;
+}
+
+.privacy-content .terms-title {
+  margin-top: 60px;
+}
+
+.privacy-content .last-updated {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 40px;
+}
+
+.privacy-content h2 {
+  font-size: 1.5rem;
+  color: #333;
+  margin-top: 40px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.privacy-content h3 {
+  font-size: 1.15rem;
+  color: #444;
+  margin-top: 24px;
+  margin-bottom: 12px;
+}
+
+/* ---------- SECTIONS ---------- */
+.policy-section {
+  margin-bottom: 32px;
+}
+
+.policy-section p {
+  margin-bottom: 16px;
+  text-align: justify;
+}
+
+/* ---------- LISTS ---------- */
+.policy-section ul {
+  margin: 16px 0;
+  padding-left: 24px;
+}
+
+.policy-section ul li {
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.policy-section ul li::marker {
+  color: #9c7635;
+}
+
+.policy-section ul li strong {
+  color: #333;
+}
+
+/* ---------- CONTACT INFO ---------- */
+.contact-info {
+  background: #f8f8f8;
+  padding: 20px 24px;
+  border-radius: 8px;
+  margin-top: 16px;
+  border-left: 4px solid #9c7635;
+}
+
+.contact-info p {
+  margin-bottom: 8px;
+}
+
+.contact-info p:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- CANCELLATION TABLE ---------- */
+.cancellation-table {
+  margin: 24px 0;
+  overflow-x: auto;
+}
+
+.cancellation-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cancellation-table th,
+.cancellation-table td {
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.cancellation-table th {
+  background: #9c7635;
+  color: #fff;
+  font-weight: 600;
+}
+
+.cancellation-table tr:last-child td {
+  border-bottom: none;
+}
+
+.cancellation-table tr:hover {
+  background: #f9f9f9;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 768px) {
+  .privacy-container {
+    padding: 40px 16px;
+  }
+
+  .privacy-content h1 {
+    font-size: 2rem;
+  }
+
+  .privacy-content h2 {
+    font-size: 1.3rem;
+  }
+
+  .cancellation-table th,
+  .cancellation-table td {
+    padding: 12px 14px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .privacy-content h1 {
+    font-size: 1.75rem;
+  }
+
+  .privacy-content h2 {
+    font-size: 1.2rem;
+  }
+
+  .contact-info {
+    padding: 16px;
+  }
+}

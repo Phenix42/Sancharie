@@ -1,0 +1,283 @@
+.our-service {
+  padding: 5rem 1rem;
+  background: #FFFFFF;
+}
+
+.service-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Header Section */
+.service-header {
+  text-align: left;
+  margin-bottom: 3rem;
+}
+
+.service-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: #A37226;
+  text-transform: uppercase;
+  letter-spacing: -2.5px;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.service-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 60px;
+  font-weight: 700;
+  color: #002C3F;
+  margin: 0;
+  line-height: 1.2;
+  max-width: 1200px;
+  text-transform: uppercase;
+  letter-spacing: -2.5px;
+}
+
+/* Service Grid - Top Row */
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+}
+
+.service-grid.top-row {
+  margin-bottom: 2rem;
+}
+
+.service-grid.bottom-row {
+  margin-top: 2rem;
+}
+
+/* Service Cards */
+.service-card {
+  background: white;
+  padding: 2.5rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: -6px -4px 17.8px rgba(0, 0, 0, 0.25), 3px 4px 17.8px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  position: relative;
+}
+
+.service-card:hover {
+  box-shadow: -8px -6px 24px rgba(0, 0, 0, 0.15), 5px 6px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Make non-featured cards turn yellow on hover and adjust text/icon colors */
+.service-card:not(.featured):hover {
+  background: #A37226;
+  color: #ffffff;
+}
+
+.service-card:not(.featured):hover .service-card-title {
+  color: #ffffff;
+}
+
+.service-card:not(.featured):hover .service-card-description {
+  color: #F1E6D0;
+}
+
+.service-card:not(.featured):hover .service-icon-wrapper {
+  background: #e6e6e6;
+}
+
+/* Staggered layout for cards */
+.service-card.offset-down {
+  margin-top: 50px;
+}
+
+.service-card.offset-up {
+  margin-top: 0;
+  margin-bottom: 50px;
+}
+
+.service-card.offset-up-bottom {
+  margin-top: -50px;
+}
+
+/* Featured Card (Gold/Orange) */
+.service-card.featured {
+  /* Make featured card white by default (so 'Faster Booking Experience' appears white)
+     but keep a subtle border/shadow to distinguish it. */
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  border: 1px solid #f2f2f2;
+}
+
+.service-card.featured:hover {
+  /* On hover, featured card can still switch to the yellow/gold tone for emphasis */
+  background: #A37226;
+  color: #ffffff;
+}
+
+/* Icon Wrapper */
+.service-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #F5F5F5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.service-card.featured .service-icon-wrapper {
+  background: #e6e6e6;
+}
+
+.service-icon {
+  font-size: 24px;
+  color: #333333;
+}
+
+/* Card Title */
+.service-card-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 36px;
+  font-weight: 600;
+  color: #000000;
+  margin: 0 0 1rem 0;
+  text-transform: capitalize;
+  letter-spacing: -0.5px;
+}
+
+.service-card.featured .service-card-title {
+  color: #000000;
+}
+
+/* Card Description */
+.service-card-description {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #000000;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.service-card.featured .service-card-description {
+  color: #333333;
+}
+
+.service-card.featured .service-icon {
+  color: #000000;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .service-label {
+    font-size: 32px;
+  }
+
+  .service-title {
+    font-size: 48px;
+  }
+
+  .service-card-title {
+    font-size: 28px;
+  }
+
+  .service-card-description {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .service-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+
+  .service-title {
+    font-size: 40px;
+  }
+
+  .service-card.offset-down,
+  .service-card.offset-up,
+  .service-card.offset-up-bottom {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .our-service {
+    padding: 3rem 1rem;
+  }
+
+  .service-container {
+    padding: 0 1rem;
+  }
+
+  .service-header {
+    margin-bottom: 2rem;
+  }
+
+  .service-label {
+    font-size: 24px;
+  }
+
+  .service-title {
+    font-size: 32px;
+  }
+
+  .service-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .service-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .service-card-title {
+    font-size: 24px;
+  }
+
+  .service-card-description {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .our-service {
+    padding: 2rem 1rem;
+  }
+
+  .service-label {
+    font-size: 20px;
+  }
+
+  .service-title {
+    font-size: 24px;
+  }
+
+  .service-card-title {
+    font-size: 20px;
+  }
+
+  .service-card-description {
+    font-size: 14px;
+  }
+
+  .service-icon-wrapper {
+    width: 44px;
+    height: 44px;
+  }
+
+  .service-icon {
+    font-size: 20px;
+  }
+}

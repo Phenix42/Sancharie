@@ -1,0 +1,640 @@
+/* BusResults - Main Container */
+.bus-results {
+  width: 100%;
+  background: #ffffff;
+}
+
+/* ==========================================
+   Section 1: Bus Booking Discount Offers
+   ========================================== */
+.discount-offers-section {
+  padding: 60px 80px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.section-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: #002c3f;
+  margin-bottom: 40px;
+  text-align: left;
+}
+
+.discount-offers-wrapper {
+  overflow: hidden;
+  width: 100%;
+}
+
+.discount-offers-track {
+  display: flex;
+  gap: 24px;
+  animation: scroll-infinite 20s linear infinite;
+  width: fit-content;
+}
+
+.discount-offers-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scroll-infinite {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-50% - 12px));
+  }
+}
+
+.discount-offer-card {
+  flex: 0 0 480px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f5f5f5;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.discount-offer-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.discount-offer-placeholder {
+  width: 100%;
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%);
+  color: #666;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.discount-offer-placeholder .placeholder-hint {
+  font-size: 14px;
+  font-weight: 400;
+  color: #999;
+  margin-top: 8px;
+}
+
+.discount-offer-image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+}
+
+/* Section Images - Common Styles */
+.section-image {
+  width: 100%;
+  max-width: 500px;
+  height: 450px;
+  border-radius: 20px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+/* ==========================================
+   Section 2: Why Choose Sancharie
+   ========================================== */
+.why-choose-section {
+  padding: 80px;
+  background: #ffffff;
+  position: relative;
+}
+
+.why-choose-section::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 150px;
+  height: 300px;
+  background: linear-gradient(135deg, rgba(206, 180, 95, 0.2), rgba(163, 114, 38, 0.1));
+  border-radius: 0 150px 150px 0;
+}
+
+.why-choose-content {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.why-choose-text {
+  flex: 1;
+}
+
+.section-title-underline {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  color: #002c3f;
+  margin-bottom: 24px;
+  position: relative;
+  display: inline-block;
+}
+
+.section-title-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #a37226 0%, #ceb45f 100%);
+}
+
+.why-choose-intro {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #333;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.key-benefits-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #002c3f;
+  margin-bottom: 16px;
+}
+
+.benefits-list {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 20px;
+  color: #333;
+  line-height: 2;
+  padding-left: 24px;
+  margin-bottom: 24px;
+}
+
+.benefits-list li {
+  margin-bottom: 8px;
+}
+
+.why-choose-conclusion {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: #333;
+  line-height: 1.6;
+}
+
+.why-choose-image {
+  flex: 0 0 500px;
+  position: sticky;
+  top: 100px;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e8f4f8 0%, #d0e8ef 100%);
+  border-radius: 20px;
+  color: #666;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  text-align: center;
+  padding: 20px;
+}
+
+.image-placeholder .placeholder-hint {
+  font-size: 14px;
+  color: #999;
+  margin-top: 8px;
+}
+
+/* ==========================================
+   Section 3: Online Bus & Travel Booking
+   ========================================== */
+.online-booking-section {
+  padding: 80px;
+  background: #f2f2f8;
+}
+
+.online-booking-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 60px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.online-booking-text {
+  flex: 1;
+}
+
+.online-booking-text p {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #333;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.subsection-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #002c3f;
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+
+.online-booking-image {
+  flex: 0 0 500px;
+  position: sticky;
+  top: 100px;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-placeholder.purple-bg {
+  background: linear-gradient(135deg, #f0e8ff 0%, #e8d8ff 100%);
+}
+
+/* ==========================================
+   Section 4: How to Book Bus Tickets
+   ========================================== */
+.how-to-book-section {
+  padding: 80px;
+  background: linear-gradient(180deg, #fff0f5 0%, #e8f4ff 50%, #fff0f5 100%);
+  position: relative;
+}
+
+.how-to-book-section::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  width: 100px;
+  height: 200px;
+  background: linear-gradient(135deg, rgba(206, 180, 95, 0.3), transparent);
+  border-radius: 0 100px 100px 0;
+}
+
+.how-to-book-section::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 20%;
+  width: 100px;
+  height: 200px;
+  background: linear-gradient(135deg, transparent, rgba(206, 180, 95, 0.3));
+  border-radius: 100px 0 0 100px;
+}
+
+.how-to-book-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 60px;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.how-to-book-text {
+  flex: 1;
+}
+
+.how-to-book-intro {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: #002c3f;
+  margin-bottom: 24px;
+}
+
+.steps-list {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 24px;
+  color: #333;
+  line-height: 2;
+  padding-left: 28px;
+  margin-bottom: 40px;
+}
+
+.steps-list li {
+  margin-bottom: 8px;
+}
+
+.steps-list li::marker {
+  font-weight: 700;
+  color: #002c3f;
+}
+
+.how-to-book-text p {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 22px;
+  color: #333;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.feature-list {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 22px;
+  color: #333;
+  line-height: 2;
+  padding-left: 24px;
+  margin-bottom: 32px;
+  list-style-type: disc;
+}
+
+.feature-list li {
+  margin-bottom: 4px;
+}
+
+.tracking-intro {
+  font-weight: 600;
+}
+
+.how-to-book-image {
+  flex: 0 0 500px;
+  position: sticky;
+  top: 100px;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================
+   Section 5: FAQs
+   ========================================== */
+.faq-section {
+  padding: 80px;
+  background: #ffffff;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.faq-section .section-title {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.faq-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 40px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
+}
+
+.faq-tab {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: #666;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0;
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.faq-tab:hover {
+  color: #002c3f;
+}
+
+.faq-tab.active {
+  color: #a37226;
+  font-weight: 600;
+}
+
+.faq-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -17px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #a37226;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.faq-item {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.faq-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.faq-question {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 28px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.faq-question span:first-child {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: #002c3f;
+  flex: 1;
+  padding-right: 20px;
+}
+
+.faq-icon {
+  font-size: 24px;
+  font-weight: 300;
+  color: #666;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.faq-answer {
+  padding: 0 28px 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+.faq-answer p {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  color: #555;
+  line-height: 1.7;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================
+   Responsive Styles
+   ========================================== */
+@media (max-width: 1200px) {
+  .discount-offers-track {
+    animation-duration: 15s;
+  }
+  
+  .section-title-underline {
+    font-size: 36px;
+  }
+  
+  .why-choose-intro,
+  .online-booking-text p {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 992px) {
+  .discount-offers-section,
+  .why-choose-section,
+  .online-booking-section,
+  .how-to-book-section,
+  .faq-section {
+    padding: 60px 40px;
+  }
+  
+  .why-choose-content,
+  .online-booking-content,
+  .how-to-book-content {
+    flex-direction: column;
+  }
+  
+  .why-choose-image,
+  .online-booking-image,
+  .how-to-book-image {
+    flex: none;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  
+  .faq-tabs {
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .section-title {
+    font-size: 28px;
+  }
+  
+  .section-title-underline {
+    font-size: 28px;
+  }
+  
+  .discount-offers-track {
+    animation-duration: 12s;
+    gap: 16px;
+  }
+  
+  .discount-offer-card {
+    flex: 0 0 320px;
+  }
+  
+  .why-choose-intro,
+  .online-booking-text p {
+    font-size: 18px;
+  }
+  
+  .benefits-list,
+  .steps-list {
+    font-size: 16px;
+  }
+  
+  .subsection-title {
+    font-size: 24px;
+  }
+  
+  .how-to-book-text p,
+  .feature-list {
+    font-size: 18px;
+  }
+  
+  .faq-tabs {
+    gap: 12px;
+  }
+  
+  .faq-tab {
+    font-size: 14px;
+  }
+  
+  .faq-question span:first-child {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .discount-offers-section,
+  .why-choose-section,
+  .online-booking-section,
+  .how-to-book-section,
+  .faq-section {
+    padding: 40px 20px;
+  }
+  
+  .section-title {
+    font-size: 24px;
+  }
+  
+  .section-title-underline {
+    font-size: 22px;
+  }
+  
+  .discount-offer-placeholder {
+    height: 200px;
+  }
+  
+  .image-placeholder {
+    height: 250px;
+  }
+  
+  .faq-question {
+    padding: 16px 20px;
+  }
+}

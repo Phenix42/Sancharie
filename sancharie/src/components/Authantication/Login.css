@@ -1,0 +1,451 @@
+/* Auth Modal Styles - Mobile OTP Login */
+/* Color Scheme: #9c7635 (Golden) & #002C3F (Dark Blue) */
+
+.auth-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 44, 63, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.auth-modal {
+  background: #fff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 25px 50px rgba(0, 44, 63, 0.35);
+  animation: slideUp 0.4s ease;
+  border-top: 4px solid #9c7635;
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Close Button */
+.auth-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #666;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.auth-close-btn:hover {
+  background: #002C3F;
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+/* Header */
+.auth-header {
+  text-align: center;
+  padding: 40px 32px 24px;
+}
+
+.auth-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.auth-logo-img {
+  height: 60px;
+  width: auto;
+}
+
+.auth-logo h2 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #002C3F;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.auth-subtitle {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* Form */
+.auth-form {
+  padding: 0 32px 32px;
+}
+
+/* Phone Illustration */
+.phone-illustration {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.phone-illustration svg {
+  font-size: 64px;
+  color: #9c7635;
+  opacity: 0.9;
+}
+
+/* Form Group */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #002C3F;
+  margin-bottom: 10px;
+}
+
+.form-group.error .phone-input-wrapper,
+.form-group.error .otp-inputs input {
+  border-color: #c53030;
+}
+
+/* Phone Input */
+.phone-input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.phone-input-wrapper:focus-within {
+  border-color: #9c7635;
+  box-shadow: 0 0 0 4px rgba(156, 118, 53, 0.15);
+}
+
+.country-code {
+  padding: 16px;
+  background: #f8f8f8;
+  font-size: 16px;
+  font-weight: 600;
+  color: #002C3F;
+  border-right: 2px solid #e8e8e8;
+}
+
+.phone-input-wrapper input {
+  flex: 1;
+  padding: 16px;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  color: #002C3F;
+  letter-spacing: 1px;
+}
+
+.phone-input-wrapper input:focus {
+  outline: none;
+}
+
+.phone-input-wrapper input::placeholder {
+  color: #999;
+  letter-spacing: 0;
+}
+
+/* Error Text */
+.error-text {
+  display: block;
+  font-size: 12px;
+  color: #c53030;
+  margin-top: 8px;
+  padding-left: 4px;
+}
+
+/* Success Text */
+.success-text {
+  display: block;
+  font-size: 12px;
+  color: #38a169;
+  margin-top: 8px;
+  padding-left: 4px;
+  font-weight: 500;
+}
+
+/* Submit Button */
+.auth-submit-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #9c7635, #7a5c2a);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(156, 118, 53, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(156, 118, 53, 0.45);
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.auth-submit-btn.loading {
+  pointer-events: none;
+}
+
+/* Button Loader */
+.btn-loader {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Terms Text */
+.auth-terms {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  margin-top: 20px;
+  line-height: 1.6;
+}
+
+.auth-terms a {
+  color: #9c7635;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-terms a:hover {
+  text-decoration: underline;
+}
+
+/* Divider */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}
+
+.auth-divider span {
+  padding: 0 16px;
+  font-size: 13px;
+  color: #999;
+  font-weight: 500;
+}
+
+/* Google Sign In Button */
+.google-sign-in-btn {
+  width: 100%;
+  padding: 14px;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.google-sign-in-btn svg {
+  font-size: 22px;
+}
+
+.google-sign-in-btn:hover {
+  border-color: #002C3F;
+  background: #f8f9fa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 44, 63, 0.15);
+}
+
+/* OTP Form */
+.otp-form {
+  position: relative;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.3s;
+}
+
+.back-btn:hover {
+  color: #9c7635;
+}
+
+/* OTP Illustration */
+.otp-illustration {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.otp-icon {
+  font-size: 56px;
+}
+
+/* OTP Inputs */
+.otp-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.otp-inputs input {
+  width: 48px;
+  height: 56px;
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #002C3F;
+  transition: all 0.3s ease;
+}
+
+.otp-inputs input:focus {
+  outline: none;
+  border-color: #9c7635;
+  box-shadow: 0 0 0 4px rgba(156, 118, 53, 0.15);
+}
+
+.otp-inputs input:not(:placeholder-shown) {
+  border-color: #9c7635;
+  background: #fffbf5;
+}
+
+/* OTP Timer */
+.otp-timer {
+  text-align: center;
+  margin: 20px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.otp-timer strong {
+  color: #9c7635;
+}
+
+.resend-btn {
+  background: none;
+  border: none;
+  color: #9c7635;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.resend-btn:hover {
+  background: #fffbf5;
+}
+
+/* Responsive */
+@media (max-width: 520px) {
+  .auth-modal {
+    margin: 10px;
+    border-radius: 20px;
+    max-width: 100%;
+  }
+
+  .auth-header {
+    padding: 32px 24px 20px;
+  }
+
+  .auth-form {
+    padding: 0 24px 24px;
+  }
+
+  .auth-logo-img {
+    height: 50px;
+  }
+
+  .auth-logo h2 {
+    font-size: 28px;
+  }
+
+  .otp-inputs {
+    gap: 8px;
+  }
+
+  .otp-inputs input {
+    width: 42px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .phone-illustration svg {
+    font-size: 52px;
+  }
+}

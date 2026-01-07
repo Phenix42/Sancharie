@@ -1,0 +1,338 @@
+/* ================= NO RESULT PAGE ================= */
+.no-result-page {
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.no-result-container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-result-content {
+  background: #ffffff;
+  border-radius: 0;
+  padding: 60px 40px;
+  box-shadow: none;
+  text-align: center;
+  animation: fadeInUp 0.5s ease-out;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= LOGO ================= */
+.no-result-logo {
+  margin-bottom: 8px;
+}
+
+.no-result-logo img {
+  width: 100px;
+  height: auto;
+  animation: logoPulse 2s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* ================= BUS ILLUSTRATION ================= */
+.bus-illustration-wrapper {
+  margin-bottom: 24px;
+}
+
+.bus-svg {
+  width: 220px;
+  height: auto;
+  animation: busFloat 3s ease-in-out infinite;
+}
+
+@keyframes busFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* ================= TITLE & SUBTITLE ================= */
+.no-result-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 10px;
+}
+
+.no-result-subtitle {
+  font-size: 15px;
+  color: #6c757d;
+  margin: 0 0 28px;
+  line-height: 1.5;
+}
+
+/* ================= ROUTE INFO CARD ================= */
+.route-info-card {
+  background: linear-gradient(135deg, #fafbfc 0%, #f0f2f5 100%);
+  border-radius: 16px;
+  padding: 24px 40px;
+  margin-bottom: 28px;
+  border: 1px solid #e9ecef;
+  max-width: 450px;
+  width: 100%;
+}
+
+.route-cities {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.city-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: #333;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.route-line .dot {
+  width: 8px;
+  height: 8px;
+  background: #9c7635;
+  border-radius: 50%;
+}
+
+.route-line .line {
+  width: 20px;
+  height: 2px;
+  background: linear-gradient(90deg, #9c7635, #d84e55);
+}
+
+.route-line .arrow {
+  font-size: 18px;
+  color: #d84e55;
+  font-weight: bold;
+}
+
+.travel-date {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px dashed #dee2e6;
+}
+
+.date-icon {
+  font-size: 18px;
+}
+
+.date-text {
+  font-size: 14px;
+  color: #555;
+  font-weight: 500;
+}
+
+/* ================= SUGGESTIONS CARD ================= */
+.suggestions-card {
+  background: #fffbeb;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 28px;
+  border-left: 4px solid #f59e0b;
+  text-align: left;
+}
+
+.suggestions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 12px;
+}
+
+.bulb-icon {
+  font-size: 18px;
+}
+
+.suggestions-list {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.suggestions-list li {
+  font-size: 13px;
+  color: #78350f;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.suggestions-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* ================= MODIFY SEARCH BUTTON ================= */
+.modify-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 40px;
+  background: linear-gradient(135deg, #9c7635 0%, #b8912e 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(156, 118, 53, 0.35);
+}
+
+.modify-search-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(156, 118, 53, 0.45);
+  background: linear-gradient(135deg, #b8912e 0%, #9c7635 100%);
+}
+
+.modify-search-btn:active {
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  font-size: 18px;
+  transition: transform 0.3s ease;
+}
+
+.modify-search-btn:hover .btn-icon {
+  transform: translateX(-4px);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 600px) {
+  .no-result-page {
+    padding: 20px 16px;
+  }
+
+  .no-result-content {
+    padding: 36px 24px;
+    border-radius: 20px;
+  }
+
+  .no-result-logo img {
+    width: 80px;
+  }
+
+  .bus-svg {
+    width: 180px;
+  }
+
+  .no-result-title {
+    font-size: 24px;
+  }
+
+  .no-result-subtitle {
+    font-size: 14px;
+  }
+
+  .route-cities {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .route-line {
+    transform: rotate(90deg);
+  }
+
+  .city-name {
+    font-size: 16px;
+    max-width: 200px;
+  }
+
+  .suggestions-card {
+    padding: 14px 16px;
+  }
+
+  .suggestions-header {
+    font-size: 14px;
+  }
+
+  .suggestions-list li {
+    font-size: 12px;
+  }
+
+  .modify-search-btn {
+    width: 100%;
+    padding: 14px 32px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 400px) {
+  .no-result-content {
+    padding: 28px 18px;
+  }
+
+  .no-result-title {
+    font-size: 22px;
+  }
+
+  .bus-svg {
+    width: 160px;
+  }
+
+  .route-info-card {
+    padding: 18px 14px;
+  }
+
+  .city-name {
+    font-size: 15px;
+  }
+
+  .date-text {
+    font-size: 13px;
+  }
+}
