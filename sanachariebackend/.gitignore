@@ -1,0 +1,28 @@
+# ============================================
+# SECURITY: Ignore sensitive files
+# ============================================
+
+# Environment variables containing secrets
+.env
+.env.local
+.env.production
+
+# Node modules
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build output
+dist/
+build/
