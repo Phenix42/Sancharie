@@ -1,7 +1,7 @@
 // Bus Booking API Service
 // Base URL should be configured in environment variables
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://www.stagingapi.bdsd.technology/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.bdsd.technology/api/";
 
 // API Authentication credentials - configure in environment variables
 const API_USERNAME = import.meta.env.VITE_API_USERNAME || "TTS";
