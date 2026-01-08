@@ -81,65 +81,81 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
   }, [searchTokenId, bus?.ResultIndex]);
 
   // Process seat layout data from API
-  // The API returns SeatDetails as a 2D array where each array is a row/section
-  // Each row contains seats that should be displayed together
-  const { lowerSeatGrid, upperSeatGrid } = React.useMemo(() => {
-    if (!seatLayout?.SeatDetails) return { lowerSeatGrid: [], upperSeatGrid: [] };
+  const processedSeats = React.useMemo(() => {
+    if (!seatLayout?.SeatDetails) return [];
     
-    const lowerGrid = [];
-    const upperGrid = [];
-    
-    // Process each row from the API
+    const allSeats = [];
     seatLayout.SeatDetails.forEach((row, rowIndex) => {
-      // Separate this row into upper and lower deck seats
-      const lowerRowSeats = [];
-      const upperRowSeats = [];
-      
-      row.forEach((seat, seatIndex) => {
-        // Detect aisle spaces: seats with very low price (0 or near 0) and SeatStatus false
-        // or seats positioned in typical aisle locations
-        const isAisle = !seat.SeatStatus && (
-          seat.SeatFare === 0 || 
-          seat.Price?.PublishedPrice === 0 ||
-          seat.SeatName?.toLowerCase().includes('aisle') ||
-          // Aisle detection: typically middle seats in a row with SeatStatus false
-          (!seat.IsLadiesSeat && !seat.IsMalesSeat && seat.SeatFare < 100)
-        );
+      row.forEach((seat, colIndex) => {
+        // Parse RowNo and ColumnNo properly - they come as strings like "000", "002"
+        // Use ColumnNo from seat data for proper positioning
+        const parsedRowNo = parseInt(seat.RowNo, 10);
+        const parsedColNo = parseInt(seat.ColumnNo, 10);
         
-        const processedSeat = {
-          id: `${seat.SeatName}-${rowIndex}-${seatIndex}`,
+        allSeats.push({
+          id: `${seat.SeatName}`,
           seatName: seat.SeatName,
           price: seat.SeatFare || seat.Price?.PublishedPrice || 0,
-          status: isAisle ? "aisle" : (seat.SeatStatus ? "available" : "booked"),
+          status: seat.SeatStatus ? "available" : "booked",
           isLadiesSeat: seat.IsLadiesSeat,
           isMalesSeat: seat.IsMalesSeat,
           isUpper: seat.IsUpper,
-          seatType: seat.SeatType,
+          rowNo: parsedRowNo,
+          columnNo: parsedColNo,
+          seatType: seat.SeatType, // 1 = Seater, 2 = Sleeper/Berth
           seatIndex: seat.SeatIndex,
           height: seat.Height || 1,
           width: seat.Width || 1,
-          isAisle: isAisle,
           fullData: seat,
-        };
-        
-        if (seat.IsUpper) {
-          upperRowSeats.push(processedSeat);
-        } else {
-          lowerRowSeats.push(processedSeat);
-        }
+        });
       });
-      
-      // Add non-empty rows to their respective grids
-      if (lowerRowSeats.length > 0) {
-        lowerGrid.push(lowerRowSeats);
-      }
-      if (upperRowSeats.length > 0) {
-        upperGrid.push(upperRowSeats);
+    });
+    return allSeats;
+  }, [seatLayout]);
+
+  // Determine bus type based on seat data
+  const busTypeInfo = React.useMemo(() => {
+    const seaterSeats = processedSeats.filter(s => s.seatType === 1);
+    const sleeperSeats = processedSeats.filter(s => s.seatType === 2);
+    
+    return {
+      hasSeater: seaterSeats.length > 0,
+      hasSleeper: sleeperSeats.length > 0,
+      isMixed: seaterSeats.length > 0 && sleeperSeats.length > 0,
+      seaterCount: seaterSeats.length,
+      sleeperCount: sleeperSeats.length,
+    };
+  }, [processedSeats]);
+
+  // Separate upper and lower deck seats
+  const upperSeats = processedSeats.filter(s => s.isUpper);
+  const lowerSeats = processedSeats.filter(s => !s.isUpper);
+
+  // Organize seats into a grid layout based on rowNo and columnNo
+  // This creates a 2D array where each cell contains a seat or null (empty space)
+  const organizeSeatsInGrid = (seats) => {
+    if (seats.length === 0) return { grid: [], maxRow: 0, maxCol: 0 };
+    
+    const maxRow = Math.max(...seats.map(s => s.rowNo)) + 1;
+    const maxCol = Math.max(...seats.map(s => s.columnNo)) + 1;
+    
+    // Create 2D grid initialized with null
+    const grid = Array(maxRow).fill(null).map(() => Array(maxCol).fill(null));
+    
+    // Place each seat in its correct position
+    seats.forEach(seat => {
+      const row = seat.rowNo;
+      const col = seat.columnNo;
+      if (row >= 0 && row < maxRow && col >= 0 && col < maxCol) {
+        grid[row][col] = seat;
       }
     });
     
-    return { lowerSeatGrid: lowerGrid, upperSeatGrid: upperGrid };
-  }, [seatLayout]);
+    return { grid, maxRow, maxCol };
+  };
+
+  const lowerSeatGrid = organizeSeatsInGrid(lowerSeats);
+  const upperSeatGrid = organizeSeatsInGrid(upperSeats);
 
   // Filter boarding and dropping points based on search
   const filteredBoardingPoints = React.useMemo(() => {
@@ -164,13 +180,17 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
     );
   }, [droppingPoints, droppingSearch]);
 
-  // Determine if bus is sleeper or seater based on BusType
-  const busType = bus?.BusType?.toLowerCase() || "";
-  const isSleeper = busType.includes("sleeper") || busType.includes("semi sleeper");
-  const isSeater = busType.includes("seater") && !isSleeper;
-  
-  // For mixed buses (seater/sleeper), check seat data
-  const hasMixedLayout = busType.includes("seater") && busType.includes("sleeper");
+  // Get bus type badge text
+  const getBusTypeBadge = () => {
+    if (busTypeInfo.isMixed) {
+      return `Mixed Layout (${busTypeInfo.seaterCount} Seats, ${busTypeInfo.sleeperCount} Sleepers)`;
+    } else if (busTypeInfo.hasSleeper) {
+      return `Sleeper (${busTypeInfo.sleeperCount} Berths)`;
+    } else if (busTypeInfo.hasSeater) {
+      return `Seater (${busTypeInfo.seaterCount} Seats)`;
+    }
+    return bus?.BusType || "Bus Layout";
+  };
 
   const toggleSeat = (seat) => {
     if (seat.status === "booked") return;
@@ -339,49 +359,62 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
       {/* HEADER */}
       <div className="selectseat-header">
         <h4>{bus?.TravelName || "Bus Seat Layout"}</h4>
-        <span className="bus-type-badge">{bus?.BusType}</span>
+        <span className="bus-type-badge">{getBusTypeBadge()}</span>
         <IoClose className="close-btn" onClick={onClose} />
       </div>
 
       <div className="selectseat-body">
         {/* ================= LEFT – BUS VIEW ================= */}
-        <div className={`bus-view ${isSleeper ? 'sleeper-layout' : 'seater-layout'}`}>
+        <div className={`bus-view ${busTypeInfo.isMixed ? 'mixed-layout' : busTypeInfo.hasSleeper ? 'sleeper-layout' : 'seater-layout'}`}>
           {/* LEGEND */}
           <div className="legend">
-            <span><i className={`box available ${isSleeper ? 'sleeper-box' : 'seater-box'}`} /> Available</span>
-            <span><i className={`box selected ${isSleeper ? 'sleeper-box' : 'seater-box'}`} /> Selected</span>
-            <span><i className={`box female ${isSleeper ? 'sleeper-box' : 'seater-box'}`} /> Female</span>
-            <span><i className={`box booked ${isSleeper ? 'sleeper-box' : 'seater-box'}`} /> Booked</span>
+            {busTypeInfo.isMixed && (
+              <>
+                <span><i className="legend-icon seat-icon available" /> Seat</span>
+                <span><i className="legend-icon sleeper-icon available" /> Sleeper</span>
+              </>
+            )}
+            {!busTypeInfo.isMixed && busTypeInfo.hasSleeper && (
+              <span><i className="legend-icon sleeper-icon available" /> Available</span>
+            )}
+            {!busTypeInfo.isMixed && busTypeInfo.hasSeater && (
+              <span><i className="legend-icon seat-icon available" /> Available</span>
+            )}
+            <span><i className={`legend-icon ${busTypeInfo.hasSleeper ? 'sleeper-icon' : 'seat-icon'} selected`} /> Selected</span>
+            <span><i className={`legend-icon ${busTypeInfo.hasSleeper ? 'sleeper-icon' : 'seat-icon'} female`} /> Female</span>
+            <span><i className={`legend-icon ${busTypeInfo.hasSleeper ? 'sleeper-icon' : 'seat-icon'} booked`} /> Booked</span>
           </div>
 
           {/* SEAT LAYOUT FROM API */}
-          {upperSeatGrid.length > 0 && (
+          {upperSeatGrid.maxRow > 0 && (
             <div className="deck">
               <div className="deck-label">Upper Deck</div>
-              <div className={isSleeper ? "sleeper-grid" : "seater-grid"}>
-                {upperSeatGrid.map((row, rowIdx) => (
-                  <div key={`upper-row-${rowIdx}`} className={`seat-row ${rowIdx === 0 ? 'front-row' : ''}`}>
+              <div className="seat-grid-container">
+                {upperSeatGrid.grid.map((row, rowIdx) => (
+                  <div key={`upper-row-${rowIdx}`} className="seat-row">
                     {row.map((seat, colIdx) => (
-                      seat.isAisle ? (
+                      seat ? (
                         <div
                           key={seat.id}
-                          className={`seat-wrapper ${!isSleeper ? 'seater-wrapper' : ''} aisle-space`}
-                        >
-                          <div className="aisle"></div>
-                        </div>
-                      ) : (
-                        <div
-                          key={seat.id}
-                          className={`seat-wrapper ${!isSleeper ? 'seater-wrapper' : ''}`}
+                          className="seat-wrapper"
                         >
                           <div
-                            className={`${isSleeper ? 'sleeper' : 'seat'} ${seat.status} ${seat.isLadiesSeat ? 'female' : ''} ${selectedSeats.some(sel => sel.id === seat.id) ? "active" : ""}`}
+                            className={`
+                              ${seat.seatType === 2 ? 'sleeper' : 'seat'}
+                              ${seat.status}
+                              ${seat.isLadiesSeat ? 'female' : ''}
+                              ${seat.isMalesSeat ? 'male' : ''}
+                              ${selectedSeats.some(sel => sel.id === seat.id) ? 'active' : ''}
+                            `}
                             onClick={() => toggleSeat(seat)}
+                            title={`${seat.seatName} - ₹${seat.price} ${seat.isLadiesSeat ? '(Ladies Only)' : seat.isMalesSeat ? '(Gents Only)' : ''}`}
                           >
+                            <div className="seat-tooltip">{seat.seatName}</div>
                             <span className="seat-price">₹{seat.price}</span>
-                            <span className="seat-tooltip">{seat.seatName}</span>
                           </div>
                         </div>
+                      ) : (
+                        <div key={`empty-upper-${rowIdx}-${colIdx}`} className="seat-wrapper empty-seat"></div>
                       )
                     ))}
                   </div>
@@ -394,31 +427,34 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
           <div className="deck-section lower-with-steering">
             <div className="driver">
               <GiSteeringWheel size={28} />
+              <span className="driver-label">Driver</span>
             </div>
-            <div className={isSleeper ? "sleeper-grid" : "seater-grid"}>
-              {lowerSeatGrid.map((row, rowIdx) => (
-                <div key={`lower-row-${rowIdx}`} className={`seat-row ${rowIdx === 0 ? 'front-row' : ''}`}>
+            <div className="seat-grid-container">
+              {lowerSeatGrid.grid.map((row, rowIdx) => (
+                <div key={`lower-row-${rowIdx}`} className="seat-row">
                   {row.map((seat, colIdx) => (
-                    seat.isAisle ? (
+                    seat ? (
                       <div
                         key={seat.id}
-                        className={`seat-wrapper ${!isSleeper ? 'seater-wrapper' : ''} aisle-space`}
-                      >
-                        <div className="aisle"></div>
-                      </div>
-                    ) : (
-                      <div
-                        key={seat.id}
-                        className={`seat-wrapper ${!isSleeper ? 'seater-wrapper' : ''}`}
+                        className="seat-wrapper"
                       >
                         <div
-                          className={`${isSleeper ? 'sleeper' : 'seat'} ${seat.status} ${seat.isLadiesSeat ? 'female' : ''} ${selectedSeats.some(sel => sel.id === seat.id) ? "active" : ""}`}
+                          className={`
+                            ${seat.seatType === 2 ? 'sleeper' : 'seat'}
+                            ${seat.status}
+                            ${seat.isLadiesSeat ? 'female' : ''}
+                            ${seat.isMalesSeat ? 'male' : ''}
+                            ${selectedSeats.some(sel => sel.id === seat.id) ? 'active' : ''}
+                          `}
                           onClick={() => toggleSeat(seat)}
+                          title={`${seat.seatName} - ₹${seat.price} ${seat.isLadiesSeat ? '(Ladies Only)' : seat.isMalesSeat ? '(Gents Only)' : ''}`}
                         >
+                          <div className="seat-tooltip">{seat.seatName}</div>
                           <span className="seat-price">₹{seat.price}</span>
-                          <span className="seat-tooltip">{seat.seatName}</span>
                         </div>
                       </div>
+                    ) : (
+                      <div key={`empty-lower-${rowIdx}-${colIdx}`} className="seat-wrapper empty-seat"></div>
                     )
                   ))}
                 </div>

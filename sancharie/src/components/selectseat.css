@@ -175,12 +175,75 @@
   font-size: 12px;
   margin-bottom: 20px;
   color: #555;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
 .legend span {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-weight: 500;
+}
+
+/* Legend icons */
+.legend-icon {
+  display: inline-block;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.legend-icon.seat-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  border: 2px solid;
+}
+
+.legend-icon.seat-icon::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 2px;
+  bottom: 2px;
+  width: 6px;
+  background: inherit;
+  border: 2px solid;
+  border-color: inherit;
+  border-right: none;
+  border-radius: 3px 0 0 3px;
+}
+
+.legend-icon.sleeper-icon {
+  width: 45px;
+  height: 18px;
+  border-radius: 6px;
+  border: 2px solid;
+}
+
+.legend-icon.available,
+.box.available {
+  background: #fff;
+  border-color: #ccc;
+}
+
+.legend-icon.selected,
+.box.selected {
+  background: #c8e6c9;
+  border-color: #4caf50;
+}
+
+.legend-icon.female,
+.box.female {
+  background: #fce4ec;
+  border-color: #f06292;
+}
+
+.legend-icon.booked,
+.box.booked {
+  background: #bdbdbd;
+  border-color: #9e9e9e;
 }
 
 .box {
@@ -283,23 +346,43 @@
 
 .driver {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 38px;
-  height: 38px;
+  gap: 4px;
   background: #fff;
-  border-radius: 50%;
+  border-radius: 8px;
   color: #666;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   margin-top: 6px;
   flex-shrink: 0;
+  padding: 8px 4px;
+}
+
+.driver-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: #666;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
 }
 
 /* ========== SEATER GRID ========== */
+.seat-grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 10px;
+}
+
 .seater-grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   padding: 10px;
   background: #f5f5f5;
   border-radius: 10px;
@@ -308,7 +391,7 @@
 /* Seat Row */
 .seat-row {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -323,36 +406,18 @@
   position: relative;
 }
 
-/* Empty seat placeholder */
+/* Empty seat placeholder - default for seater */
 .seat-wrapper.empty-seat {
-  width: 40px;
-  height: 32px;
+  width: 3px;
+  height: 30px;
   visibility: hidden;
-}
-
-/* Aisle space */
-.seat-wrapper.aisle-space {
-  width: 24px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.seat-wrapper.aisle-space .aisle {
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border-left: 1px dashed #d0d0d0;
-  border-right: 1px dashed #d0d0d0;
-  opacity: 0.5;
 }
 
 .seater-wrapper {
   display: flex;
   flex-direction: row;
   align-items: center;
-}
+} 
 
 /* ========== SEAT PRICE (inside seat) ========== */
 .seat-price {
@@ -402,17 +467,33 @@
 
 /* ========== SEAT STYLING ========== */
 .seat {
-  width: 40px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   background: #fff;
   border: 2px solid #ccc;
-  border-radius: 4px 8px 8px 4px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
+}
+
+.seat::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 3px;
+  bottom: 3px;
+  width: 6px;
+  background: inherit;
+  border: 2px solid;
+  border-color: inherit;
+  border-right: none;
+  border-radius: 3px 0 0 3px;
 }
 
 .seat::before {
@@ -476,17 +557,31 @@
 }
 
 .seat.booked .seat-price {
-  color: #777;
+  display: none;
 }
 
 .seat.female {
-  background: #fce4ec;
   border-color: #f06292;
 }
 
 .seat.female::before {
-  background: #fce4ec;
   border-color: #f06292;
+}
+
+.seat.female.available {
+  background: #fff;
+}
+
+.seat.female.available::before {
+  background: #fff;
+}
+
+.seat.female.booked {
+  background: #fce4ec;
+}
+
+.seat.female.booked::before {
+  background: #fce4ec;
 }
 
 .seat.female .seat-price {
@@ -497,58 +592,60 @@
   color: #2e7d32;
 }
 
+.seat.male {
+  background: #e3f2fd;
+  border-color: #64b5f6;
+}
+
+.seat.male::before {
+  background: #e3f2fd;
+  border-color: #64b5f6;
+}
+
+.seat.male .seat-price {
+  color: #1976d2;
+}
+
 /* ========== SLEEPER GRID ========== */
 .sleeper-grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .sleeper-grid .seat-row {
   display: flex;
-  gap: 4px;
+  gap: 3px;
 }
 
 .sleeper-grid .seat-row.front-row {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .sleeper-grid .seat-wrapper.empty-seat {
-  width: 58px;
-  height: 32px;
+  width: 3px;
+  height: 30px;
   visibility: hidden;
-}
-
-/* Aisle space for sleeper layout */
-.sleeper-grid .seat-wrapper.aisle-space {
-  width: 32px;
-  height: 32px;
-}
-
-.sleeper-grid .seat-wrapper.aisle-space .aisle {
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border-left: 1px dashed #d0d0d0;
-  border-right: 1px dashed #d0d0d0;
-  opacity: 0.5;
 }
 
 .sleeper {
   position: relative;
   min-width: 58px;
-  height: 32px;
+  height: 30px;
   background: #d8d8d8;
   border-radius: 6px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  gap: 1px;
+  padding: 2px 6px;
 }
 
 .sleeper .seat-price {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   color: #555;
 }
@@ -579,7 +676,7 @@
 }
 
 .sleeper.booked .seat-price {
-  color: #777;
+  display: none;
 }
 
 .sleeper.booked .seat-tooltip {
@@ -591,12 +688,28 @@
 }
 
 .sleeper.female {
-  background: #fce4ec;
   border: 2px solid #f06292;
+}
+
+.sleeper.female.available {
+  background: #fff;
+}
+
+.sleeper.female.booked {
+  background: #fce4ec;
 }
 
 .sleeper.female .seat-price {
   color: #c2185b;
+}
+
+.sleeper.male {
+  background: #e3f2fd;
+  border: 2px solid #64b5f6;
+}
+
+.sleeper.male .seat-price {
+  color: #1976d2;
 }
 
 /* ========== SELECTED SUMMARY ========== */
