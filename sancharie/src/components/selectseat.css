@@ -421,7 +421,7 @@
 
 /* ========== SEAT PRICE (inside seat) ========== */
 .seat-price {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 600;
   color: #555;
   display: flex;
@@ -467,8 +467,8 @@
 
 /* ========== SEAT STYLING ========== */
 .seat {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   background: #fff;
   border: 2px solid #ccc;
   border-radius: 4px;
@@ -592,18 +592,18 @@
   color: #2e7d32;
 }
 
-.seat.male {
-  background: #e3f2fd;
-  border-color: #64b5f6;
+.seat.female.active {
+  background: #fff;
+  border-color: #4caf50;
 }
 
-.seat.male::before {
-  background: #e3f2fd;
-  border-color: #64b5f6;
+.seat.female.active::before {
+  background: #fff;
+  border-color: #4caf50;
 }
 
-.seat.male .seat-price {
-  color: #1976d2;
+.seat.female.active .seat-price {
+  color: #2e7d32;
 }
 
 /* ========== SLEEPER GRID ========== */
@@ -703,13 +703,13 @@
   color: #c2185b;
 }
 
-.sleeper.male {
-  background: #e3f2fd;
-  border: 2px solid #64b5f6;
+.sleeper.female.active {
+  background: #fff;
+  border: 2px solid #4caf50;
 }
 
-.sleeper.male .seat-price {
-  color: #1976d2;
+.sleeper.female.active .seat-price {
+  color: #2e7d32;
 }
 
 /* ========== SELECTED SUMMARY ========== */
