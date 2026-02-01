@@ -72,24 +72,6 @@
   transform: translateY(-4px);
 }
 
-/* Make non-featured cards turn yellow on hover and adjust text/icon colors */
-.service-card:not(.featured):hover {
-  background: #A37226;
-  color: #ffffff;
-}
-
-.service-card:not(.featured):hover .service-card-title {
-  color: #ffffff;
-}
-
-.service-card:not(.featured):hover .service-card-description {
-  color: #F1E6D0;
-}
-
-.service-card:not(.featured):hover .service-icon-wrapper {
-  background: #e6e6e6;
-}
-
 /* Staggered layout for cards */
 .service-card.offset-down {
   margin-top: 50px;
@@ -106,18 +88,13 @@
 
 /* Featured Card (Gold/Orange) */
 .service-card.featured {
-  /* Make featured card white by default (so 'Faster Booking Experience' appears white)
-     but keep a subtle border/shadow to distinguish it. */
-  background: #ffffff;
-  color: #000000;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-  border: 1px solid #f2f2f2;
+  background: #A37226;
+  color: white;
+  box-shadow: 3px 4px 4px rgba(0, 0, 0, 0.25);
 }
 
 .service-card.featured:hover {
-  /* On hover, featured card can still switch to the yellow/gold tone for emphasis */
-  background: #A37226;
-  color: #ffffff;
+  background: #8A5F1E;
 }
 
 /* Icon Wrapper */
@@ -133,12 +110,11 @@
 }
 
 .service-card.featured .service-icon-wrapper {
-  background: #e6e6e6;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .service-icon {
   font-size: 24px;
-  color: #333333;
 }
 
 /* Card Title */
@@ -153,7 +129,7 @@
 }
 
 .service-card.featured .service-card-title {
-  color: #000000;
+  color: white;
 }
 
 /* Card Description */
@@ -168,11 +144,7 @@
 }
 
 .service-card.featured .service-card-description {
-  color: #333333;
-}
-
-.service-card.featured .service-icon {
-  color: #000000;
+  color: #D9D9D9;
 }
 
 /* Responsive Design */

@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Login.css";
 import { IoClose } from "react-icons/io5";
-import { FaPhone, FaMobileAlt } from "react-icons/fa";
+import { FaPhone, FaMobileAlt, FaShieldAlt } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import Logo from "../../assets/logosan.svg";
 // Import our secure API service
 // SECURITY: This service calls our backend ONLY, never the SMS provider directly
-import { sendOTP, verifyOTP, resendOTP } from "../../services/authApi";
+import { auth } from "../../services/api";
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [step, setStep] = useState("phone"); // "phone" or "otp"
@@ -17,6 +17,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [showGooglePopup, setShowGooglePopup] = useState(false);
   
   const otpRefs = useRef([]);
 
@@ -43,6 +44,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       setCanResend(false);
       setError("");
       setSuccessMessage("");
+      setShowGooglePopup(false);
     }
   }, [isOpen]);
 
@@ -71,7 +73,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     
     // SECURITY: Call our backend API, NOT the SMS provider directly
     // The backend handles all SMS API credentials securely
-    const result = await sendOTP(phoneNumber);
+    const result = await auth.sendOTP(phoneNumber);
     
     setIsLoading(false);
     
@@ -138,7 +140,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     
     // SECURITY: OTP verification happens on the backend
     // Backend validates, expires, and deletes used OTPs
-    const result = await verifyOTP(phoneNumber, otpValue);
+    const result = await auth.verifyOTP(phoneNumber, otpValue);
     
     if (result.success) {
       // Login successful!
@@ -171,7 +173,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     setOtp(["", "", "", "", "", ""]);
     
     // SECURITY: Resend OTP through our backend
-    const result = await resendOTP(phoneNumber);
+    const result = await auth.resendOTP(phoneNumber);
     
     setIsLoading(false);
     
@@ -263,10 +265,26 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               <span>OR</span>
             </div>
 
-            <button className="google-sign-in-btn" onClick={() => alert('Google Sign In clicked!')}>
+            <button className="google-sign-in-btn" onClick={() => setShowGooglePopup(true)}>
               <FcGoogle />
               <span>Continue with Google</span>
             </button>
+
+            {/* Google Configuration Popup */}
+            {showGooglePopup && (
+              <div className="google-popup-overlay" onClick={() => setShowGooglePopup(false)}>
+                <div className="google-popup" onClick={(e) => e.stopPropagation()}>
+                  <div className="google-popup-icon">
+                    <FcGoogle />
+                  </div>
+                  <h3>Coming Soon!</h3>
+                  <p>Google configuration is currently in progress. Please continue with your mobile number for now.</p>
+                  <button className="google-popup-btn" onClick={() => setShowGooglePopup(false)}>
+                    Got it, use Mobile Number
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -278,7 +296,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             </button>
 
             <div className="otp-illustration">
-              <div className="otp-icon">🔐</div>
+              <div className="otp-icon"><FaShieldAlt /></div>
             </div>
 
             <div className={`form-group ${error ? 'error' : ''}`}>

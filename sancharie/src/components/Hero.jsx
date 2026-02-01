@@ -1,8 +1,6 @@
 import React from 'react'
 import './Hero.css'
-import busImage from '../assets/bus1.png'
-import busLightImage from '../assets/buslight.png'
-import bgImage from '../assets/bgimage.png'
+import bgImage from '../assets/bgimage2.svg'
 
 function Hero() {
   return (
@@ -10,31 +8,10 @@ function Hero() {
       <div className="hero-background">
         <img 
           src={bgImage}
-          alt="Mountain landscape with rainbow" 
+          alt="Mountain landscape" 
           className="hero-bg-image" 
         />
-        <div className="hero-overlay"></div>
       </div>
-      
-      <div className="hero-content">
-        <h1 className="hero-title">SANCHARIE</h1>
-        <p className="hero-subtitle">Your Trusted Partner for Every Journey</p>
-      </div>
-
-      <div className="bus-image-container">
-        <img 
-          src={busImage}
-          alt="Sancharie Bus" 
-          className="hero-bus-image" 
-        />
-        <img 
-          src={busLightImage}
-          alt="Bus Light Effect" 
-          className="hero-bus-light" 
-        />
-      </div>
-
-      <div className="hero-wave"></div>
     </section>
   )
 }

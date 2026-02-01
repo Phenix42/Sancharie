@@ -7,8 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from './Header';
 import Footer from './Footer';
-import { generateTicketPDF } from '../services/ticketPdf';
-import { cancelBooking } from '../services/busApi';
+import { generateTicketPDF } from '../utils/ticketGenerator';
+import { bus } from '../services/api';
 import './MyBookings.css';
 
 export default function MyBookings() {
@@ -210,12 +210,12 @@ export default function MyBookings() {
       
       const seatId = seatIds[0] || cancellingBooking.seatId || '0';
 
-      const result = await cancelBooking(
-        cancellingBooking.searchTokenId || cancellingBooking.tokenId,
-        cancellingBooking.apiBookingId || cancellingBooking.bookingId,
+      const result = await bus.cancelBooking({
+        searchTokenId: cancellingBooking.searchTokenId || cancellingBooking.tokenId,
+        bookingId: cancellingBooking.apiBookingId || cancellingBooking.bookingId,
         seatId,
-        'User requested cancellation'
-      );
+        remarks: 'User requested cancellation'
+      });
 
       if (result.responseStatus === 1 || result.traceId) {
         setCancelSuccess('Ticket cancelled successfully! Refund will be processed as per cancellation policy.');

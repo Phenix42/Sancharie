@@ -1,14 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./Details.css";
-import { IoArrowBack } from "react-icons/io5";
-import { blockSeat } from "../services/busApi";
+import { 
+  ArrowLeft, 
+  User, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Clock, 
+  Shield, 
+  CreditCard, 
+  Tag, 
+  Bus, 
+  CheckCircle2,
+  ChevronRight,
+  Armchair,
+  Info,
+  Lock,
+  Gift,
+  Percent
+} from "lucide-react";
+import { bus as busApi } from "../services/api";
 import { useBooking } from "../context/BookingContext";
+import { useToast } from "./Toast";
 
 export default function Details() {
   const location = useLocation();
   const navigate = useNavigate();
   const { actions } = useBooking();
+  const toast = useToast();
   
   // Get data from navigation state
   const stateData = location.state || {};
@@ -52,17 +72,26 @@ export default function Details() {
   // Redirect to home if no booking data
   if (!fareData || !selectedSeats) {
     return (
-      <div className="details-container">
-        <div className="details-header">
-          <div className="header-left">
-            <IoArrowBack className="back-icon" onClick={() => navigate('/')} />
-            <h4>No Booking Data</h4>
+      <div className="details-page">
+        <div className="details-container">
+          <div className="details-header">
+            <div className="header-left">
+              <button className="back-btn" onClick={() => navigate('/')}>
+                <ArrowLeft size={20} />
+              </button>
+              <h4>No Booking Data</h4>
+            </div>
           </div>
-        </div>
-        <div className="details-body">
-          <div className="no-data">
-            <p>No booking data found. Please select seats first.</p>
-            <button onClick={() => navigate('/')}>Go Back to Home</button>
+          <div className="no-data-state">
+            <div className="no-data-icon">
+              <Bus size={48} />
+            </div>
+            <h3>No Booking Data Found</h3>
+            <p>Please select seats first to continue with your booking.</p>
+            <button className="primary-btn" onClick={() => navigate('/')}>
+              <ArrowLeft size={16} />
+              Go Back to Search
+            </button>
           </div>
         </div>
       </div>
@@ -91,17 +120,17 @@ export default function Details() {
     for (let i = 0; i < passengers.length; i++) {
       const p = passengers[i];
       if (!p.name) {
-        alert(`Please enter name for Passenger ${i + 1} (Seat ${p.seatNumber})`);
+        toast.warning(`Please enter name for Passenger ${i + 1} (Seat ${p.seatNumber})`);
         return;
       }
     }
     // Validate contact details
     if (!contactDetails.phone) {
-      alert("Please enter phone number");
+      toast.warning("Please enter phone number");
       return;
     }
     if (!contactDetails.state) {
-      alert("Please select state of residence");
+      toast.warning("Please select state of residence");
       return;
     }
     
@@ -117,13 +146,14 @@ export default function Details() {
         address: contactDetails.state,
       }));
       
-      const blockSeatResponse = await blockSeat(
-        bus?.searchTokenId,
-        bus?.resultIndex || bus?.ResultIndex,
-        boardingPoint?.id,
-        droppingPoint?.id,
-        passengersWithContact
-      );
+      const blockSeatResponse = await busApi.blockSeat({
+        bus,
+        boardingPoint,
+        droppingPoint,
+        passengers: passengersWithContact,
+        contactDetails,
+        fareData,
+      });
       
       // Store block seat response in context
       actions.setBlockSeatData(blockSeatResponse);
@@ -146,7 +176,7 @@ export default function Details() {
       });
     } catch (error) {
       console.error("Block seat error:", error);
-      alert(`Failed to block seats: ${error.message}`);
+      toast.error(`Failed to block seats: ${error.message}`);
     } finally {
       setIsBlocking(false);
     }
@@ -158,32 +188,108 @@ export default function Details() {
 
   return (
     <div className="details-page">
+      {/* Progress Steps */}
+      <div className="booking-progress">
+        <div className="progress-step completed">
+          <div className="step-icon"><CheckCircle2 size={18} /></div>
+          <span>Select Seat</span>
+        </div>
+        <div className="progress-line completed"></div>
+        <div className="progress-step active">
+          <div className="step-icon"><User size={18} /></div>
+          <span>Passenger Info</span>
+        </div>
+        <div className="progress-line"></div>
+        <div className="progress-step">
+          <div className="step-icon"><CreditCard size={18} /></div>
+          <span>Payment</span>
+        </div>
+      </div>
+
       <div className="details-container">
         {/* HEADER */}
         <div className="details-header">
           <div className="header-left">
-            <IoArrowBack className="back-icon" onClick={handleBack} />
-            <h4>Booking Details</h4>
+            <button className="back-btn" onClick={handleBack}>
+              <ArrowLeft size={20} />
+            </button>
+            <div className="header-info">
+              <h4>Complete Your Booking</h4>
+              <p>Fill in passenger details to proceed</p>
+            </div>
+          </div>
+          <div className="header-badge">
+            <Lock size={14} />
+            <span>Secure Booking</span>
           </div>
         </div>
 
       <div className="details-body">
         {/* LEFT SIDE - PASSENGER DETAILS (70%) */}
         <div className="passenger-section">
+          {/* Bus Summary Card */}
+          <div className="bus-summary-card">
+            <div className="bus-summary-header">
+              <Bus size={20} />
+              <span>Journey Summary</span>
+            </div>
+            <div className="bus-summary-content">
+              <div className="bus-operator">
+                <strong>{bus?.TravelName || bus?.name || "Bus Operator"}</strong>
+                <span className="bus-type-badge">{bus?.BusType || bus?.type || "A/C Sleeper"}</span>
+              </div>
+              <div className="journey-route">
+                <div className="route-point">
+                  <div className="point-marker start"></div>
+                  <div className="point-info">
+                    <span className="point-time">{boardingPoint?.time}</span>
+                    <span className="point-name">{boardingPoint?.name}</span>
+                  </div>
+                </div>
+                <div className="route-line">
+                  <ChevronRight size={16} />
+                </div>
+                <div className="route-point">
+                  <div className="point-marker end"></div>
+                  <div className="point-info">
+                    <span className="point-time">{droppingPoint?.time}</span>
+                    <span className="point-name">{droppingPoint?.name}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="section-card">
-            <h3>Passenger Details</h3>
-            <p className="section-subtitle">Please enter details for {selectedSeats.length} passenger{selectedSeats.length > 1 ? 's' : ''}</p>
+            <div className="section-header">
+              <div className="section-icon">
+                <User size={20} />
+              </div>
+              <div className="section-title-group">
+                <h3>Passenger Details</h3>
+                <p className="section-subtitle">Enter details for {selectedSeats.length} passenger{selectedSeats.length > 1 ? 's' : ''}</p>
+              </div>
+            </div>
 
             {passengers.map((passenger, index) => (
               <div key={passenger.seatNumber} className="passenger-form">
                 <div className="passenger-header">
-                  <span className="passenger-number">Passenger {index + 1}</span>
-                  <span className="seat-tag">Seat {passenger.seatNumber}</span>
+                  <div className="passenger-info">
+                    <span className="passenger-number">Passenger {index + 1}</span>
+                    {index === 0 && <span className="primary-badge">Primary</span>}
+                  </div>
+                  <div className="seat-tag">
+                    <Armchair size={14} />
+                    <span>Seat {passenger.seatNumber}</span>
+                  </div>
                 </div>
 
                 <div className="form-row three-cols">
                   <div className="form-group">
-                    <label>Full Name <span className="required">*</span></label>
+                    <label>
+                      <User size={14} />
+                      Full Name <span className="required">*</span>
+                    </label>
                     <input
                       type="text"
                       name="name"
@@ -224,29 +330,37 @@ export default function Details() {
 
           {/* CONTACT DETAILS */}
           <div className="section-card contact-card">
-            <h3>Contact Details</h3>
-            <p className="section-subtitle">Ticket details will be sent to</p>
+            <div className="section-header">
+              <div className="section-icon">
+                <Phone size={20} />
+              </div>
+              <div className="section-title-group">
+                <h3>Contact Details</h3>
+                <p className="section-subtitle">Ticket details will be sent here</p>
+              </div>
+            </div>
 
             <div className="contact-form">
               <div className="phone-input-group">
                 <div className="country-code">
-                  <span className="code-label">Country Code</span>
+                  <span className="code-label">Country</span>
                   <select
                     name="countryCode"
                     value={contactDetails.countryCode}
                     onChange={handleContactChange}
                   >
-                    <option value="+91">+91 (IND) ▼</option>
-                    <option value="+1">+1 (USA)</option>
-                    <option value="+44">+44 (UK)</option>
-                    <option value="+971">+971 (UAE)</option>
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+971">🇦🇪 +971</option>
                   </select>
                 </div>
                 <div className="phone-field">
+                  <Phone size={18} className="field-icon" />
                   <input
                     type="tel"
                     name="phone"
-                    placeholder="Phone *"
+                    placeholder="Enter phone number *"
                     value={contactDetails.phone}
                     onChange={handleContactChange}
                     required
@@ -254,16 +368,20 @@ export default function Details() {
                 </div>
               </div>
 
-              <input
-                type="email"
-                name="email"
-                placeholder="Email ID"
-                value={contactDetails.email}
-                onChange={handleContactChange}
-                className="contact-input"
-              />
+              <div className="input-with-icon">
+                <Mail size={18} className="field-icon" />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email ID (for ticket confirmation)"
+                  value={contactDetails.email}
+                  onChange={handleContactChange}
+                  className="contact-input"
+                />
+              </div>
 
-              <div className="state-wrapper">
+              <div className="input-with-icon state-wrapper">
+                <MapPin size={18} className="field-icon" />
                 <select
                   name="state"
                   value={contactDetails.state}
@@ -271,7 +389,7 @@ export default function Details() {
                   className="contact-input"
                   required
                 >
-                  <option value="">State of Residence *</option>
+                  <option value="">Select State of Residence *</option>
                   <option value="AP">Andhra Pradesh</option>
                   <option value="TS">Telangana</option>
                   <option value="KA">Karnataka</option>
@@ -288,16 +406,19 @@ export default function Details() {
                   <option value="BR">Bihar</option>
                   <option value="PB">Punjab</option>
                 </select>
-                <span className="gst-note">Required for GST Tax Invoicing</span>
+                <span className="input-hint">Required for GST invoicing</span>
               </div>
 
               <div className="whatsapp-toggle">
                 <div className="whatsapp-icon">
-                  <svg viewBox="0 0 24 24" width="28" height="28" fill="#25D366">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="#25D366">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                   </svg>
                 </div>
-                <span className="whatsapp-text">Send booking details and trip updates on WhatsApp</span>
+                <div className="whatsapp-content">
+                  <span className="whatsapp-title">WhatsApp Updates</span>
+                  <span className="whatsapp-text">Get booking details & trip updates</span>
+                </div>
                 <label className="toggle-switch">
                   <input
                     type="checkbox"
@@ -314,28 +435,57 @@ export default function Details() {
           {/* SANCHARIE ASSURANCE */}
           <div className="section-card assurance-card">
             <div className="assurance-header">
+              <div className="assurance-icon">
+                <Shield size={24} />
+              </div>
               <div className="assurance-title">
                 <h3>Sancharie Assurance</h3>
                 <span className="assurance-price">₹{assurancePrice} per passenger</span>
               </div>
               <div className="assurance-badge">
-                <span>🛡️</span>
+                <span>Recommended</span>
               </div>
             </div>
 
-            <div className="assurance-info">
-              <p className="assurance-highlight">If your bus gets cancelled, you get</p>
-              <div className="refund-amount">₹{fareData.baseFare + 500}</div>
-              <p className="refund-breakdown">₹{fareData.baseFare} + ₹500 (extra cashback)</p>
-              <p className="coverage-text">
-                Includes coverage of ₹75,000 for hospitalisation and ₹5,00,000 in case of death, PTD or PPD.
-              </p>
-              <a href="#" className="terms-link">Terms and conditions</a>
+            <div className="assurance-benefits">
+              <div className="benefit-card">
+                <div className="benefit-icon refund">
+                  <CreditCard size={20} />
+                </div>
+                <div className="benefit-info">
+                  <span className="benefit-label">If bus cancelled, get</span>
+                  <span className="benefit-value">₹{fareData.baseFare + 500}</span>
+                  <span className="benefit-breakdown">₹{fareData.baseFare} + ₹500 bonus</span>
+                </div>
+              </div>
+              <div className="benefit-card">
+                <div className="benefit-icon medical">
+                  <Shield size={20} />
+                </div>
+                <div className="benefit-info">
+                  <span className="benefit-label">Medical Coverage</span>
+                  <span className="benefit-value">₹75,000</span>
+                  <span className="benefit-breakdown">Hospitalization</span>
+                </div>
+              </div>
+              <div className="benefit-card">
+                <div className="benefit-icon life">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div className="benefit-info">
+                  <span className="benefit-label">Accidental Cover</span>
+                  <span className="benefit-value">₹5,00,000</span>
+                  <span className="benefit-breakdown">Death/PTD/PPD</span>
+                </div>
+              </div>
             </div>
 
             <div className="assurance-options">
               <label className={`assurance-option ${assurance === 'yes' ? 'selected' : ''}`}>
-                <span>Yes, protect my trip at ₹{assurancePrice * selectedSeats.length} ({selectedSeats.length} passenger{selectedSeats.length > 1 ? 's' : ''})</span>
+                <div className="option-content">
+                  <CheckCircle2 size={18} className={assurance === 'yes' ? 'checked' : ''} />
+                  <span>Yes, protect my trip at ₹{assurancePrice * selectedSeats.length}</span>
+                </div>
                 <input
                   type="radio"
                   name="assurance"
@@ -347,7 +497,9 @@ export default function Details() {
               </label>
 
               <label className={`assurance-option ${assurance === 'no' ? 'selected' : ''}`}>
-                <span>Don't add Sancharie Assurance</span>
+                <div className="option-content">
+                  <span>No, I'll skip the protection</span>
+                </div>
                 <input
                   type="radio"
                   name="assurance"
@@ -358,45 +510,29 @@ export default function Details() {
                 <span className="radio-circle"></span>
               </label>
             </div>
-          </div>
 
-          {/* JOURNEY DETAILS */}
-          <div className="section-card journey-card">
-            <h3>Journey Details</h3>
-            <div className="journey-info">
-              <div className="journey-point">
-                <span className="label">Boarding Point</span>
-                <strong>{boardingPoint?.name}</strong>
-                <span className="time">{boardingPoint?.time}</span>
-                <p className="desc">{boardingPoint?.desc}</p>
-              </div>
-              <div className="journey-divider">
-                <div className="divider-line"></div>
-                <span className="divider-icon">→</span>
-                <div className="divider-line"></div>
-              </div>
-              <div className="journey-point">
-                <span className="label">Dropping Point</span>
-                <strong>{droppingPoint?.name}</strong>
-                <span className="time">{droppingPoint?.time}</span>
-                <p className="desc">{droppingPoint?.desc}</p>
-              </div>
-            </div>
+            <a href="#" className="terms-link">
+              <Info size={14} />
+              View Terms & Conditions
+            </a>
           </div>
         </div>
 
         {/* RIGHT SIDE - FARE DETAILS (30%) */}
         <div className="fare-section">
           <div className="fare-card">
-            <h3>Fare Details</h3>
-            
-            <div className="bus-info">
-              <strong>{bus?.name || "Bus"}</strong>
-              <span className="bus-type">{bus?.type || "Sleeper"}</span>
+            <div className="fare-card-header">
+              <h3>
+                <CreditCard size={18} />
+                Fare Summary
+              </h3>
             </div>
 
-            <div className="selected-seats">
-              <span className="label">Selected Seats</span>
+            <div className="selected-seats-display">
+              <div className="seats-header">
+                <Armchair size={16} />
+                <span>Selected Seats ({selectedSeats.length})</span>
+              </div>
               <div className="seats-list">
                 {selectedSeats.map((seat, index) => (
                   <span key={seat.seatName || index} className="seat-badge">{seat.seatName || seat}</span>
@@ -406,20 +542,31 @@ export default function Details() {
 
             <div className="fare-breakdown">
               <div className="fare-row">
-                <span>Base Fare ({fareData.seatCount} seats)</span>
+                <span>Base Fare ({fareData.seatCount} seat{fareData.seatCount > 1 ? 's' : ''})</span>
                 <span>₹{fareData.baseFare}</span>
               </div>
               <div className="fare-row">
-                <span>GST (5%)</span>
-                <span>₹{fareData.gst}</span>
+                <span>GST/Service Tax</span>
+                <span>₹{fareData.serviceTax || fareData.gst || 0}</span>
               </div>
-              <div className="fare-row">
-                <span>Service Charge</span>
-                <span>₹{fareData.serviceCharge}</span>
-              </div>
+              {(fareData.operatorCharge > 0 || fareData.serviceCharge > 0) && (
+                <div className="fare-row">
+                  <span>Service Charge</span>
+                  <span>₹{fareData.operatorCharge || fareData.serviceCharge || 0}</span>
+                </div>
+              )}
+              {assurance === 'yes' && (
+                <div className="fare-row assurance-row">
+                  <span>
+                    <Shield size={14} />
+                    Sancharie Assurance
+                  </span>
+                  <span>₹{assurancePrice * selectedSeats.length}</span>
+                </div>
+              )}
               <div className="fare-row total">
                 <span>Total Amount</span>
-                <span>₹{fareData.totalFare}</span>
+                <span>₹{fareData.totalFare + (assurance === 'yes' ? assurancePrice * selectedSeats.length : 0)}</span>
               </div>
             </div>
 
@@ -428,24 +575,22 @@ export default function Details() {
               onClick={handleProceedToPayment}
               disabled={isBlocking}
             >
-              {isBlocking ? "Blocking Seats..." : "Proceed to Payment"}
+              {isBlocking ? (
+                <>
+                  <span className="btn-loader"></span>
+                  Blocking Seats...
+                </>
+              ) : (
+                <>
+                  Proceed to Payment
+                  <ChevronRight size={18} />
+                </>
+              )}
             </button>
 
-            <p className="secure-text">
-              🔒 Your payment is secured with SSL encryption
-            </p>
-          </div>
-
-          {/* OFFERS CARD */}
-          <div className="offers-card">
-            <h4>Available Offers</h4>
-            <div className="offer-item">
-              <span className="offer-code">FIRST50</span>
-              <span className="offer-desc">Get 50% off on first booking</span>
-            </div>
-            <div className="offer-item">
-              <span className="offer-code">WEEKEND</span>
-              <span className="offer-desc">₹100 off on weekend travel</span>
+            <div className="secure-info">
+              <Lock size={14} />
+              <span>Your payment is 100% secure with SSL encryption</span>
             </div>
           </div>
         </div>

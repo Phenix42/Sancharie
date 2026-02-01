@@ -1,330 +1,253 @@
-.search-bus {
-  background: #eff3f4;
-  padding: 3rem 1rem;
-}
+/* Figma Design Search Bar - Exact Match */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Montserrat:wght@600;700&display=swap');
 
-.search-container {
-  max-width: 1400px;
-  margin: auto;
-  /* Remove any background or padding that could create an extra card */
-  background: none;
-  padding: 0;
-  box-shadow: none;
-}
-
-/* Tabs */
-.search-tabs {
+/* Main Wrapper */
+.search-bus-wrapper {
+  width: 100%;
   display: flex;
-  margin-bottom: 2rem;
+  justify-content: center;
+  padding: 0 20px;
+  margin-top: -200px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 10;
 }
 
-.tab {
-  border: none;
-  background: none;
-  padding: 1rem 2.5rem;
-  font-weight: 600;
-  color: #666;
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
+.search-container-figma {
+  width: 100%;
+  max-width: 1200px;
 }
 
-.tab.active {
-  color: #9c7635;
-  border-bottom-color: #9c7635;
-}
-
-/* Search Bar */
-.search-form {
-  background: #fff;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-  border-radius: 22px;
-  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
-  margin-bottom: 2.5rem;
-  margin-top: 1.5rem;
-  border: 1.5px solid #f2f2f2;
-  transition: box-shadow 0.2s;
-}
-
-.form-fields {
-  display: grid;
-  grid-template-columns: 1.4fr 80px 1.4fr 1.2fr 200px; /* Remove extra column */
-  height: 120px; /* ⬅ Taller height as per image */
+/* Search Card - Figma: #FFEDD1 background, rounded corners */
+.search-card-figma {
+  background: #FFEDD1;
+  border-radius: 30px;
+  padding: 20px 24px;
+  display: flex;
   align-items: center;
+  gap: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  animation: slideUp 0.5s ease;
+  border: 18px solid #FFFFFF;
 }
 
-.form-group.from {
-  border-right: none;
+/* Search Field Group */
+.search-field-figma {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  position: relative;
+  flex: 1;
+  min-width: 0;
 }
-.form-group.to {
-  border-right: 1px solid #e6e6e6;
+
+.search-field-figma.date-field {
+  cursor: pointer;
+  flex: 0 0 auto;
+  gap: 12px;
 }
-.swap-wrapper {
-  z-index: 2;
+
+/* Field Icon Images */
+.field-icon-img {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
 }
-/* Sections */
-.form-group {
-  padding: 0 2rem;
-  border-right: 1px solid #e6e6e6;
+
+.field-icon-img.cal-icon {
+  width: 40px;
+  height: 40px;
+}
+
+/* Field Content */
+.field-content-figma {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  position: relative;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
-/* Autocomplete Dropdown */
-.autocomplete-dropdown {
+/* Field Label - Figma: Inter Regular, 20px */
+.field-label-figma {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #000000;
+  line-height: 1.2;
+}
+
+/* Field Input - Figma: Montserrat Bold, 20px */
+.field-input-figma {
+  border: none;
+  background: transparent;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+  padding: 0;
+  outline: none;
+  width: 100%;
+  line-height: 1.2;
+}
+
+.field-input-figma::placeholder {
+  color: rgba(0, 0, 0, 0.35);
+  font-weight: 600;
+}
+
+/* Field Value Display (for date) */
+.field-value-figma {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1.2;
+}
+
+/* Swap Button */
+.swap-btn-figma {
+  width: 48px;
+  height: 48px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.swap-btn-figma:hover {
+  transform: scale(1.05);
+}
+
+.swap-icon-img {
+  width: 48px;
+  height: 48px;
+}
+
+/* Hidden Date Input */
+.hidden-date-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+/* Quick Date Buttons */
+.quick-dates-figma {
+  display: flex;
+  gap: 18px;
+  flex-shrink: 0;
+}
+
+/* Quick Date Button - Figma: white bg, 47px radius, no border */
+.quick-date-btn-figma {
+  padding: 17px 37px;
+  border-radius: 47px;
+  border: none;
+  background: #FFFFFF;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.quick-date-btn-figma:hover {
+  background: #F8F8F8;
+}
+
+.quick-date-btn-figma.active {
+  color: #000000;
+}
+
+/* Search Button - Figma: #A37226 bg, 47px radius */
+.search-btn-figma {
+  background: #A37226;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 47px;
+  padding: 17px 15px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.search-btn-figma:hover {
+  background: #8B6220;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(163, 114, 38, 0.4);
+}
+
+.search-btn-figma svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* City Dropdown */
+.city-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #e6e6e6;
-  border-top: none;
-  border-radius: 0 0 8px 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
   max-height: 250px;
   overflow-y: auto;
   z-index: 100;
+  list-style: none;
+  padding: 8px 0;
+  margin: 8px 0 0 0;
 }
 
-.autocomplete-dropdown li {
-  padding: 12px 2rem;
+.city-dropdown li {
+  padding: 12px 16px;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
   color: #333;
   transition: background 0.2s ease;
 }
 
-.autocomplete-dropdown li:hover {
-  background: #f5f5f5;
+.city-dropdown li:hover {
+  background: #FFF8ED;
+  color: #A37226;
 }
 
-.autocomplete-dropdown li:last-child {
-  border-radius: 0 0 8px 8px;
+/* Custom Scrollbar for Dropdown */
+.city-dropdown::-webkit-scrollbar {
+  width: 6px;
 }
 
-.form-group:last-of-type {
-  border-right: none;
+.city-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
 }
 
-.form-group label {
-  font-size: 0.75rem;
-  color: #999;
-  font-weight: 600;
-  text-transform: uppercase;
-  margin-bottom: 6px;
+.city-dropdown::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
 }
 
-/* Inputs */
-.form-group input {
-  border: none;
-  outline: none;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-  background: transparent;
-  z-index: 2;
+.city-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
 }
 
-.form-group input[type="date"] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.value {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-
-
-/* Fake placeholder text */
-.fake-placeholder {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-/* Clickable date field */
-.clickable {
-  cursor: pointer;
-}
-
-/* Swap button centered */
-.swap-wrapper {
-  display: flex;
-  justify-content: center;
-}
-
-.swap-btn {
-  width: 44px;
-  height: 44px;
-  background: #f2f2f2;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  font-size: 1.1rem;
-}
-
-/* Search button */
-.search-btn {
-  height: 110px;
-  background: #9c7635;
-  border: none;
-  font-weight: 700;
-  letter-spacing: 1px;
-  cursor: pointer;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .search-bus {
-    padding: 2rem 1rem;
-  }
-
-  .form-fields {
-    grid-template-columns: 1fr 1fr;
-    height: auto;
-    gap: 0;
-  }
-
-  .form-group {
-    border-right: none;
-    border-bottom: 1px solid #e6e6e6;
-    padding: 1.2rem 1.5rem;
-    min-height: 70px;
-  }
-
-  .form-group.from {
-    border-right: 1px solid #e6e6e6;
-  }
-
-  .form-group.to {
-    border-right: none;
-  }
-
-  .swap-wrapper {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    top: 55px;
-    z-index: 10;
-  }
-
-  .search-form {
-    position: relative;
-  }
-
-  .swap-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 0.9rem;
-    background: #fff;
-    border: 1px solid #e6e6e6;
-  }
-
-  .form-group.clickable {
-    border-right: 1px solid #e6e6e6;
-  }
-
-  .form-group.clickable:last-of-type {
-    border-right: none;
-  }
-
-  .search-btn {
-    height: 55px;
-    grid-column: 1 / -1;
-    font-size: 0.95rem;
-  }
-
-  .autocomplete-dropdown {
-    max-height: 200px;
-  }
-}
-
-@media (max-width: 600px) {
-  .search-bus {
-    padding: 1.5rem 0.75rem;
-  }
-
-  .search-tabs {
-    margin-bottom: 1rem;
-    justify-content: center;
-  }
-
-  .tab {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
-  }
-
-  .form-fields {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-
-  .form-group {
-    padding: 1rem 1.2rem;
-    min-height: 65px;
-    border-right: none !important;
-  }
-
-  .form-group.from,
-  .form-group.to {
-    border-right: none;
-  }
-
-  .swap-wrapper {
-    position: relative;
-    left: auto;
-    transform: none;
-    top: auto;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #e6e6e6;
-  }
-
-  .swap-btn {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
-  }
-
-  .form-group label {
-    font-size: 0.7rem;
-    margin-bottom: 4px;
-  }
-
-  .form-group input,
-  .value {
-    font-size: 0.95rem;
-  }
-
-  .search-btn {
-    height: 50px;
-    font-size: 0.9rem;
-    letter-spacing: 0.5px;
-  }
-
-  .autocomplete-dropdown {
-    max-height: 180px;
-    border-radius: 0 0 6px 6px;
-  }
-
-  .autocomplete-dropdown li {
-    padding: 10px 1.2rem;
-    font-size: 0.9rem;
-  }
-}
-
-/* Custom Validation Popup */
+/* Popup Styles */
 .popup-overlay {
   position: fixed;
   top: 0;
@@ -336,37 +259,28 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  backdrop-filter: blur(4px);
 }
 
 .popup-container {
-  background: #ffffff;
-  border-radius: 16px;
+  background: white;
+  border-radius: 20px;
   padding: 32px 40px;
-  max-width: 400px;
-  width: 90%;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.3s ease;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: popupSlide 0.3s ease;
 }
 
-@keyframes slideUp {
+@keyframes popupSlide {
   from {
-    transform: translateY(20px);
     opacity: 0;
+    transform: scale(0.9) translateY(-20px);
   }
   to {
-    transform: translateY(0);
     opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -376,30 +290,177 @@
 }
 
 .popup-message {
-  font-size: 1.1rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
   color: #333;
   margin-bottom: 24px;
   line-height: 1.5;
-  font-weight: 500;
 }
 
 .popup-btn {
-  background: #9c7635;
-  color: #fff;
+  background: #A37226;
+  color: white;
   border: none;
-  padding: 12px 48px;
-  font-size: 1rem;
+  border-radius: 25px;
+  padding: 12px 40px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 15px;
   font-weight: 600;
-  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .popup-btn:hover {
-  background: #7d5e2a;
-  transform: scale(1.02);
+  background: #8B6220;
+  transform: translateY(-2px);
 }
 
-.popup-btn:active {
-  transform: scale(0.98);
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .search-card-figma {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .field-icon-img {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .field-icon-img.cal-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .swap-icon-img,
+  .swap-btn-figma {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .quick-date-btn-figma {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+  
+  .search-btn-figma {
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+  
+  .field-label-figma {
+    font-size: 12px;
+  }
+  
+  .field-input-figma,
+  .field-value-figma {
+    font-size: 14px;
+  }
+  
+  .field-content-figma {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 900px) {
+  .search-card-figma {
+    flex-wrap: wrap;
+    border-radius: 12px;
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .search-field-figma {
+    flex: 1 1 40%;
+    min-width: 160px;
+  }
+  
+  .search-field-figma.date-field {
+    flex: 1 1 auto;
+  }
+  
+  .swap-btn-figma {
+    order: 0;
+  }
+  
+  .quick-dates-figma {
+    flex: 1 1 100%;
+    justify-content: center;
+    gap: 12px;
+  }
+  
+  .search-btn-figma {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .search-bus-wrapper {
+    margin-top: -30px;
+    padding: 0 12px;
+  }
+  
+  .search-card-figma {
+    flex-direction: column;
+    border-radius: 16px;
+    padding: 20px;
+    gap: 16px;
+  }
+  
+  .search-field-figma {
+    width: 100%;
+    flex: 1 1 100%;
+    padding: 8px 0;
+  }
+  
+  .swap-btn-figma {
+    transform: rotate(90deg);
+    margin: -8px 0;
+  }
+  
+  .field-icon-img {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .field-icon-img.cal-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .swap-icon-img {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .quick-dates-figma {
+    width: 100%;
+    gap: 12px;
+  }
+  
+  .quick-date-btn-figma {
+    flex: 1;
+    text-align: center;
+    padding: 12px 16px;
+  }
+  
+  .search-btn-figma {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    justify-content: center;
+  }
+}
+
+/* Animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

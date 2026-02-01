@@ -1,7 +1,13 @@
-import React, { createContext, useContext, useReducer } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useState, useCallback } from "react";
+
+// Session duration constant (10 minutes)
+const SESSION_DURATION = 10 * 60 * 1000;
 
 // Initial state
 const initialState = {
+  // Session data
+  sessionStartTime: null,
+  sessionExpired: false,
   // Search data
   searchTokenId: null,
   searchResults: [],
@@ -50,6 +56,9 @@ const initialState = {
 
 // Action types
 const ACTIONS = {
+  SET_SESSION_START: "SET_SESSION_START",
+  SET_SESSION_EXPIRED: "SET_SESSION_EXPIRED",
+  RESET_SESSION: "RESET_SESSION",
   SET_SEARCH_TOKEN: "SET_SEARCH_TOKEN",
   SET_SEARCH_RESULTS: "SET_SEARCH_RESULTS",
   SET_SEARCH_PARAMS: "SET_SEARCH_PARAMS",
@@ -73,6 +82,15 @@ const ACTIONS = {
 // Reducer
 function bookingReducer(state, action) {
   switch (action.type) {
+    case ACTIONS.SET_SESSION_START:
+      return { ...state, sessionStartTime: action.payload, sessionExpired: false };
+    
+    case ACTIONS.SET_SESSION_EXPIRED:
+      return { ...state, sessionExpired: action.payload };
+    
+    case ACTIONS.RESET_SESSION:
+      return { ...state, sessionStartTime: null, sessionExpired: false };
+    
     case ACTIONS.SET_SEARCH_TOKEN:
       return { ...state, searchTokenId: action.payload };
     
@@ -151,9 +169,95 @@ const BookingContext = createContext();
 // Provider component
 export function BookingProvider({ children }) {
   const [state, dispatch] = useReducer(bookingReducer, initialState);
+  const [sessionTimer, setSessionTimer] = useState(null);
+
+  // Start session timer when search is performed
+  const startSession = useCallback(() => {
+    const startTime = Date.now();
+    dispatch({ type: ACTIONS.SET_SESSION_START, payload: startTime });
+    sessionStorage.setItem('bookingSessionStart', startTime.toString());
+    
+    // Clear existing timer if any
+    if (sessionTimer) {
+      clearInterval(sessionTimer);
+    }
+    
+    // Set up new timer
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= SESSION_DURATION) {
+        dispatch({ type: ACTIONS.SET_SESSION_EXPIRED, payload: true });
+        sessionStorage.removeItem('bookingSessionStart');
+        clearInterval(timer);
+      }
+    }, 1000);
+    
+    setSessionTimer(timer);
+  }, [sessionTimer]);
+
+  // Reset session (for new search or going home)
+  const resetSession = useCallback(() => {
+    if (sessionTimer) {
+      clearInterval(sessionTimer);
+      setSessionTimer(null);
+    }
+    dispatch({ type: ACTIONS.RESET_SESSION });
+    sessionStorage.removeItem('bookingSessionStart');
+  }, [sessionTimer]);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const storedSessionStart = sessionStorage.getItem('bookingSessionStart');
+    if (storedSessionStart) {
+      const startTime = parseInt(storedSessionStart);
+      const elapsed = Date.now() - startTime;
+      
+      if (elapsed >= SESSION_DURATION) {
+        // Session already expired
+        dispatch({ type: ACTIONS.SET_SESSION_EXPIRED, payload: true });
+        sessionStorage.removeItem('bookingSessionStart');
+      } else {
+        // Session still valid, restore and continue timer
+        dispatch({ type: ACTIONS.SET_SESSION_START, payload: startTime });
+        
+        const timer = setInterval(() => {
+          const currentElapsed = Date.now() - startTime;
+          if (currentElapsed >= SESSION_DURATION) {
+            dispatch({ type: ACTIONS.SET_SESSION_EXPIRED, payload: true });
+            sessionStorage.removeItem('bookingSessionStart');
+            clearInterval(timer);
+          }
+        }, 1000);
+        
+        setSessionTimer(timer);
+      }
+    }
+    
+    return () => {
+      if (sessionTimer) {
+        clearInterval(sessionTimer);
+      }
+    };
+  }, []);
+
+  // Calculate remaining time
+  const getRemainingTime = useCallback(() => {
+    if (!state.sessionStartTime) return null;
+    const elapsed = Date.now() - state.sessionStartTime;
+    const remaining = Math.max(0, SESSION_DURATION - elapsed);
+    return {
+      minutes: Math.floor(remaining / 60000),
+      seconds: Math.floor((remaining % 60000) / 1000),
+      total: remaining
+    };
+  }, [state.sessionStartTime]);
 
   // Action creators
   const actions = {
+    startSession,
+    resetSession,
+    getRemainingTime,
+    setSessionExpired: (expired) => dispatch({ type: ACTIONS.SET_SESSION_EXPIRED, payload: expired }),
     setSearchToken: (token) => dispatch({ type: ACTIONS.SET_SEARCH_TOKEN, payload: token }),
     setSearchResults: (results) => dispatch({ type: ACTIONS.SET_SEARCH_RESULTS, payload: results }),
     setSearchParams: (params) => dispatch({ type: ACTIONS.SET_SEARCH_PARAMS, payload: params }),

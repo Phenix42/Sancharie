@@ -1,242 +1,189 @@
-# 🔐 Secure OTP Authentication System
+# 🚌 Sancharie Backend API
 
-## Architecture Overview
+A secure Node.js/Express backend for the Sancharie bus booking platform.
+
+## 🏗️ Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                    SECURITY ARCHITECTURE                          │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│   ┌─────────────┐        ┌─────────────┐        ┌─────────────┐  │
-│   │   React     │   →    │  Node.js    │   →    │  MetaReach  │  │
-│   │  Frontend   │        │  Backend    │        │   SMS API   │  │
-│   │             │        │             │        │             │  │
-│   │  NO SECRETS │        │  .env FILE  │        │  EXTERNAL   │  │
-│   │  NO API KEY │        │  API KEY ✓  │        │  SERVICE    │  │
-│   └─────────────┘        └─────────────┘        └─────────────┘  │
-│                                                                   │
-│   ✅ Safe to expose        ✅ Protected          ✅ Never called  │
-│      to users                 on server             from frontend │
-│                                                                   │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                       SECURITY ARCHITECTURE                           │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│   ┌─────────────┐      ┌─────────────┐      ┌─────────────────────┐  │
+│   │   React     │  →   │  Node.js    │  →   │  External APIs      │  │
+│   │  Frontend   │      │  Backend    │      │  - MetaReach SMS    │  │
+│   │             │      │             │      │  - Bus Booking API  │  │
+│   │  NO SECRETS │      │  ALL KEYS   │      │  - Razorpay         │  │
+│   └─────────────┘      └─────────────┘      └─────────────────────┘  │
+│                                                                       │
+│   ✅ Public only       ✅ Credentials      ✅ Hidden from            │
+│                           protected           browser network tab    │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## 🔒 Security Features
 
 | Feature | Implementation |
 |---------|---------------|
-| **API Key Protection** | Stored in backend `.env` only |
+| **API Key Protection** | All secrets in backend `.env` only |
 | **Rate Limiting** | 3 OTP requests per 10 minutes |
-| **OTP Expiry** | 5 minutes auto-expiration |
-| **Single-Use OTP** | Deleted after successful verification |
-| **Attempt Limiting** | Max 3 incorrect attempts |
-| **CORS Protection** | Only frontend domain allowed |
-| **Input Validation** | Phone number format validation |
-| **Secure Random** | Crypto.randomInt for OTP generation |
+| **OTP Security** | 5-min expiry, single-use, max 3 attempts |
+| **API Proxy** | Third-party APIs hidden from browser |
+| **CORS Protection** | Only allowed frontend domains |
+| **Input Validation** | All endpoints validated |
+| **JWT Auth** | Secure token-based sessions |
+| **Payment Security** | Server-side Razorpay signature verification |
 
 ## 📁 Project Structure
 
 ```
 sanachariebackend/
-├── .env                    # 🔐 SECRETS HERE (never commit)
+├── .env                    # 🔐 SECRETS (never commit)
 ├── .env.example            # Template for .env
-├── .gitignore              # Excludes .env from git
-├── index.js                # Express server entry point
+├── .gitignore              # Excludes .env
+├── index.js                # Express entry point
 ├── package.json
+│
 ├── routes/
-│   └── auth.js             # /auth/send-otp, /auth/verify-otp
+│   ├── auth.js             # OTP authentication
+│   ├── bus.js              # Bus API proxy (hides third-party API)
+│   ├── payment.js          # Razorpay integration
+│   └── user.js             # User profile & bookings
+│
 ├── services/
 │   ├── otpService.js       # OTP generation & validation
-│   └── smsService.js       # MetaReach API integration
+│   ├── smsService.js       # MetaReach SMS integration
+│   └── paymentService.js   # Razorpay payment processing
+│
+├── models/
+│   ├── User.js             # User schema (MongoDB)
+│   └── Booking.js          # Booking schema
+│
 └── middleware/
     └── validation.js       # Rate limiting & validation
-
-sancharie/
-├── .env                    # Frontend config (NO SECRETS)
-└── src/
-    ├── services/
-    │   └── authApi.js      # API calls to backend
-    └── components/
-        └── Authantication/
-            └── Login.jsx   # Login UI component
 ```
 
-## 🚀 Setup Instructions
-
-### 1. Backend Setup
+## 🚀 Quick Start
 
 ```bash
-cd sanachariebackend
-
-# Install dependencies
+# 1. Install dependencies
 npm install
 
-# Configure environment variables
-# Edit .env file with your MetaReach credentials:
-#   SMS_API_KEY=your_actual_api_key
-#   SMS_SENDER_ID=your_sender_id
+# 2. Copy and configure environment
+cp .env.example .env
+# Edit .env with your actual credentials
 
-# Start the server
+# 3. Start MongoDB (local)
+mongod
+
+# 4. Start development server
 npm run dev
 ```
-
-### 2. Frontend Setup
-
-```bash
-cd sancharie
-
-# Install dependencies (if not already done)
-npm install
-
-# Start the development server
-npm run dev
-```
-
-### 3. Configure MetaReach Credentials
-
-Edit `sanachariebackend/.env`:
-
-```env
-SMS_API_KEY=your_metareach_api_key_here
-SMS_SENDER_ID=your_approved_sender_id
-SMS_API_URL=https://api.metareach.com/sms/send
-```
-
-⚠️ **IMPORTANT**: Get these credentials from your MetaReach dashboard.
 
 ## 📡 API Endpoints
 
-### POST `/auth/send-otp`
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/send-otp` | Send OTP to phone |
+| POST | `/auth/verify-otp` | Verify OTP |
+| POST | `/auth/resend-otp` | Resend OTP |
 
-Send OTP to mobile number.
+### User
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/user/login-complete` | Complete login, get JWT |
+| POST | `/user/verify-token` | Verify JWT token |
+| GET | `/user/profile` | Get user profile (auth required) |
+| PUT | `/user/profile` | Update profile (auth required) |
+| GET | `/user/bookings` | Get bookings (auth required) |
+| POST | `/user/bookings` | Save booking (auth required) |
 
-**Request:**
-```json
-{
-  "mobile": "9876543210"
-}
+### Bus (Proxy)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/busservice/rest/search` | Search buses |
+| POST | `/api/busservice/rest/seatlayout` | Get seat layout |
+| POST | `/api/busservice/rest/boardingpoint` | Get boarding points |
+| POST | `/api/busservice/rest/blockseat` | Block seats |
+| POST | `/api/busservice/rest/book` | Book ticket |
+| POST | `/api/busservice/rest/getbookingdetail` | Get booking details |
+| POST | `/api/busservice/rest/cancelrequest` | Cancel booking |
+
+### Payment
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/payment/config` | Get Razorpay public key |
+| POST | `/payment/create-order` | Create payment order |
+| POST | `/payment/verify-payment` | Verify payment signature |
+| GET | `/payment/order/:id` | Get order status |
+
+## 🔧 Environment Variables
+
+See `.env.example` for all required variables:
+
+```env
+# Server
+PORT=8000
+NODE_ENV=development
+
+# MongoDB
+MONGODB_URI=mongodb://localhost:27017/sancharie
+
+# JWT
+JWT_SECRET=your-secret-key
+
+# SMS (MetaReach)
+SMS_API_KEY=xxx
+SMS_SENDER_ID=xxx
+SMS_API_URL=https://sms.metareach.in/vb/apikey.php
+SMS_ENTITY_ID=xxx
+SMS_TEMPLATE_ID=xxx
+
+# Razorpay
+RAZORPAY_KEY_ID=rzp_xxx
+RAZORPAY_KEY_SECRET=xxx
+RAZORPAY_MERCHANT_NAME=Your Business
+
+# Bus API (Third-party - HIDDEN FROM FRONTEND)
+BUS_API_URL=https://...
+BUS_API_USERNAME=xxx
+BUS_API_PASSWORD=xxx
 ```
 
-**Response (Success):**
-```json
-{
-  "success": true,
-  "message": "OTP sent successfully",
-  "expiresIn": 5
-}
+## 🛡️ Security Notes
+
+1. **Never commit `.env`** - Contains all secrets
+2. **API Proxy** - Bus API URL completely hidden from browser network tab
+3. **JWT Tokens** - 30-day expiry, secure httpOnly cookies recommended for production
+4. **Rate Limiting** - Prevents brute force attacks on OTP
+5. **CORS** - Restricted to frontend domains only
+6. **Input Sanitization** - All inputs validated before processing
+
+## 📦 Dependencies
+
+- `express` - Web framework
+- `mongoose` - MongoDB ODM
+- `jsonwebtoken` - JWT authentication
+- `axios` - HTTP client for API proxy
+- `cors` - Cross-origin handling
+- `helmet` - Security headers
+- `dotenv` - Environment variables
+- `razorpay` - Payment integration
+
+## 🔄 Development
+
+```bash
+# Run with auto-reload
+npm run dev
+
+# Run production
+npm start
+
+# Check for issues
+npm run lint
 ```
 
-**Response (Rate Limited):**
-```json
-{
-  "success": false,
-  "message": "Too many OTP requests. Please try again in 8 minute(s).",
-  "retryAfter": 8
-}
-```
+---
 
-### POST `/auth/verify-otp`
-
-Verify OTP entered by user.
-
-**Request:**
-```json
-{
-  "mobile": "9876543210",
-  "otp": "123456"
-}
-```
-
-**Response (Success):**
-```json
-{
-  "success": true,
-  "message": "OTP verified successfully",
-  "user": {
-    "mobile": "9876543210",
-    "isAuthenticated": true
-  }
-}
-```
-
-### POST `/auth/resend-otp`
-
-Resend OTP (subject to rate limiting).
-
-**Request:**
-```json
-{
-  "mobile": "9876543210"
-}
-```
-
-## ⚙️ Configuration Options
-
-### Backend `.env`
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SMS_API_KEY` | MetaReach API Key | Required |
-| `SMS_SENDER_ID` | Approved Sender ID | Required |
-| `SMS_API_URL` | MetaReach API URL | https://api.metareach.com/sms/send |
-| `PORT` | Server port | 5000 |
-| `FRONTEND_URL` | CORS allowed origin | http://localhost:5173 |
-| `OTP_EXPIRY_MINUTES` | OTP validity duration | 5 |
-| `RATE_LIMIT_MAX_REQUESTS` | Max OTP requests per window | 3 |
-| `RATE_LIMIT_WINDOW_MINUTES` | Rate limit window | 10 |
-
-## 🛡️ Security Checklist
-
-- [x] API key stored in backend `.env` only
-- [x] `.env` added to `.gitignore`
-- [x] Frontend never calls SMS API directly
-- [x] Rate limiting implemented
-- [x] OTP expiry implemented
-- [x] Single-use OTP (deleted after verification)
-- [x] Input validation for phone numbers
-- [x] CORS restricted to frontend domain
-- [x] Helmet security headers enabled
-- [x] Cryptographically secure OTP generation
-
-## ⚠️ Security Warnings
-
-### DO NOT:
-- ❌ Commit `.env` file to version control
-- ❌ Hardcode API keys in frontend code
-- ❌ Call MetaReach API from frontend
-- ❌ Expose OTP in API responses
-- ❌ Log sensitive credentials
-
-### ALWAYS:
-- ✅ Keep `.env` in `.gitignore`
-- ✅ Use environment variables for secrets
-- ✅ Route all SMS calls through backend
-- ✅ Validate and sanitize inputs
-- ✅ Implement rate limiting
-
-## 🔧 Production Deployment
-
-### Backend
-1. Use a process manager (PM2)
-2. Enable HTTPS
-3. Use Redis for OTP storage (instead of in-memory)
-4. Set `NODE_ENV=production`
-5. Update `FRONTEND_URL` to production domain
-
-### Frontend
-1. Update `VITE_API_URL` to production backend URL
-2. Build for production: `npm run build`
-
-## 📞 MetaReach API Notes
-
-The SMS service (`smsService.js`) is configured for MetaReach HTTP API. If your API format differs, update the `sendOTP` function accordingly.
-
-Typical MetaReach parameters:
-- `apikey` - Your API key
-- `senderid` - Approved sender ID
-- `number` - Phone number with country code
-- `message` - URL-encoded message text
-
-## 📝 License
-
-Private - Sancharie Project
+© 2025 Sancharie Travels

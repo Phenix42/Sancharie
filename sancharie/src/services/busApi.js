@@ -1,60 +1,97 @@
-// Bus Booking API Service
-// Base URL should be configured in environment variables
+/**
+ * ============================================
+ * ETS (eTravelSmart) BUS API SERVICE
+ * ============================================
+ * 
+ * All requests go through our backend proxy to hide the actual API URL
+ * and credentials. Uses Digest Authentication handled server-side.
+ * 
+ * In browser network tab, users will see: https://www.sancharie.com/api/ets/*
+ * Backend proxies to ETS API internally.
+ * 
+ * @module services/busApi
+ */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.bdsd.technology/api/";
-
-// API Authentication credentials - configure in environment variables
-const API_USERNAME = import.meta.env.VITE_API_USERNAME || "DKWPP4556F";
-const API_PASSWORD = import.meta.env.VITE_API_PASSWORD || "5727246";
+// Use backend proxy URL
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // Common headers for all API requests
 const getHeaders = () => ({
   "Content-Type": "application/json",
-  "Accept-Encoding": "gzip, deflate, br",
-  "Connection": "keep-alive",
-  "Username": API_USERNAME,
-  "Password": API_PASSWORD,
 });
 
-// Helper function to get user IP (you can replace with actual IP detection)
-const getUserIp = () => {
-  return "103.209.223.52"; // Default IP, should be dynamically fetched in production
+/**
+ * Handle API response and check for ETS API errors
+ * @param {Response} response - Fetch response
+ * @returns {Promise<Object>} Parsed response data
+ */
+const handleResponse = async (response) => {
+  const data = await response.json();
+  
+  // Check for ETS API error format
+  if (data.apiStatus && !data.apiStatus.success) {
+    throw new Error(data.apiStatus.message || "API request failed");
+  }
+  
+  return data;
 };
 
 /**
- * 1. Search Buses
- * POST /busservice/rest/search
+ * 1. Get All Stations/Cities
+ * GET /api/ets/getStations
+ * 
+ * Returns list of all available stations for bus booking
  */
-export const searchBuses = async (originId, destinationId, dateOfJourney) => {
+export const getStations = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/busservice/rest/search`, {
-      method: "POST",
+    const response = await fetch(`${BASE_URL}/api/ets/getStations`, {
+      method: "GET",
       headers: getHeaders(),
-      body: JSON.stringify({
-        UserIp: getUserIp(),
-        DateOfJourney: dateOfJourney,
-        OriginId: String(originId),
-        DestinationId: String(destinationId),
-      }),
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    const data = await handleResponse(response);
+    
+    // Return in the same format as ETS API response for consistency
+    return {
+      stationList: data.stationList || [],
+      apiStatus: data.apiStatus,
+      success: data.apiStatus?.success || false,
+    };
+  } catch (error) {
+    console.error("Get stations error:", error);
+    throw error;
+  }
+};
 
-    const data = await response.json();
+/**
+ * 2. Search Available Buses
+ * GET /api/ets/getAvailableBuses
+ * 
+ * @param {string} sourceCity - Source city name
+ * @param {string} destinationCity - Destination city name
+ * @param {string} dateOfJourney - Journey date in yyyy-MM-dd format
+ */
+export const searchBuses = async (sourceCity, destinationCity, dateOfJourney) => {
+  try {
+    const params = new URLSearchParams({
+      sourceCity,
+      destinationCity,
+      doj: dateOfJourney,
+    });
+
+    const response = await fetch(`${BASE_URL}/api/ets/getAvailableBuses?${params}`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+
+    const data = await handleResponse(response);
     
     console.log("Search API full response:", JSON.stringify(data, null, 2));
-    
-    // ErrorCode 1 means "no result found" - return empty results, not an error
-    if (data.Error && data.Error.ErrorCode !== 0 && data.Error.ErrorCode !== 1) {
-      throw new Error(data.Error.ErrorMessage || "Search failed");
-    }
 
     return {
-      searchTokenId: data.SearchTokenId || data.TokenId || data.Token,
-      results: data.Result || [],
-      userIp: data.UserIp,
+      results: data.apiAvailableBuses || [],
+      success: data.apiStatus?.success || false,
+      message: data.apiStatus?.message,
     };
   } catch (error) {
     console.error("Search buses error:", error);
@@ -63,39 +100,39 @@ export const searchBuses = async (originId, destinationId, dateOfJourney) => {
 };
 
 /**
- * 2. Get Seat Layout
- * POST /busservice/rest/seatlayout
+ * 3. Get Bus Seat Layout
+ * GET /api/ets/getBusLayout
+ * 
+ * @param {string} sourceCity - Source city name
+ * @param {string} destinationCity - Destination city name
+ * @param {string} dateOfJourney - Journey date in yyyy-MM-dd format
+ * @param {number} inventoryType - Inventory type value
+ * @param {string} routeScheduleId - Route schedule ID
  */
-export const getSeatLayout = async (searchTokenId, resultIndex) => {
-  const requestBody = {
-    UserIp: getUserIp(),
-    SearchTokenId: searchTokenId,
-    ResultIndex: resultIndex,
-  };
-  console.log("getSeatLayout request:", requestBody);
-  
+export const getSeatLayout = async (sourceCity, destinationCity, dateOfJourney, inventoryType, routeScheduleId) => {
   try {
-    const response = await fetch(`${BASE_URL}/busservice/rest/seatlayout`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(requestBody),
+    const params = new URLSearchParams({
+      sourceCity,
+      destinationCity,
+      doj: dateOfJourney,
+      inventoryType: String(inventoryType),
+      routeScheduleId,
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    const response = await fetch(`${BASE_URL}/api/ets/getBusLayout?${params}`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
 
-    const data = await response.json();
-    
-    if (data.Error && data.Error.ErrorCode !== 0) {
-      throw new Error(data.Error.ErrorMessage || "Failed to get seat layout");
-    }
+    const data = await handleResponse(response);
 
     return {
-      availableSeats: data.Result?.AvailableSeats,
-      htmlLayout: data.Result?.HTMLLayout,
-      seatLayout: data.Result?.SeatLayout,
-      searchTokenId: data.SearchTokenId,
+      seats: data.seats || [],
+      boardingPoints: data.boardingPoints || null,
+      droppingPoints: data.droppingPoints || null,
+      inventoryType: data.inventoryType,
+      serviceTaxApplicable: data.serviceTaxApplicable,
+      success: data.apiStatus?.success || false,
     };
   } catch (error) {
     console.error("Get seat layout error:", error);
@@ -104,166 +141,94 @@ export const getSeatLayout = async (searchTokenId, resultIndex) => {
 };
 
 /**
- * 3. Get Boarding Points
- * POST /busservice/rest/boardingpoint
+ * 4. Block Ticket (Reserve seats for 10 minutes)
+ * POST /api/ets/blockTicket
+ * 
+ * @param {Object} blockData - Block ticket request data
  */
-export const getBoardingPoints = async (searchTokenId, resultIndex) => {
-  const requestBody = {
-    UserIp: getUserIp(),
-    SearchTokenId: searchTokenId,
-    ResultIndex: resultIndex,
-  };
-  console.log("getBoardingPoints request:", requestBody);
-  
+export const blockTicket = async (blockData) => {
   try {
-    const response = await fetch(`${BASE_URL}/busservice/rest/boardingpoint`, {
+    const response = await fetch(`${BASE_URL}/api/ets/blockTicket`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(blockData),
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.Error && data.Error.ErrorCode !== 0) {
-      throw new Error(data.Error.ErrorMessage || "Failed to get boarding points");
-    }
+    const data = await handleResponse(response);
 
     return {
-      boardingPoints: data.Result?.BoardingPointsDetails || [],
-      droppingPoints: data.Result?.DroppingPointsDetails || [],
-      searchTokenId: data.SearchTokenId,
+      blockTicketKey: data.blockTicketKey,
+      inventoryType: data.inventoryType,
+      success: data.apiStatus?.success || false,
+      message: data.apiStatus?.message,
     };
   } catch (error) {
-    console.error("Get boarding points error:", error);
+    console.error("Block ticket error:", error);
     throw error;
   }
 };
 
 /**
- * 4. Block Seat
- * POST /busservice/rest/blockseat
+ * 5. Get RTC Updated Fare (For RTC services only)
+ * GET /api/ets/getRtcUpdatedFare
+ * 
+ * Call this after blockTicket for RTC services (isRTC: true in search response)
+ * 
+ * @param {string} blockTicketKey - Block ticket key from blockTicket response
  */
-export const blockSeat = async (
-  searchTokenId,
-  resultIndex,
-  boardingPointId,
-  droppingPointId,
-  passengers
-) => {
+export const getRtcUpdatedFare = async (blockTicketKey) => {
   try {
-    const response = await fetch(`${BASE_URL}/busservice/rest/blockseat`, {
-      method: "POST",
+    const params = new URLSearchParams({ blockTicketKey });
+
+    const response = await fetch(`${BASE_URL}/api/ets/getRtcUpdatedFare?${params}`, {
+      method: "GET",
       headers: getHeaders(),
-      body: JSON.stringify({
-        UserIp: getUserIp(),
-        SearchTokenId: searchTokenId,
-        ResultIndex: resultIndex,
-        BoardingPointId: boardingPointId,
-        DroppingPointId: droppingPointId,
-          Passenger: passengers.map((p, index) => ({
-          LeadPassenger: index === 0,
-          Title: p.gender === "male" ? "Mr" : p.gender === "female" ? "Ms" : "Mr",
-          FirstName: p.name.split(" ")[0] || p.name,
-            LastName: p.name.split(" ").slice(1).join(" ") || p.name.split(" ")[0] || "",
-          Email: p.email || "",
-          Phoneno: p.phone || "",
-          Gender: p.gender === "male" ? "1" : "2",
-          IdType: p.idType || null,
-          IdNumber: p.idNumber || null,
-          Address: p.address || "",
-          Age: String(p.age || "25"),
-          SeatName: p.seatName,
-        })),
-      }),
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.Error && data.Error.ErrorCode !== 0) {
-      throw new Error(data.Error.ErrorMessage || "Failed to block seat");
-    }
+    const data = await handleResponse(response);
 
     return {
-      isPriceChanged: data.Result?.IsPriceChanged,
-      arrivalTime: data.Result?.ArrivalTime,
-      busType: data.Result?.BusType,
-      departureTime: data.Result?.DepartureTime,
-      travelName: data.Result?.TravelName,
-      boardingPointDetails: data.Result?.BoardingPointdetails,
-      cancelPolicy: data.Result?.CancelPolicy || [],
-      passengers: data.Result?.Passenger || [],
-      searchTokenId: data.SearchTokenId,
+      convenienceFee: data.convenienceFee,
+      bookingFee: data.bookingFee,
+      reservationFee: data.reservationFee,
+      tollFee: data.tollFee,
+      otherCharges: data.otherCharges,
+      previousFare: data.previousFare,
+      updatedFare: data.updatedFare,
+      success: data.apiStatus?.success || false,
     };
   } catch (error) {
-    console.error("Block seat error:", error);
+    console.error("Get RTC updated fare error:", error);
     throw error;
   }
 };
 
 /**
- * 5. Book Ticket
- * POST /busservice/rest/book
+ * 6. Book Seat (Confirm booking after payment)
+ * GET /api/ets/seatBooking
+ * 
+ * @param {string} blockTicketKey - Block ticket key from blockTicket response
  */
-export const bookTicket = async (
-  searchTokenId,
-  resultIndex,
-  boardingPointId,
-  droppingPointId,
-  passengers
-) => {
+export const bookTicket = async (blockTicketKey) => {
   try {
-    const response = await fetch(`${BASE_URL}/busservice/rest/book`, {
-      method: "POST",
+    const params = new URLSearchParams({ blockTicketKey });
+
+    const response = await fetch(`${BASE_URL}/api/ets/seatBooking?${params}`, {
+      method: "GET",
       headers: getHeaders(),
-      body: JSON.stringify({
-        UserIp: getUserIp(),
-        SearchTokenId: searchTokenId,
-        ResultIndex: resultIndex,
-        BoardingPointId: boardingPointId,
-        DroppingPointId: droppingPointId,
-        Passenger: passengers.map((p, index) => ({
-          LeadPassenger: index === 0,
-          Title: p.gender === "male" ? "Mr" : p.gender === "female" ? "Ms" : "Mr",
-          FirstName: p.name.split(" ")[0] || p.name,
-          LastName: p.name.split(" ").slice(1).join(" ") || "",
-          Email: p.email || "",
-          Phoneno: p.phone || "",
-          Gender: p.gender === "male" ? "1" : "2",
-          IdType: p.idType || null,
-          IdNumber: p.idNumber || null,
-          Address: p.address || "",
-          Age: String(p.age || "25"),
-          SeatName: p.seatName,
-        })),
-      }),
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.Error && data.Error.ErrorCode !== 0) {
-      throw new Error(data.Error.ErrorMessage || "Booking failed");
-    }
+    const data = await handleResponse(response);
 
     return {
-      bookingStatus: data.Result?.BookingStatus,
-      invoiceAmount: data.Result?.InvoiceAmount,
-      invoiceNumber: data.Result?.InvoiceNumber,
-      bookingId: data.Result?.BookingID,
-      ticketNo: data.Result?.TicketNo,
-      travelOperatorPNR: data.Result?.TravelOperatorPNR,
-      searchTokenId: data.SearchTokenId,
+      opPNR: data.opPNR,
+      etsTicketNumber: data.etstnumber,
+      commPCT: data.commPCT,
+      totalFare: data.totalFare,
+      cancellationPolicy: data.cancellationPolicy,
+      tripCode: data.tripCode,
+      inventoryType: data.inventoryType,
+      success: data.apiStatus?.success || false,
     };
   } catch (error) {
     console.error("Book ticket error:", error);
@@ -272,54 +237,46 @@ export const bookTicket = async (
 };
 
 /**
- * 6. Get Booking Details
- * POST /busservice/rest/getbookingdetail
+ * 7. Get Booked Ticket Details
+ * GET /api/ets/getTicketByETSTNumber
+ * 
+ * @param {string} etsTicketNumber - ETS ticket number from booking response
  */
-export const getBookingDetails = async (searchTokenId, bookingId) => {
+export const getBookingDetails = async (etsTicketNumber) => {
   try {
-    const response = await fetch(`${BASE_URL}/busservice/rest/getbookingdetail`, {
-      method: "POST",
+    const params = new URLSearchParams({ ETSTNumber: etsTicketNumber });
+
+    const response = await fetch(`${BASE_URL}/api/ets/getTicketByETSTNumber?${params}`, {
+      method: "GET",
       headers: getHeaders(),
-      body: JSON.stringify({
-        UserIp: getUserIp(),
-        SearchTokenId: searchTokenId,
-        BookingId: bookingId,
-      }),
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.Error && data.Error.ErrorCode !== 0) {
-      throw new Error(data.Error.ErrorMessage || "Failed to get booking details");
-    }
+    const data = await handleResponse(response);
 
     return {
-      bookingId: data.Result?.BookingId,
-      ticketNo: data.Result?.TicketNo,
-      travelOperatorPNR: data.Result?.TravelOperatorPNR,
-      origin: data.Result?.Origin,
-      originId: data.Result?.OriginID,
-      destination: data.Result?.Destination,
-      destinationId: data.Result?.DestinationId,
-      dateOfJourney: data.Result?.DateOfJourney,
-      noOfSeats: data.Result?.NoOfSeats,
-      departureTime: data.Result?.DepartureTime,
-      arrivalTime: data.Result?.ArrivalTime,
-      duration: data.Result?.Duration,
-      busType: data.Result?.BusType,
-      travelName: data.Result?.TravelName,
-      passengers: data.Result?.Passenger || [],
-      boardingPointDetails: data.Result?.BoardingPointdetails,
-      droppingPointDetails: data.Result?.DroppingPointdetails,
-      cancelPolicy: data.Result?.CancelPolicy || [],
-      price: data.Result?.Price,
-      invoiceNumber: data.Result?.InvoiceNumber,
-      invoiceAmount: data.Result?.InvoiceAmount,
-      invoiceCreatedOn: data.Result?.InvoiceCreatedOn,
+      ticketStatus: data.ticketStatus,
+      inventoryType: data.inventoryType,
+      sourceCity: data.sourceCity,
+      destinationCity: data.destinationCity,
+      journeyDate: data.journeyDate,
+      departureTime: data.departureTime,
+      routeScheduleId: data.routeScheduleId,
+      serviceProvider: data.serviceProvider,
+      serviceType: data.service_type,
+      serviceId: data.serviceId,
+      serviceProviderContact: data.serviceProviderContact,
+      boardingPoint: data.boardingPoint,
+      droppingPoint: data.droppingPoint,
+      travelerDetails: data.travelerDetails || [],
+      etsTicketNumber: data.ETSTNumber,
+      opPNR: data.opPNR,
+      commPCT: data.commPCT,
+      cancellationPolicy: data.cancellationPolicy,
+      bookingDate: data.bookingDate,
+      cancelDate: data.cancelDate,
+      refundAmount: data.refundAmount,
+      tripCode: data.tripCode,
+      success: data.apiStatus?.success || false,
     };
   } catch (error) {
     console.error("Get booking details error:", error);
@@ -328,39 +285,68 @@ export const getBookingDetails = async (searchTokenId, bookingId) => {
 };
 
 /**
- * 7. Cancel Booking
- * POST /busservice/rest/cancelrequest
+ * 8. Cancel Ticket Confirmation (Get cancellation details before actual cancel)
+ * POST /api/ets/cancelTicketConfirmation
+ * 
+ * @param {string} etsTicketNo - ETS ticket number
+ * @param {string[]} seatNbrsToCancel - Array of seat numbers to cancel
  */
-export const cancelBooking = async (searchTokenId, bookingId, seatId, remarks = "Cancel Bus Ticket") => {
+export const cancelTicketConfirmation = async (etsTicketNo, seatNbrsToCancel) => {
   try {
-    const response = await fetch(`${BASE_URL}/busservice/rest/cancelrequest`, {
+    const response = await fetch(`${BASE_URL}/api/ets/cancelTicketConfirmation`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify({
-        UserIp: getUserIp(),
-        SearchTokenId: searchTokenId,
-        BookingId: bookingId,
-        SeatId: String(seatId),
-        Remarks: remarks,
+        etsTicketNo,
+        seatNbrsToCancel,
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    // Check for cancellation error
-    if (data.SendChangeRequestResult?.Error?.ErrorCode !== 0) {
-      throw new Error(
-        data.SendChangeRequestResult?.Error?.ErrorMessage || "Cancellation failed"
-      );
-    }
+    const data = await handleResponse(response);
 
     return {
-      responseStatus: data.SendChangeRequestResult?.ResponseStatus,
-      traceId: data.SendChangeRequestResult?.TraceId,
+      cancellable: data.cancellable,
+      partiallyCancellable: data.partiallyCancellable,
+      totalTicketFare: data.totalTicketFare,
+      totalRefundAmount: data.totalRefundAmount,
+      cancelChargesPercentage: data.cancelChargesPercentage,
+      cancellationCharges: data.cancellationCharges,
+      success: data.apiStatus?.success || false,
+    };
+  } catch (error) {
+    console.error("Cancel ticket confirmation error:", error);
+    throw error;
+  }
+};
+
+/**
+ * 9. Cancel Ticket (Actual cancellation)
+ * POST /api/ets/cancelTicket
+ * 
+ * @param {string} etsTicketNo - ETS ticket number
+ * @param {string[]} seatNbrsToCancel - Array of seat numbers to cancel
+ */
+export const cancelBooking = async (etsTicketNo, seatNbrsToCancel) => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/ets/cancelTicket`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        etsTicketNo,
+        seatNbrsToCancel,
+      }),
+    });
+
+    const data = await handleResponse(response);
+
+    return {
+      cancellable: data.cancellable,
+      partiallyCancellable: data.partiallyCancellable,
+      totalTicketFare: data.totalTicketFare,
+      totalRefundAmount: data.totalRefundAmount,
+      cancelChargesPercentage: data.cancelChargesPercentage,
+      cancellationCharges: data.cancellationCharges,
+      success: data.apiStatus?.success || false,
     };
   } catch (error) {
     console.error("Cancel booking error:", error);
@@ -368,13 +354,123 @@ export const cancelBooking = async (searchTokenId, bookingId, seatId, remarks = 
   }
 };
 
+/**
+ * 10. Get My Plan and Balance
+ * GET /api/ets/getMyPlanAndBalance
+ * 
+ * Returns API partner plan and balance information
+ */
+export const getMyPlanAndBalance = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/ets/getMyPlanAndBalance`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+
+    const data = await handleResponse(response);
+
+    return {
+      userType: data.userType,
+      planName: data.planName,
+      planNature: data.planNature,
+      product: data.product,
+      allowedIPs: data.allowedIPs,
+      inventoryTypes: data.inventoryTypes,
+      registrationDate: data.registrationDate,
+      renewalDate: data.renewalDate,
+      planDescription: data.planDescription,
+      fixedCommission: data.fixedCommission,
+      dynamicCommission: data.dynamicComission,
+      serviceCharges: data.serviceCharges,
+      balanceAmount: data.balanceAmount,
+      lowBalanceAmount: data.lowBalanceAmount,
+      success: data.apiStatus?.success || false,
+    };
+  } catch (error) {
+    console.error("Get plan and balance error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Helper: Format block ticket request data
+ * 
+ * @param {Object} params - Booking parameters
+ * @returns {Object} Formatted request body for blockTicket API
+ */
+export const formatBlockTicketRequest = ({
+  sourceCity,
+  destinationCity,
+  dateOfJourney,
+  routeScheduleId,
+  inventoryType,
+  boardingPoint,
+  droppingPoint,
+  customerName,
+  customerLastName,
+  customerEmail,
+  customerPhone,
+  emergencyPhNumber,
+  customerAddress,
+  passengers,
+}) => {
+  return {
+    sourceCity,
+    destinationCity,
+    doj: dateOfJourney,
+    routeScheduleId,
+    inventoryType,
+    boardingPoint: {
+      id: boardingPoint.id,
+      location: boardingPoint.location,
+      time: boardingPoint.time,
+    },
+    droppingPoint: {
+      id: droppingPoint.id,
+      location: droppingPoint.location,
+      time: droppingPoint.time,
+    },
+    customerName,
+    customerLastName,
+    customerEmail,
+    customerPhone,
+    emergencyPhNumber,
+    customerAddress,
+    blockSeatPaxDetails: passengers.map((p, index) => ({
+      age: String(p.age || "25"),
+      name: p.name,
+      seatNbr: p.seatNbr,
+      sex: p.gender === "male" ? "M" : "F",
+      fare: p.fare,
+      serviceTaxAmount: p.serviceTaxAmount || 0,
+      operatorServiceChargeAbsolute: p.operatorServiceChargeAbsolute || 0,
+      totalFareWithTaxes: p.totalFareWithTaxes || p.fare,
+      ladiesSeat: p.ladiesSeat || false,
+      lastName: p.lastName || "",
+      mobile: p.mobile || customerPhone,
+      title: p.gender === "male" ? "Mr" : p.title || "Ms",
+      email: p.email || customerEmail,
+      idType: p.idType || "",
+      idNumber: p.idNumber || "",
+      nameOnId: p.nameOnId || p.name,
+      primary: index === 0,
+      ac: p.ac || false,
+      sleeper: p.sleeper || false,
+    })),
+  };
+};
+
 // Export all functions
 export default {
+  getStations,
   searchBuses,
   getSeatLayout,
-  getBoardingPoints,
-  blockSeat,
+  blockTicket,
+  getRtcUpdatedFare,
   bookTicket,
   getBookingDetails,
+  cancelTicketConfirmation,
   cancelBooking,
+  getMyPlanAndBalance,
+  formatBlockTicketRequest,
 };

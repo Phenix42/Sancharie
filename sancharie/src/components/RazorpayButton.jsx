@@ -21,7 +21,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { loadRazorpayScript, initiatePayment } from '../services/paymentApi';
+import { payment } from '../services/api';
 import { BsShieldLock } from 'react-icons/bs';
 import './RazorpayButton.css';
 
@@ -44,7 +44,7 @@ const RazorpayButton = ({
 
   // Load Razorpay script on mount
   useEffect(() => {
-    loadRazorpayScript()
+    payment.loadScript()
       .then((loaded) => {
         setIsScriptLoaded(loaded);
         if (!loaded) {
@@ -71,30 +71,30 @@ const RazorpayButton = ({
     setError(null);
 
     try {
-      const result = await initiatePayment({
+      const result = await payment.initiatePayment({
         amount,
         customerInfo,
         bookingDetails: {
           ...bookingDetails,
           currency,
         },
-        onPaymentStart: () => {
+        onStart: () => {
           console.log('Razorpay checkout opening...');
         },
-        onPaymentSuccess: (verification) => {
+        onSuccess: (verification) => {
           setIsLoading(false);
           if (onSuccess) {
             onSuccess(verification);
           }
         },
-        onPaymentFailure: (err) => {
+        onFailure: (err) => {
           setIsLoading(false);
           setError(err.description || 'Payment failed');
           if (onFailure) {
             onFailure(err);
           }
         },
-        onPaymentDismiss: () => {
+        onDismiss: () => {
           setIsLoading(false);
           if (onDismiss) {
             onDismiss();

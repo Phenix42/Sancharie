@@ -15,6 +15,7 @@ import Payment from "./components/payment";
 import MyBookings from "./components/MyBookings";
 import Profile from "./components/Profile";
 import Travellers from "./components/Travellers";
+import { ToastProvider } from "./components/Toast";
 
 function App() {
   const [showSearchResult, setShowSearchResult] = useState(false);
@@ -34,8 +35,9 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <Routes>
+    <ToastProvider>
+      <div className="app">
+        <Routes>
         <Route path="/privacy-policy" element={
           <>
             <Header onBackToHome={handleBackToHome} />
@@ -79,6 +81,7 @@ function App() {
         } />
       </Routes>
     </div>
+    </ToastProvider>
   );
 }
 

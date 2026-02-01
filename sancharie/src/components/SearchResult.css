@@ -369,6 +369,111 @@
   gap: 14px;
 }
 
+/* ================= ROUTE HEADER ================= */
+.route-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #002c3f, #003d54);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.route-header-left h2 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.route-header-left p {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ================= SESSION TIMER ================= */
+.session-timer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(190, 149, 31, 0.3);
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+
+.session-timer svg {
+  color: #be951f;
+  flex-shrink: 0;
+}
+
+.timer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.timer-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timer-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  color: #be951f;
+  letter-spacing: 1px;
+}
+
+/* Warning state - less than 2 minutes */
+.session-timer.warning {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.session-timer.warning .timer-value {
+  color: #fbbf24;
+}
+
+.session-timer.warning svg {
+  color: #fbbf24;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* Critical state - less than 1 minute */
+.session-timer.critical {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.session-timer.critical .timer-value {
+  color: #ef4444;
+  animation: blink 0.5s ease-in-out infinite;
+}
+
+.session-timer.critical svg {
+  color: #ef4444;
+  animation: pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* ================= DATE SELECTOR ================= */
 .date-selector {
   display: flex;
@@ -456,16 +561,110 @@
 /* ================= BUS CARD ================= */
 .sr-card {
   background: #ffffff;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid #e4e4e4;
-  padding: 14px 18px;
-  display: grid;
-  grid-template-columns: minmax(350px, 1fr) auto 1px auto;
-  align-items: stretch;
-  gap: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   position: relative;
-  min-height: 140px;
+  overflow: hidden;
+}
+
+/* Card Header Row - Operator and Route */
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 18px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #ffffff;
+}
+
+.operator-route {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.operator-name {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+}
+
+.route-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.route-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: #000000;
+  text-transform: lowercase;
+}
+
+.route-point {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: #000000;
+  text-transform: lowercase;
+}
+
+.route-point.other-stops {
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.route-arrow {
+  font-size: 16px;
+  color: #666666;
+}
+
+/* Discount Ribbon - Positioned in Header */
+.discount-ribbon {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ribbon-content {
+  background: linear-gradient(90deg, #1a1a1a 0%, #2d2d2d 100%);
+  color: #ffffff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  padding: 4px 10px 6px 10px;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.3;
+  clip-path: polygon(100% 0%, 100% 100%, 50% 80%, 0% 100%, 0% 0%);
+  padding-bottom: 14px;
+}
+
+.ribbon-content strong {
+  font-weight: 700;
+  color: #be951f;
+}
+
+.ribbon-zigzag {
+  display: none;
+}
+
+/* Card Main Content */
+.card-main-content {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) auto 1px auto;
+  align-items: stretch;
+  padding: 14px 18px 18px;
+  gap: 0;
 }
 
 /* Left info */
@@ -473,83 +672,133 @@
   padding-right: 16px;
 }
 
-.sr-info .bus-title {
+/* Bus Number Badge */
+.bus-number-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #ec9a19;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  padding: 4px 12px;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.bus-number-badge .badge-dot {
+  width: 5px;
+  height: 5px;
+  background: #000000;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.bus-number-badge .badge-dot.left {
+  left: 6px;
+}
+
+.bus-number-badge .badge-dot.right {
+  right: 6px;
+}
+
+.bus-number {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000000;
+  padding: 0 8px;
+}
+
+/* Bus Type */
+.bus-type {
   font-family: 'Montserrat', sans-serif;
   font-size: 14px;
-  font-weight: 700;
-  margin: 0 0 4px 0;
-  color: #000000;
-  line-height: 1.3;
-}
-
-.sr-info .depart-label {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 12px;
   font-weight: 400;
   color: #000000;
-  margin: 0 0 8px 0;
+  margin: 0 0 10px 0;
 }
 
-/* Timeline */
-.timeline-row {
+/* Time Row */
+.time-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0;
+  gap: 0;
+  margin-bottom: 4px;
 }
 
-.time-location {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-
-.time-location-end {
-  align-items: flex-end;
-}
-
-.time-location .time {
+.time-row .time {
   font-family: 'Montserrat', sans-serif;
   font-size: 14px;
   font-weight: 400;
   color: #000000;
+  white-space: nowrap;
 }
 
-.time-location .boarding {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  color: #000000;
+/* Location Names Row */
+.location-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  max-width: 400px;
 }
 
-.time-location .dropping {
+.location-name {
   font-family: 'Montserrat', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: #000000;
   text-transform: uppercase;
 }
 
-.timeline-line-segment {
+.location-name.location-end {
+  text-align: right;
+}
+
+/* Duration Connector */
+.duration-connector {
+  display: flex;
+  align-items: center;
   flex: 1;
-  min-width: 40px;
-  max-width: 80px;
+  min-width: 120px;
+  max-width: 250px;
+  margin: 0 12px;
+}
+
+.duration-line-left {
+  flex: 1;
+  height: 2px;
+  background: #000000;
+  min-width: 30px;
+}
+
+.duration-line-right {
+  flex: 1;
+  height: 2px;
+  background: #000000;
+  min-width: 30px;
+  position: relative;
+}
+
+.duration-line-right::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
   height: 0;
-  border-top: 1px solid #000000;
-  align-self: flex-start;
-  margin-top: 10px;
+  border-left: 8px solid #000000;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
 }
 
 .duration-badge {
   font-family: 'Montserrat', sans-serif;
   font-size: 11px;
-  font-weight: 400;
+  font-weight: 600;
   color: #000000;
   white-space: nowrap;
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 4px;
+  padding: 2px 8px;
+  background: #ffffff;
 }
 
 /* ================= SEAT PREVIEW ================= */
@@ -557,32 +806,33 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 0 16px;
+  gap: 8px;
 }
 
 .seat-layout-container {
   border: 1px solid #c5c5c5;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 6px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
   gap: 0;
   overflow: hidden;
   background: #ffffff;
-  min-width: 280px;
-  min-height: 100px;
+  min-width: 320px;
 }
 
 .seat-deck {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 0;
+  gap: 10px;
+  padding: 6px 0;
+  position: relative;
 }
 
 .deck-label-wrapper {
-  width: 20px;
+  width: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -592,7 +842,7 @@
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-family: 'Montserrat', sans-serif;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 400;
   color: #112211;
   text-transform: capitalize;
@@ -602,55 +852,77 @@
 .deck-seats {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .seat-row {
   display: flex;
-  gap: 4px;
+  gap: 5px;
 }
 
 .seat-cell {
-  width: 28px;
-  height: 12px;
+  width: 32px;
+  height: 14px;
   border-radius: 2px;
   display: block;
+  border: 1px solid transparent;
 }
 
 .seat-cell.booked {
   background: #d9d9d9;
+  border-color: #d9d9d9;
 }
 
 .seat-cell.available {
-  background: #8dd3bb;
+  background: transparent;
+  border-color: #4caf50;
+}
+
+.seat-cell.ladies {
+  background: transparent;
+  border-color: #ff89be;
+}
+
+.seat-cell.males {
+  background: transparent;
+  border-color: #2438b8;
+}
+
+.steering-icon {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  opacity: 0.6;
 }
 
 .deck-divider {
   height: 1px;
   background: #c5c5c5;
-  margin: 6px 0;
-  width: calc(100% - 28px);
-  margin-left: 28px;
+  margin: 4px 0;
+  width: calc(100% - 32px);
+  margin-left: 32px;
 }
 
-.select-seat-btn {
-  background: #002c3f;
-  color: #ffffff;
-  border: none;
-  padding: 6px 20px;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 4px;
-  cursor: pointer;
-  text-transform: uppercase;
-  margin-top: 10px;
-  letter-spacing: 0.5px;
-  transition: background 0.2s ease;
+/* Seats Info */
+.seats-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
 }
 
-.select-seat-btn:hover {
-  background: #001f2d;
+.seats-info .seat-icon {
+  font-size: 18px;
+  color: #a37226;
+}
+
+.seats-text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: #a37226;
 }
 
 /* Card Divider - Vertical line between seat preview and price */
@@ -662,7 +934,7 @@
     #c5c5c5 90%, 
     transparent 100%);
   align-self: stretch;
-  margin: 0 10px;
+  margin: 0 14px;
   min-height: 140px;
 }
 
@@ -671,51 +943,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  min-width: 110px;
+  justify-content: center;
+  min-width: 150px;
   padding-left: 14px;
-  position: relative;
-  padding-top: 40px;
-}
-
-.discount-ribbon {
-  position: absolute;
-  top: -14px;
-  right: -18px;
-  z-index: 2;
-}
-
-.ribbon-content {
-  background: #112211;
-  color: #ffffff;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 10px;
-  font-weight: 400;
-  padding: 4px 10px 6px 10px;
-  text-align: center;
-  white-space: nowrap;
-  line-height: 1.3;
-}
-
-.ribbon-content strong {
-  font-weight: 700;
-  color: #be951f;
-}
-
-.ribbon-zigzag {
-  width: 100%;
-  height: 6px;
-  background: linear-gradient(135deg, #112211 25%, transparent 25%) -6px 0,
-              linear-gradient(225deg, #112211 25%, transparent 25%) -6px 0,
-              linear-gradient(315deg, #112211 25%, transparent 25%),
-              linear-gradient(45deg, #112211 25%, transparent 25%);
-  background-size: 6px 6px;
-  background-color: transparent;
 }
 
 .starts-from-label {
   font-family: 'Montserrat', sans-serif;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: #000000;
   margin: 0 0 2px 0;
@@ -725,42 +960,70 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .old-price {
   font-family: 'Montserrat', sans-serif;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 400;
-  color: #666666;
+  color: #322d2d;
   text-decoration: line-through;
 }
 
 .current-price {
   font-family: 'Montserrat', sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: #000000;
 }
 
-.seats-available-btn {
-  background: #be951f;
+.select-seat-btn {
+  background: linear-gradient(180deg, #a37226 3%, #684208 90%);
   color: #ffffff;
   border: none;
-  padding: 5px 14px;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  border-radius: 4px;
-  cursor: default;
-  min-width: 80px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 8px 20px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+  min-width: 130px;
 }
 
-/* ================= NO RESULTS ================= */
+.select-seat-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Seats Left Indicator - AbhiBus Style */
+.seats-left-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 0;
+}
+
+.seats-left-indicator .seats-icon {
+  font-size: 14px;
+}
+
+.seats-left-indicator .seats-count {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e53935;
+}
+
+/* Hide old seats available button */
+.seats-available-btn {
+  display: none;
+}/* ================= NO RESULTS ================= */
 .no-results {
   text-align: center;
   padding: 40px;
@@ -772,31 +1035,30 @@
 /* ================= RESPONSIVE ================= */
 @media (max-width: 1200px) {
   .sr-card {
-    grid-template-columns: 1fr auto 1px auto;
     gap: 0;
-    padding: 16px 20px;
   }
   
-  .sr-info .bus-title {
-    font-size: 16px;
+  .card-main-content {
+    grid-template-columns: minmax(280px, 1fr) auto 1px auto;
+    gap: 0;
+    padding: 14px 16px 16px;
   }
   
-  .sr-info .depart-label {
-    font-size: 18px;
+  .operator-name {
+    font-size: 20px;
   }
   
-  .timeline .time {
-    font-size: 18px;
-  }
-  
-  .locations .boarding,
-  .locations .dropping {
-    font-size: 18px;
+  .route-breadcrumb {
+    display: none;
   }
   
   .seat-cell {
     width: 28px;
     height: 12px;
+  }
+  
+  .seat-layout-container {
+    min-width: 280px;
   }
 }
 
@@ -810,13 +1072,20 @@
   }
 
   .sr-card {
+    gap: 0;
+  }
+  
+  .card-main-content {
     grid-template-columns: 1fr;
-    gap: 20px;
-    padding: 16px;
+    gap: 16px;
   }
   
   .card-divider {
     display: none;
+  }
+  
+  .sr-info {
+    padding-right: 0;
   }
 
   .seat-preview {
@@ -824,37 +1093,66 @@
     padding: 16px 0;
     border-top: 1px solid #e4e4e4;
     border-bottom: 1px solid #e4e4e4;
+    flex-direction: row;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .seat-layout-container {
+    min-width: 260px;
   }
 
   .price-section {
-    align-items: center;
-    text-align: center;
-    padding-left: 0;
-    padding-top: 0;
     flex-direction: row;
-    flex-wrap: wrap;
     justify-content: space-between;
+    align-items: center;
+    padding-left: 0;
     gap: 16px;
+    width: 100%;
   }
   
   .discount-ribbon {
     position: relative;
-    top: 0;
-    right: 0;
-  }
-  
-  .ribbon-content {
-    border-radius: 4px 4px 0 0;
-  }
-  
-  .ribbon-zigzag {
-    border-radius: 0 0 4px 4px;
   }
 }
 
 @media (max-width: 768px) {
   .sr-page {
     padding: 12px;
+  }
+
+  /* Route Header Responsive */
+  .route-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+  }
+
+  .route-header-left h2 {
+    font-size: 18px;
+  }
+
+  .session-timer {
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 14px;
+  }
+
+  .timer-content {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .timer-label {
+    font-size: 11px;
+  }
+
+  .timer-value {
+    font-size: 18px;
   }
 
   .date-selector {
@@ -874,59 +1172,46 @@
   .date-item .date {
     font-size: 12px;
   }
-
-  .sr-card {
-    padding: 14px;
-    gap: 16px;
+  
+  .card-header-row {
+    padding: 10px 14px 8px;
+  }
+  
+  .operator-name {
+    font-size: 18px;
+  }
+  
+  .card-main-content {
+    padding: 12px 14px 16px;
   }
 
-  .sr-info .bus-title {
-    font-size: 14px;
-    line-height: 1.4;
-  }
-
-  .sr-info .depart-label {
-    font-size: 14px;
-    margin-bottom: 12px;
-  }
-
-  .timeline {
-    flex-wrap: wrap;
-    gap: 6px;
-    margin: 12px 0 10px;
-  }
-
-  .timeline .time {
+  .bus-type {
     font-size: 14px;
   }
-
-  .timeline-connector {
-    max-width: 200px;
-    margin: 0 8px;
+  
+  .time-block .time {
+    font-size: 15px;
   }
-
-  .duration-badge {
-    font-size: 13px;
-    padding: 2px 8px;
-  }
-
-  .locations {
-    max-width: 100%;
-  }
-
-  .locations .boarding,
-  .locations .dropping {
+  
+  .time-block .location-name {
     font-size: 14px;
+  }
+  
+  .duration-connector {
+    max-width: 150px;
   }
 
   /* Seat Preview */
   .seat-preview {
     width: 100%;
+    flex-direction: column;
+    align-items: center;
   }
 
   .seat-layout-container {
     width: 100%;
-    max-width: 300px;
+    max-width: 320px;
+    min-width: auto;
   }
 
   .seat-cell {
@@ -948,7 +1233,7 @@
   }
 
   .ribbon-content {
-    font-size: 14px;
+    font-size: 13px;
     padding: 6px 12px 8px 12px;
   }
 
@@ -957,16 +1242,11 @@
   }
 
   .old-price {
-    font-size: 14px;
-  }
-
-  .current-price {
     font-size: 16px;
   }
 
-  .seats-available-btn {
-    padding: 8px 20px;
-    font-size: 14px;
+  .current-price {
+    font-size: 18px;
   }
 }
 
@@ -988,28 +1268,38 @@
     min-width: 55px;
     padding: 6px 4px;
   }
-
-  .sr-card {
-    padding: 12px;
-    border-radius: 6px;
+  
+  .card-header-row {
+    padding: 8px 12px;
   }
-
-  .sr-info .bus-title {
+  
+  .operator-name {
+    font-size: 16px;
+  }
+  
+  .card-main-content {
+    padding: 10px 12px 14px;
+  }
+  
+  .bus-number-badge {
+    padding: 3px 10px;
+  }
+  
+  .bus-number {
     font-size: 13px;
   }
-
-  .timeline {
+  
+  .time-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .duration-connector {
+    flex: 0 0 100%;
+    max-width: 100%;
+    order: 2;
+    margin: 8px 0;
     justify-content: center;
-  }
-
-  .timeline-connector {
-    max-width: 120px;
-  }
-
-  .locations {
-    flex-direction: column;
-    gap: 4px;
-    align-items: flex-start;
   }
 
   .seat-cell {
@@ -1026,7 +1316,735 @@
     width: 100%;
   }
 
-  .seats-available-btn {
-    width: auto;
+  .load-more-btn {
+    width: 100%;
+    padding: 14px;
+  }
+}
+
+/* ================= LOAD MORE BUTTON ================= */
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+  margin-top: 8px;
+}
+
+.load-more-btn {
+  background: linear-gradient(135deg, #A37226 0%, #c9944d 100%);
+  color: white;
+  border: none;
+  padding: 14px 48px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(163, 114, 38, 0.3);
+}
+
+.load-more-btn:hover {
+  background: linear-gradient(135deg, #8a5f1e 0%, #A37226 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(163, 114, 38, 0.4);
+}
+
+.load-more-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(163, 114, 38, 0.3);
+}
+
+/* ================= BUS DETAILS CHIPS ROW ================= */
+.bus-details-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+  flex-wrap: wrap;
+}
+
+.rating-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #fff8e6 0%, #fff3d4 100%);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #f5e6c8;
+}
+
+.rating-chip svg {
+  flex-shrink: 0;
+}
+
+.rating-value {
+  color: #333;
+}
+
+.rating-divider {
+  color: #ccc;
+  margin: 0 2px;
+}
+
+.rating-count {
+  color: #666;
+  font-weight: 500;
+}
+
+.detail-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: #444;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.detail-chip:hover {
+  background: #f8f4ed;
+  border-color: #d4c5a9;
+  color: #9c7635;
+}
+
+.detail-chip:hover svg {
+  color: #9c7635;
+}
+
+.detail-chip svg {
+  color: #666;
+  flex-shrink: 0;
+}
+
+/* ================= BUS DETAILS MODAL ================= */
+.bus-details-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 44, 63, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.bus-details-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 44, 63, 0.4);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e8e8e8;
+  background: #fff;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.modal-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.modal-bus-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.modal-bus-name h3 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 4px 0;
+}
+
+.modal-bus-name p {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+}
+
+.modal-bus-rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.modal-rating-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modal-rating-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  color: #666;
+}
+
+/* Modal Tabs */
+.modal-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  overflow-x: auto;
+  background: #fff;
+}
+
+.modal-tab {
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 18px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.modal-tab:hover {
+  background: #f8f4ed;
+  border-color: #d4c5a9;
+}
+
+.modal-tab.active {
+  background: linear-gradient(135deg, #9c7635 0%, #b8912e 100%);
+  border-color: #9c7635;
+  color: #fff;
+}
+
+/* Modal Content */
+.modal-content {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.content-section-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 14px 0;
+}
+
+/* Boarding/Dropping Points Timeline */
+.points-timeline {
+  margin-bottom: 20px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.timeline-time {
+  min-width: 50px;
+  text-align: right;
+}
+
+.point-time {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  display: block;
+}
+
+.point-date {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  color: #999;
+  display: block;
+}
+
+.timeline-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 50px;
+}
+
+.marker-dot {
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 2px solid #9c7635;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.marker-line {
+  width: 2px;
+  flex: 1;
+  background: linear-gradient(180deg, #9c7635 0%, #be951f 100%);
+  margin-top: 4px;
+}
+
+.timeline-details {
+  flex: 1;
+  padding-bottom: 14px;
+}
+
+.point-name {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.point-address {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  color: #666;
+  display: block;
+}
+
+.view-more-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #fff8e6 0%, #fff3d4 100%);
+  border: 1px solid #f5e6c8;
+  border-radius: 6px;
+  color: #9c7635;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+}
+
+.view-more-btn:hover {
+  background: linear-gradient(135deg, #fff3d4 0%, #ffe9b8 100%);
+  border-color: #e6d4a5;
+}
+
+/* Cancellation Table */
+.cancellation-table {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: linear-gradient(135deg, #002c3f 0%, #0a3d54 100%);
+  padding: 10px 14px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.table-subheader {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f5f5f5;
+  padding: 4px 14px 10px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  color: #888;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-row:nth-child(even) {
+  background: #fafafa;
+}
+
+.cancellation-time {
+  color: #333;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.refund-amount {
+  color: #9c7635;
+  text-align: right;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.cancellation-notes {
+  background: linear-gradient(135deg, #fff8e6 0%, #fff3d4 100%);
+  padding: 12px 14px;
+  border-radius: 6px;
+  border: 1px solid #f5e6c8;
+}
+
+.cancellation-notes p {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  color: #666;
+  margin: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cancellation-notes p svg {
+  color: #9c7635;
+  flex-shrink: 0;
+}
+
+/* Amenities Grid */
+.amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.amenity-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  background: #f8f8f8;
+  border-radius: 10px;
+  border: 1px solid #eee;
+  transition: all 0.2s;
+}
+
+.amenity-item:hover {
+  background: #f8f4ed;
+  border-color: #e6d4a5;
+}
+
+.amenity-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9c7635;
+}
+
+.amenity-name {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  color: #555;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* Policy Content */
+.policy-item {
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.policy-item:last-child {
+  border-bottom: none;
+}
+
+.policy-item h5 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 6px 0;
+}
+
+.policy-item p {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Modal Responsive */
+@media (max-width: 768px) {
+  .bus-details-modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  
+  .bus-details-modal {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .modal-tabs {
+    padding: 10px 16px;
+  }
+  
+  .modal-tab {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  
+  .amenities-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  
+  .bus-details-chips {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  
+  .detail-chip {
+    padding: 4px 8px;
+    font-size: 10px;
+    border-radius: 12px;
+  }
+  
+  .detail-chip span {
+    display: none;
+  }
+  
+  .rating-chip {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+}
+
+/* ================= SESSION EXPIRED POPUP ================= */
+.session-expired-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 44, 63, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: fadeInOverlay 0.3s ease;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.session-expired-popup {
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px 36px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0, 44, 63, 0.4);
+  animation: popupSlideUp 0.4s ease;
+}
+
+@keyframes popupSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.session-expired-icon {
+  width: 90px;
+  height: 90px;
+  background: linear-gradient(135deg, #fff3cd, #ffeeba);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  color: #d97706;
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.session-expired-popup h2 {
+  margin: 0 0 14px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #002C3F;
+}
+
+.session-expired-popup p {
+  margin: 0 0 28px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.session-expired-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.session-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #9c7635, #7a5c2a);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 20px rgba(156, 118, 53, 0.35);
+}
+
+.session-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(156, 118, 53, 0.45);
+}
+
+.session-btn-primary:active {
+  transform: translateY(0);
+}
+
+.session-btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #002C3F;
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.session-btn-secondary:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+/* Session Expired Responsive */
+@media (max-width: 480px) {
+  .session-expired-popup {
+    padding: 32px 24px;
+    margin: 16px;
+  }
+
+  .session-expired-icon {
+    width: 76px;
+    height: 76px;
+    margin-bottom: 20px;
+  }
+
+  .session-expired-icon svg {
+    width: 44px;
+    height: 44px;
+  }
+
+  .session-expired-popup h2 {
+    font-size: 22px;
+  }
+
+  .session-expired-popup p {
+    font-size: 14px;
+  }
+
+  .session-btn-primary,
+  .session-btn-secondary {
+    padding: 14px 20px;
+    font-size: 15px;
   }
 }

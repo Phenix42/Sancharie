@@ -124,7 +124,7 @@
 }
 
 /* Mobile Responsive */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .my-account-dropdown {
     position: fixed;
     top: auto;
@@ -136,6 +136,7 @@
     max-height: 80vh;
     overflow-y: auto;
     animation: slideUp 0.3s ease;
+    z-index: 9999;
   }
 
   @keyframes slideUp {

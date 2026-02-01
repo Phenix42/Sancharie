@@ -21,6 +21,7 @@ const mongoose = require('mongoose');
 const authRoutes = require('./routes/auth');
 const paymentRoutes = require('./routes/payment');
 const userRoutes = require('./routes/user');
+const busRoutes = require('./routes/bus');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,7 +47,7 @@ mongoose.connect(MONGODB_URI)
 // CORS - Allow frontend origin
 // In production, restrict this to your actual domain
 app.use(cors({
-  origin: ['https://sancharie.com', 'https://www.sancharie.com', 'http://localhost:5173', 'http://localhost:3000'],
+  origin: ['https://sancharie.com', 'https://www.sancharie.com', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -75,6 +76,9 @@ app.use('/payment', paymentRoutes);
 
 // User routes (profile, bookings)
 app.use('/user', userRoutes);
+
+// Bus API proxy routes (hides actual API URL from browser)
+app.use('/api', busRoutes);
 
 // ============================================
 // ERROR HANDLING

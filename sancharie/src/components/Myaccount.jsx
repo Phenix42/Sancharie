@@ -15,13 +15,23 @@ export default function MyAccount({ onClose }) {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      // Don't close if clicking on the login button
+      const isLoginButton = event.target.closest('.login-btn');
+      
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) && !isLoginButton) {
         onClose?.();
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // Use setTimeout to avoid race condition with button click
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [onClose]);
 
   const handleLogout = () => {

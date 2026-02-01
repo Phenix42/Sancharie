@@ -1,20 +1,43 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Header.css'
 import AuthModal from './Authantication/Login'
 import MyAccount from './Myaccount'
 import ProfileCompletion from './ProfileCompletion'
-import Logo from '../assets/logosan.svg'
 import { useAuth } from '../context/AuthContext'
+import { useBooking } from '../context/BookingContext'
+import { Timer } from 'lucide-react'
 
 function Header({ onBackToHome }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showAccountDropdown, setShowAccountDropdown] = useState(false)
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
+  const [remainingTime, setRemainingTime] = useState({ minutes: 10, seconds: 0 })
   
   const { isAuthenticated, user, completeLogin, isLoading } = useAuth()
+  const { state: bookingState, actions: bookingActions } = useBooking()
+  const { sessionExpired, sessionStartTime } = bookingState
   const navigate = useNavigate()
+
+  // Update remaining time every second
+  useEffect(() => {
+    if (!sessionStartTime || sessionExpired) return;
+    
+    const updateTimer = () => {
+      const timeLeft = bookingActions.getRemainingTime();
+      if (timeLeft) {
+        setRemainingTime({
+          minutes: timeLeft.minutes,
+          seconds: timeLeft.seconds
+        });
+      }
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [sessionStartTime, sessionExpired, bookingActions]);
 
   // Get display name - use name if available, otherwise show phone last 4 digits
   const getDisplayName = () => {
@@ -29,6 +52,10 @@ function Header({ onBackToHome }) {
   };
 
   const handleLogoClick = () => {
+    // Reset session when going back to home
+    bookingActions.resetSession();
+    bookingActions.resetAll();
+    
     if (onBackToHome) {
       onBackToHome();
       setMobileMenuOpen(false);
@@ -75,7 +102,7 @@ function Header({ onBackToHome }) {
       <header className="header">
         <div className="header-container">
           <div className="logo" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
-            <img src={Logo} alt="Sancharie" className="logo-img" />
+            <span className="logo-text">Sancharie</span>
           </div>
           
           <button 
@@ -84,6 +111,16 @@ function Header({ onBackToHome }) {
           >
             ☰
           </button>
+
+          {/* Session Timer */}
+          {sessionStartTime && !sessionExpired && (
+            <div className={`header-timer ${remainingTime.minutes < 2 ? 'warning' : ''} ${remainingTime.minutes < 1 ? 'critical' : ''}`}>
+              <Timer size={14} />
+              <span className="timer-time">
+                {String(remainingTime.minutes).padStart(2, '0')}:{String(remainingTime.seconds).padStart(2, '0')}
+              </span>
+            </div>
+          )}
 
           <nav className={`nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
             <a href="#home" onClick={handleLogoClick}>Home</a>
