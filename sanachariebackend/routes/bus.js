@@ -19,7 +19,7 @@
  */
 
 const express = require('express');
-const AxiosDigestAuth = require('@mhoc/axios-digest-auth').default;
+const AxiosDigestAuth = require('@mhoc/axios-digest-auth');
 const router = express.Router();
 
 // ============================================
