@@ -66,6 +66,14 @@
   flex-shrink: 0;
 }
 
+.logo-text {
+  font-family: 'Koguli', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #9c7635;
+  letter-spacing: 1px;
+}
+
 .logo-img {
   height: 50px;
   width: auto;
@@ -74,10 +82,10 @@
 
 .logo h1 {
   margin: 0;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Koguli', serif;
   font-size: 24px;
   font-weight: 700;
-  color: #002C3F;
+  color: #9c7635;
   letter-spacing: -0.5px;
 }
 

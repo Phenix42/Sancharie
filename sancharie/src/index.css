@@ -1,5 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
+/* Koguli Font - Add your font file if available */
+@font-face {
+  font-family: 'Koguli';
+  src: url('/fonts/Koguli-Bold.woff2') format('woff2'),
+       url('/fonts/Koguli-Bold.woff') format('woff'),
+       url('/fonts/Koguli-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   margin: 0;
   padding: 0;
