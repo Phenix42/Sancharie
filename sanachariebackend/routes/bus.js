@@ -75,9 +75,9 @@ router.use(checkConfig);
 
 /**
  * Get all stations/cities
- * POST /ets/getStations
+ * GET /ets/getStations
  */
-router.post('/ets/getStations', async (req, res) => {
+router.get('/ets/getStations', async (req, res) => {
   try {
     const response = await digestAuth.request({
       method: 'GET',
