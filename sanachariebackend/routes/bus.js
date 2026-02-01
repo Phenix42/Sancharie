@@ -1,16 +1,17 @@
 /**
  * ============================================
- * BUS API PROXY ROUTES
+ * ETS BUS API PROXY ROUTES
  * ============================================
  * 
- * Secure proxy for third-party bus booking API.
- * All credentials stored server-side only.
+ * Secure proxy for eTravelSmart (ETS) bus booking API.
+ * Uses Digest Authentication with credentials stored server-side only.
  * 
- * Browser sees: https://sancharie.com/api/busservice/*
- * Server calls: [HIDDEN - Configured in .env]
+ * Browser sees: https://sancharie.com/api/ets/*
+ * Server calls: ETS API (Configured in .env)
  * 
  * SECURITY:
  * - API credentials never exposed to frontend
+ * - Digest Authentication handled server-side
  * - Request validation and sanitization
  * - Error handling without leaking internal details
  * 
@@ -18,88 +19,48 @@
  */
 
 const express = require('express');
-const axios = require('axios');
+const AxiosDigestAuth = require('@mhoc/axios-digest-auth').default;
 const router = express.Router();
 
 // ============================================
 // CONFIGURATION (from environment only)
 // ============================================
 
-const BUS_API_CONFIG = {
-  baseUrl: process.env.BUS_API_URL,
-  username: process.env.BUS_API_USERNAME,
-  password: process.env.BUS_API_PASSWORD,
+const ETS_API_CONFIG = {
+  baseUrl: process.env.ETS_API_URL || 'http://test.etravelsmart.com/etsAPI/api',
+  username: process.env.ETS_API_USERNAME || 'sancharie',
+  password: process.env.ETS_API_PASSWORD || 'Amma@5143',
   timeout: 30000,
 };
 
 /**
- * Check if bus API is properly configured
+ * Check if ETS API is properly configured
  */
 const isConfigured = () => {
-  return !!(BUS_API_CONFIG.baseUrl && BUS_API_CONFIG.username && BUS_API_CONFIG.password);
+  return !!(ETS_API_CONFIG.baseUrl && ETS_API_CONFIG.username && ETS_API_CONFIG.password);
 };
 
 // ============================================
-// SECURITY HELPERS
+// AXIOS INSTANCE WITH DIGEST AUTH
 // ============================================
 
-/**
- * Get API headers with credentials (server-side only)
- */
-const getApiHeaders = () => ({
-  'Content-Type': 'application/json',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Connection': 'keep-alive',
-  'Username': BUS_API_CONFIG.username,
-  'Password': BUS_API_CONFIG.password,
+const digestAuth = new AxiosDigestAuth({
+  username: ETS_API_CONFIG.username,
+  password: ETS_API_CONFIG.password,
 });
-
-/**
- * Sanitize request body - only allow expected fields
- */
-const sanitizeBody = (body) => {
-  if (!body || typeof body !== 'object') return {};
-  
-  const allowedFields = [
-    'UserIp', 'DateOfJourney', 'OriginId', 'DestinationId',
-    'SearchTokenId', 'ResultIndex', 'BoardingPointId', 'DroppingPointId',
-    'Passenger', 'BookingId', 'SeatId', 'Remarks'
-  ];
-  
-  const sanitized = {};
-  for (const field of allowedFields) {
-    if (body[field] !== undefined) {
-      sanitized[field] = body[field];
-    }
-  }
-  return sanitized;
-};
 
 // ============================================
 // MIDDLEWARE
 // ============================================
 
 /**
- * Verify bus API configuration
+ * Verify ETS API configuration
  */
 const checkConfig = (req, res, next) => {
   if (!isConfigured()) {
-    console.error('[Bus API] Missing configuration');
+    console.error('[ETS API] Missing configuration');
     return res.status(503).json({
-      Error: { ErrorCode: -1, ErrorMessage: 'Bus service not available' }
-    });
-  }
-  next();
-};
-
-/**
- * Validate required fields
- */
-const validateRequired = (fields) => (req, res, next) => {
-  const missing = fields.filter(f => !req.body[f]);
-  if (missing.length > 0) {
-    return res.status(400).json({
-      Error: { ErrorCode: -1, ErrorMessage: `Missing: ${missing.join(', ')}` }
+      apiStatus: { success: false, message: 'Bus service not available' }
     });
   }
   next();
@@ -109,89 +70,332 @@ const validateRequired = (fields) => (req, res, next) => {
 router.use(checkConfig);
 
 // ============================================
-// PROXY HANDLER
+// API ROUTES
 // ============================================
 
 /**
- * Proxy requests to the bus API
+ * Get all stations/cities
+ * GET /ets/getStations
  */
-const proxyRequest = async (req, res, endpoint) => {
+router.get('/ets/getStations', async (req, res) => {
   try {
-    const response = await axios({
-      method: 'POST',
-      url: `${BUS_API_CONFIG.baseUrl}${endpoint}`,
-      headers: getApiHeaders(),
-      data: sanitizeBody(req.body),
-      timeout: BUS_API_CONFIG.timeout,
-      validateStatus: (status) => status < 500,
+    const response = await digestAuth.request({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/getStations`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
     });
-
-    res.status(response.status).json(response.data);
+    res.json(response.data);
   } catch (error) {
-    console.error(`[Bus API] ${endpoint}:`, error.message);
-    
-    let statusCode = 500;
-    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-      statusCode = 503;
-    } else if (error.code === 'ETIMEDOUT') {
-      statusCode = 504;
-    }
-    
-    res.status(statusCode).json({
-      Error: { ErrorCode: -1, ErrorMessage: 'Service temporarily unavailable' }
+    console.error('[ETS API] getStations error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to fetch stations' }
     });
   }
-};
+});
 
-// ============================================
-// ROUTES
-// ============================================
+/**
+ * Search available buses
+ * GET /ets/getAvailableBuses
+ * Query params: sourceCity, destinationCity, doj (yyyy-MM-dd)
+ */
+router.get('/ets/getAvailableBuses', async (req, res) => {
+  try {
+    const { sourceCity, destinationCity, doj } = req.query;
+    
+    if (!sourceCity || !destinationCity || !doj) {
+      return res.status(400).json({
+        apiStatus: { success: false, message: 'Missing required parameters: sourceCity, destinationCity, doj' }
+      });
+    }
 
-// Search buses
-router.post('/busservice/rest/search', 
-  validateRequired(['OriginId', 'DestinationId', 'DateOfJourney']),
-  (req, res) => proxyRequest(req, res, '/busservice/rest/search')
-);
+    const response = await digestAuth.request({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/getAvailableBuses`,
+      params: {
+        sourceCity,
+        destinationCity,
+        doj,
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('[ETS API] getAvailableBuses error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to search buses' }
+    });
+  }
+});
 
-// Get seat layout
-router.post('/busservice/rest/seatlayout',
-  validateRequired(['SearchTokenId', 'ResultIndex']),
-  (req, res) => proxyRequest(req, res, '/busservice/rest/seatlayout')
-);
+/**
+ * Get bus seat layout
+ * GET /ets/getBusLayout
+ * Query params: sourceCity, destinationCity, doj, inventoryType, routeScheduleId
+ */
+router.get('/ets/getBusLayout', async (req, res) => {
+  try {
+    const { sourceCity, destinationCity, doj, inventoryType, routeScheduleId } = req.query;
+    
+    if (!sourceCity || !destinationCity || !doj || inventoryType === undefined || !routeScheduleId) {
+      return res.status(400).json({
+        apiStatus: { success: false, message: 'Missing required parameters' }
+      });
+    }
 
-// Get boarding points
-router.post('/busservice/rest/boardingpoint',
-  validateRequired(['SearchTokenId', 'ResultIndex']),
-  (req, res) => proxyRequest(req, res, '/busservice/rest/boardingpoint')
-);
+    const response = await digestAuth.request({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/getBusLayout`,
+      params: {
+        sourceCity,
+        destinationCity,
+        doj,
+        inventoryType,
+        routeScheduleId,
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('[ETS API] getBusLayout error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to get bus layout' }
+    });
+  }
+});
 
-// Block seat
-router.post('/busservice/rest/blockseat',
-  validateRequired(['SearchTokenId', 'ResultIndex', 'BoardingPointId']),
-  (req, res) => proxyRequest(req, res, '/busservice/rest/blockseat')
-);
+/**
+ * Block ticket (reserve seats for 10 minutes)
+ * POST /ets/blockTicket
+ */
+router.post('/ets/blockTicket', async (req, res) => {
+  try {
+    const response = await digestAuth.request({
+      method: 'POST',
+      url: `${ETS_API_CONFIG.baseUrl}/blockTicket`,
+      data: req.body,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('[ETS API] blockTicket error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to block ticket' }
+    });
+  }
+});
 
-// Book ticket
-router.post('/busservice/rest/book',
-  validateRequired(['SearchTokenId', 'ResultIndex', 'BoardingPointId']),
-  (req, res) => proxyRequest(req, res, '/busservice/rest/book')
-);
+/**
+ * Get RTC updated fare (for RTC services only)
+ * GET /ets/getRtcUpdatedFare
+ * Query params: blockTicketKey
+ */
+router.get('/ets/getRtcUpdatedFare', async (req, res) => {
+  try {
+    const { blockTicketKey } = req.query;
+    
+    if (!blockTicketKey) {
+      return res.status(400).json({
+        apiStatus: { success: false, message: 'Missing blockTicketKey parameter' }
+      });
+    }
 
-// Get booking details
-router.post('/busservice/rest/getbookingdetail',
-  validateRequired(['BookingId']),
-  (req, res) => proxyRequest(req, res, '/busservice/rest/getbookingdetail')
-);
+    const response = await digestAuth.request({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/getRtcUpdatedFare`,
+      params: { blockTicketKey },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('[ETS API] getRtcUpdatedFare error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to get updated fare' }
+    });
+  }
+});
 
-// Cancel booking
-router.post('/busservice/rest/cancelrequest',
-  validateRequired(['BookingId', 'SeatId']),
-  (req, res) => proxyRequest(req, res, '/busservice/rest/cancelrequest')
-);
+/**
+ * Book seat (confirm booking after payment)
+ * GET /ets/seatBooking
+ * Query params: blockTicketKey
+ */
+router.get('/ets/seatBooking', async (req, res) => {
+  try {
+    const { blockTicketKey } = req.query;
+    
+    if (!blockTicketKey) {
+      return res.status(400).json({
+        apiStatus: { success: false, message: 'Missing blockTicketKey parameter' }
+      });
+    }
 
-// Health check
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok', configured: isConfigured() });
+    const response = await digestAuth.request({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/seatBooking`,
+      params: { blockTicketKey },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('[ETS API] seatBooking error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to book seat' }
+    });
+  }
+});
+
+/**
+ * Get booked ticket details
+ * GET /ets/getTicketByETSTNumber
+ * Query params: ETSTNumber
+ */
+router.get('/ets/getTicketByETSTNumber', async (req, res) => {
+  try {
+    const { ETSTNumber } = req.query;
+    
+    if (!ETSTNumber) {
+      return res.status(400).json({
+        apiStatus: { success: false, message: 'Missing ETSTNumber parameter' }
+      });
+    }
+
+    const response = await digestAuth.request({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/getTicketByETSTNumber`,
+      params: { ETSTNumber },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('[ETS API] getTicketByETSTNumber error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to get ticket details' }
+    });
+  }
+});
+
+/**
+ * Cancel ticket confirmation (get cancellation details before actual cancel)
+ * POST /ets/cancelTicketConfirmation
+ */
+router.post('/ets/cancelTicketConfirmation', async (req, res) => {
+  try {
+    const { etsTicketNo, seatNbrsToCancel } = req.body;
+    
+    if (!etsTicketNo || !seatNbrsToCancel || !Array.isArray(seatNbrsToCancel)) {
+      return res.status(400).json({
+        apiStatus: { success: false, message: 'Missing required parameters' }
+      });
+    }
+
+    const response = await digestAuth.request({
+      method: 'POST',
+      url: `${ETS_API_CONFIG.baseUrl}/cancelTicketConfirmation`,
+      data: req.body,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('[ETS API] cancelTicketConfirmation error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to get cancellation details' }
+    });
+  }
+});
+
+/**
+ * Cancel ticket (actual cancellation)
+ * POST /ets/cancelTicket
+ */
+router.post('/ets/cancelTicket', async (req, res) => {
+  try {
+    const { etsTicketNo, seatNbrsToCancel } = req.body;
+    
+    if (!etsTicketNo || !seatNbrsToCancel || !Array.isArray(seatNbrsToCancel)) {
+      return res.status(400).json({
+        apiStatus: { success: false, message: 'Missing required parameters' }
+      });
+    }
+
+    const response = await digestAuth.request({
+      method: 'POST',
+      url: `${ETS_API_CONFIG.baseUrl}/cancelTicket`,
+      data: req.body,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('[ETS API] cancelTicket error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to cancel ticket' }
+    });
+  }
+});
+
+/**
+ * Get plan and balance information
+ * GET /ets/getMyPlanAndBalance
+ */
+router.get('/ets/getMyPlanAndBalance', async (req, res) => {
+  try {
+    const response = await digestAuth.request({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/getMyPlanAndBalance`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('[ETS API] getMyPlanAndBalance error:', error.message);
+    res.status(error.response?.status || 500).json({
+      apiStatus: { success: false, message: 'Failed to get plan and balance' }
+    });
+  }
+});
+
+/**
+ * Health check
+ */
+router.get('/ets/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    configured: isConfigured(),
+    apiUrl: ETS_API_CONFIG.baseUrl ? 'configured' : 'not configured'
+  });
 });
 
 module.exports = router;
