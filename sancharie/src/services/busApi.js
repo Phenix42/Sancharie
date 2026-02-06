@@ -6,8 +6,17 @@
  * All requests go through our backend proxy to hide the actual API URL
  * and credentials. Uses Digest Authentication handled server-side.
  * 
+ * Live API: http://agent.etravelsmart.com/etsAPI/api
+ * Documentation: http://partners.etravelsmart.com/bus/busApi.htm
+ * 
  * In browser network tab, users will see: https://www.sancharie.com/api/ets/*
  * Backend proxies to ETS API internally.
+ * 
+ * BOARDING POINT LOGIC (per ETS documentation):
+ * - inventoryType 0, 1: Use boarding points from getAvailableBuses response
+ * - inventoryType 2, 3, 5, 6: Use boarding points from getBusLayout response
+ * - inventoryType 1: Time may be null in layout; use search results for time
+ * - Map boarding details using boardingId for complete name with landmarks
  * 
  * @module services/busApi
  */
@@ -414,7 +423,8 @@ export const formatBlockTicketRequest = ({
   customerAddress,
   passengers,
 }) => {
-  return {
+  // Base request object
+  const requestBody = {
     sourceCity,
     destinationCity,
     doj: dateOfJourney,
@@ -424,11 +434,6 @@ export const formatBlockTicketRequest = ({
       id: boardingPoint.id,
       location: boardingPoint.location,
       time: boardingPoint.time,
-    },
-    droppingPoint: {
-      id: droppingPoint.id,
-      location: droppingPoint.location,
-      time: droppingPoint.time,
     },
     customerName,
     customerLastName,
@@ -450,13 +455,147 @@ export const formatBlockTicketRequest = ({
       mobile: p.mobile || customerPhone,
       title: p.gender === "male" ? "Mr" : p.title || "Ms",
       email: p.email || customerEmail,
-      idType: p.idType || "",
+      idType: p.idType || "PAN_CARD", // Required field per ETS docs
       idNumber: p.idNumber || "",
       nameOnId: p.nameOnId || p.name,
       primary: index === 0,
       ac: p.ac || false,
       sleeper: p.sleeper || false,
     })),
+  };
+
+  // Only include droppingPoint if available (some operators may not have it)
+  // Per ETS FAQ: If dropping points are null, use destination city
+  if (droppingPoint && droppingPoint.id) {
+    requestBody.droppingPoint = {
+      id: droppingPoint.id,
+      location: droppingPoint.location,
+      time: droppingPoint.time,
+    };
+  }
+
+  return requestBody;
+};
+
+/**
+ * Helper: Determine boarding point source based on inventory type
+ * Per ETS API Documentation:
+ * - inventoryType 0, 1: Use boarding points from getAvailableBuses response
+ * - inventoryType 2, 3, 5, 6: Use boarding points from getBusLayout response
+ * - inventoryType 1: Time may be null in layout; prefer search results for time
+ * 
+ * @param {number} inventoryType - Inventory type from bus search/layout response
+ * @returns {Object} Configuration for boarding point handling
+ */
+export const getBoardingPointSource = (inventoryType) => {
+  const type = parseInt(inventoryType);
+  
+  // Inventory types that require getBusLayout for boarding points
+  const layoutInventoryTypes = [2, 3, 5, 6];
+  const useLayout = layoutInventoryTypes.includes(type);
+  
+  return {
+    inventoryType: type,
+    useLayoutForBoardingPoints: useLayout,
+    useSearchForBoardingPoints: !useLayout,
+    // For type 1: Time may be null in layout, so prefer search results
+    preferSearchForTime: type === 1,
+    // For type 1: Can map boarding ID from both for complete name with landmarks
+    canMapWithBoardingId: type === 1,
+    // MSRTC specific handling
+    isMSRTC: type === 6,
+    message: useLayout
+      ? 'Fetch boarding/dropping points from getBusLayout response'
+      : 'Use boarding/dropping points from search results',
+  };
+};
+
+/**
+ * Helper: Merge boarding points from search and layout responses
+ * For inventoryType 1: Time is in search results, landmarks are in layout
+ * 
+ * @param {Array} searchBoardingPoints - Boarding points from getAvailableBuses
+ * @param {Array} layoutBoardingPoints - Boarding points from getBusLayout  
+ * @returns {Array} Merged boarding points with complete information
+ */
+export const mergeBoardingPoints = (searchBoardingPoints, layoutBoardingPoints) => {
+  if (!searchBoardingPoints || !layoutBoardingPoints) {
+    return searchBoardingPoints || layoutBoardingPoints || [];
+  }
+
+  // Create a map of layout boarding points by ID
+  const layoutMap = new Map();
+  layoutBoardingPoints.forEach(bp => {
+    if (bp.id) {
+      layoutMap.set(String(bp.id), bp);
+    }
+  });
+
+  // Merge: Use search results as base, enhance with layout data
+  return searchBoardingPoints.map(searchBp => {
+    const layoutBp = layoutMap.get(String(searchBp.id));
+    
+    if (layoutBp) {
+      return {
+        ...searchBp,
+        // Use time from search (may be null in layout)
+        time: searchBp.time || layoutBp.time,
+        // Use location from layout if more complete (has landmarks)
+        location: layoutBp.location && layoutBp.location.length > searchBp.location?.length
+          ? layoutBp.location
+          : searchBp.location,
+        // Keep additional fields from both
+        landmark: layoutBp.landmark || searchBp.landmark,
+        address: layoutBp.address || searchBp.address,
+      };
+    }
+    
+    return searchBp;
+  });
+};
+
+/**
+ * Helper: Get boarding points for a bus based on inventory type
+ * Automatically determines source and returns appropriate points
+ * 
+ * @param {Object} bus - Bus object from search results
+ * @param {Object} layout - Layout response (optional, required for certain inventory types)
+ * @returns {Object} Boarding and dropping points with source info
+ */
+export const getBoardingPoints = (bus, layout = null) => {
+  const config = getBoardingPointSource(bus.inventoryType);
+  
+  let boardingPoints = [];
+  let droppingPoints = [];
+  
+  if (config.useLayoutForBoardingPoints) {
+    // For inventory types 2, 3, 5, 6: MUST use layout
+    if (!layout) {
+      console.warn(`[ETS] inventoryType ${bus.inventoryType} requires layout for boarding points`);
+      return { 
+        boardingPoints: [], 
+        droppingPoints: [], 
+        source: 'layout_required',
+        error: 'Please fetch bus layout first',
+      };
+    }
+    boardingPoints = layout.boardingPoints || [];
+    droppingPoints = layout.droppingPoints || [];
+  } else if (config.canMapWithBoardingId && layout) {
+    // For inventory type 1: Merge both for complete data
+    boardingPoints = mergeBoardingPoints(bus.boardingPoints, layout.boardingPoints);
+    droppingPoints = mergeBoardingPoints(bus.droppingPoints, layout.droppingPoints);
+  } else {
+    // For inventory type 0, 1 (without layout): Use search results
+    boardingPoints = bus.boardingPoints || [];
+    droppingPoints = bus.droppingPoints || [];
+  }
+  
+  return {
+    boardingPoints,
+    droppingPoints,
+    source: config.useLayoutForBoardingPoints ? 'layout' : 'search',
+    config,
   };
 };
 
@@ -473,4 +612,7 @@ export default {
   cancelBooking,
   getMyPlanAndBalance,
   formatBlockTicketRequest,
+  getBoardingPointSource,
+  mergeBoardingPoints,
+  getBoardingPoints,
 };
