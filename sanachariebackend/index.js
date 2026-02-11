@@ -9,6 +9,7 @@
  * - Backend makes all external API calls to MetaReach
  * - Rate limiting prevents brute force attacks
  * - OTP expiry prevents replay attacks
+ * - Security headers protect against common attacks
  * 
  * FLOW:
  * React Frontend → This Backend → MetaReach SMS API
@@ -25,6 +26,22 @@ const busRoutes = require('./routes/bus');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// ============================================
+// SECURITY: Validate Required Environment Variables
+// ============================================
+const requiredEnvVars = ['JWT_SECRET', 'MONGODB_URI'];
+const missingEnvVars = requiredEnvVars.filter(v => !process.env[v]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ SECURITY ERROR: Missing required environment variables:');
+  missingEnvVars.forEach(v => console.error(`   - ${v}`));
+  console.error('   Please configure these in your .env file');
+  // Don't exit in development, but warn
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
 
 // ============================================
 // MONGODB CONNECTION
@@ -44,28 +61,73 @@ mongoose.connect(MONGODB_URI)
 // SECURITY MIDDLEWARE
 // ============================================
 
+// Security headers middleware
+const securityHeaders = (req, res, next) => {
+  // Prevent clickjacking
+  res.setHeader('X-Frame-Options', 'DENY');
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // Enable XSS filter
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // Control referrer information
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Prevent caching of sensitive data
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  // Remove server identification
+  res.removeHeader('X-Powered-By');
+  next();
+};
+
+app.use(securityHeaders);
+
 // CORS - Allow frontend origin
-// In production, restrict this to your actual domain
+// SECURITY: Restrict to specific domains only
+const allowedOrigins = [
+  'https://sancharie.com',
+  'https://www.sancharie.com',
+  'https://api.sancharie.com'
+];
+
+// Add localhost only in development
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000');
+}
+
 app.use(cors({
-  origin: ['https://sancharie.com', 'https://www.sancharie.com', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS blocked request from: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true,
+  maxAge: 86400 // Cache preflight for 24 hours
 }));
 
-// Parse JSON bodies
-app.use(express.json());
+// Parse JSON bodies with size limit (prevent large payload attacks)
+app.use(express.json({ limit: '10kb' }));
 
-// Parse URL-encoded bodies
-app.use(express.urlencoded({ extended: true }));
+// Parse URL-encoded bodies with size limit
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // ============================================
 // ROUTES
 // ============================================
 
-// Health check endpoint
+// Health check endpoint (minimal info, no sensitive data)
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Authentication routes (OTP send/verify)
@@ -90,11 +152,24 @@ app.use((req, res) => {
 });
 
 // Global error handler
+// SECURITY: Never expose stack traces or internal errors to clients
 app.use((err, req, res, next) => {
-  console.error('Server Error:', err);
-  res.status(500).json({ 
+  // Log error internally (with full details)
+  console.error('Server Error:', {
+    message: err.message,
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+    // Only log stack in development
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+  });
+
+  // SECURITY: Generic error response to client
+  // Never expose internal error details
+  const statusCode = err.status || 500;
+  res.status(statusCode).json({ 
     success: false, 
-    message: 'Internal server error' 
+    message: statusCode === 500 ? 'Internal server error' : err.message || 'An error occurred'
   });
 });
 
@@ -103,20 +178,21 @@ app.use((err, req, res, next) => {
 // ============================================
 
 const server = app.listen(PORT, '0.0.0.0', () => {
+  // SECURITY: Don't log sensitive config values
   console.log(`
 ============================================
 🚀 Sancharie Backend Server Started
 ============================================
 Port: ${PORT}
 Environment: ${process.env.NODE_ENV || 'development'}
-Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}
 ============================================
-SECURITY STATUS:
-✅ SMS API Key: ${process.env.SMS_API_KEY ? 'Configured' : '❌ MISSING'}
-✅ Sender ID: ${process.env.SMS_SENDER_ID ? 'Configured' : '❌ MISSING'}
-✅ Razorpay Key ID: ${process.env.RAZORPAY_KEY_ID ? 'Configured' : '❌ MISSING'}
-✅ Razorpay Secret: ${process.env.RAZORPAY_KEY_SECRET ? 'Configured' : '❌ MISSING'}
-✅ CORS: Enabled for frontend only
+Configuration Status:
+${process.env.JWT_SECRET ? '✅' : '❌'} JWT_SECRET
+${process.env.SMS_API_KEY ? '✅' : '❌'} SMS_API_KEY
+${process.env.RAZORPAY_KEY_ID ? '✅' : '❌'} RAZORPAY_KEY_ID
+${process.env.RAZORPAY_KEY_SECRET ? '✅' : '❌'} RAZORPAY_KEY_SECRET
+${process.env.ETS_API_USERNAME ? '✅' : '❌'} ETS_API
+${process.env.MONGODB_URI ? '✅' : '❌'} MONGODB_URI
 ============================================
   `);
 });

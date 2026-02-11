@@ -1,5 +1,10 @@
 /**
  * User Routes - Profile management and bookings
+ * 
+ * SECURITY:
+ * - All routes requiring authentication use JWT verification
+ * - JWT_SECRET must be configured in environment variables
+ * - Never store sensitive data in JWT payload
  */
 
 const express = require('express');
@@ -8,13 +13,32 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 
-// JWT Secret (should be in .env in production)
-const JWT_SECRET = process.env.JWT_SECRET || 'sancharie-jwt-secret-key-2026';
+// ============================================
+// SECURITY: JWT Configuration
+// ============================================
+// NEVER use fallback secrets in production
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Validate JWT_SECRET is configured
+if (!JWT_SECRET) {
+  console.error('❌ SECURITY ERROR: JWT_SECRET not configured in environment variables!');
+  console.error('   Set JWT_SECRET in .env file before starting the server.');
+}
 
 /**
  * Middleware to verify JWT token
+ * SECURITY: Validates token and attaches user to request
  */
 const authenticateToken = (req, res, next) => {
+  // Check if JWT_SECRET is configured
+  if (!JWT_SECRET) {
+    console.error('Authentication failed: JWT_SECRET not configured');
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Server configuration error' 
+    });
+  }
+
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -24,6 +48,7 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
+      // SECURITY: Don't reveal specific error details
       return res.status(403).json({ success: false, message: 'Invalid or expired token' });
     }
     req.user = user;
@@ -34,13 +59,32 @@ const authenticateToken = (req, res, next) => {
 /**
  * POST /user/login-complete
  * Called after OTP verification to create/get user and generate JWT
+ * 
+ * SECURITY:
+ * - Only called after successful OTP verification
+ * - JWT includes only non-sensitive user identifiers
+ * - Token expiry set to limit exposure window
  */
 router.post('/login-complete', async (req, res) => {
   try {
+    // Check if JWT_SECRET is configured
+    if (!JWT_SECRET) {
+      console.error('Login failed: JWT_SECRET not configured');
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Server configuration error' 
+      });
+    }
+
     const { phone } = req.body;
 
     if (!phone) {
       return res.status(400).json({ success: false, message: 'Phone number required' });
+    }
+
+    // Validate phone format
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({ success: false, message: 'Invalid phone number format' });
     }
 
     // Find or create user

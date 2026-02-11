@@ -95,7 +95,10 @@ export const searchBuses = async (sourceCity, destinationCity, dateOfJourney) =>
 
     const data = await handleResponse(response);
     
-    console.log("Search API full response:", JSON.stringify(data, null, 2));
+    // Development logging only - disabled in production
+    if (import.meta.env.DEV) {
+      console.log("Search API results count:", data.apiAvailableBuses?.length || 0);
+    }
 
     return {
       results: data.apiAvailableBuses || [],
