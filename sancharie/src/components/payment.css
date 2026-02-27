@@ -508,6 +508,110 @@
   flex-shrink: 0;
 }
 
+/* GST Invoice Section */
+.gst-invoice-section {
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-md);
+}
+
+.gst-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.gst-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.gst-checkbox {
+  display: none;
+}
+
+.gst-checkbox-custom {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--color-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-normal);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.gst-checkbox:checked + .gst-checkbox-custom {
+  background: var(--color-secondary);
+  border-color: var(--color-secondary);
+}
+
+.gst-checkbox:checked + .gst-checkbox-custom::after {
+  content: '✓';
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.gst-checkbox-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.gst-checkbox-text svg {
+  color: var(--color-secondary);
+}
+
+.gst-details-form {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--color-border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gst-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gst-input-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.gst-input-group input {
+  padding: 12px 14px;
+  font-size: 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text);
+  transition: var(--transition-normal);
+}
+
+.gst-input-group input:focus {
+  outline: none;
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.15);
+}
+
+.gst-input-group input::placeholder {
+  color: var(--color-text-muted);
+}
+
 /* Pay Button */
 .pay-button {
   width: 100%;
@@ -1359,6 +1463,70 @@
 
   .fare-total {
     font-size: 16px;
+  }
+  
+  .payment-container {
+    padding: 8px;
+  }
+  
+  .payment-header {
+    padding: 12px;
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+  }
+  
+  .back-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .summary-section,
+  .passengers-section,
+  .fare-section {
+    padding: 12px;
+    border-radius: var(--radius-md);
+  }
+  
+  .passenger-card {
+    padding: 12px;
+  }
+  
+  .passenger-detail span {
+    font-size: 12px;
+  }
+  
+  .fare-row {
+    font-size: 13px;
+  }
+  
+  .pay-button {
+    padding: 14px 16px;
+    font-size: 15px;
+    border-radius: var(--radius-md);
+  }
+  
+  .processing-card {
+    padding: 30px 16px;
+    border-radius: var(--radius-lg);
+  }
+  
+  .processing-amount {
+    font-size: 28px;
+  }
+  
+  .success-card {
+    padding: 24px 16px;
+  }
+  
+  .success-title {
+    font-size: 20px;
+  }
+  
+  .download-ticket-btn,
+  .btn-primary,
+  .btn-secondary {
+    padding: 12px 16px;
+    font-size: 14px;
   }
 }
 

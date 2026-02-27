@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import './Header.css'
 import AuthModal from './Authantication/Login'
 import MyAccount from './Myaccount'
@@ -19,6 +19,8 @@ function Header({ onBackToHome }) {
   const { state: bookingState, actions: bookingActions } = useBooking()
   const { sessionExpired, sessionStartTime } = bookingState
   const navigate = useNavigate()
+  const location = useLocation()
+  const isHomePage = location.pathname === '/'
 
   // Update remaining time every second
   useEffect(() => {
@@ -112,8 +114,8 @@ function Header({ onBackToHome }) {
             ☰
           </button>
 
-          {/* Session Timer */}
-          {sessionStartTime && !sessionExpired && (
+          {/* Session Timer - Only show during booking flow, not on home page */}
+          {sessionStartTime && !sessionExpired && !isHomePage && (
             <div className={`header-timer ${remainingTime.minutes < 2 ? 'warning' : ''} ${remainingTime.minutes < 1 ? 'critical' : ''}`}>
               <Timer size={14} />
               <span className="timer-time">
@@ -123,8 +125,8 @@ function Header({ onBackToHome }) {
           )}
 
           <nav className={`nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-            <a href="#home" onClick={handleLogoClick}>Home</a>
-            <a href="#bookings" onClick={handleMyBookingsClick}>My Bookings</a>
+            <a href="#home" className={isHomePage ? 'active' : ''} onClick={handleLogoClick}>Home</a>
+            <a href="#bookings" className={location.pathname === '/my-bookings' ? 'active' : ''} onClick={handleMyBookingsClick}>My Bookings</a>
             <a href="#help">Help</a>
             
             <div className="auth-wrapper">

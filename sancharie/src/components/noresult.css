@@ -335,4 +335,26 @@
   .date-text {
     font-size: 13px;
   }
+  
+  .no-result-logo img {
+    width: 60px;
+  }
+  
+  .no-result-subtitle {
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  
+  .suggestions-card {
+    padding: 12px;
+  }
+  
+  .suggestions-header {
+    font-size: 12px;
+  }
+  
+  .modify-search-btn {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
 }

@@ -453,3 +453,75 @@
     justify-content: flex-start;
   }
 }
+
+@media (max-width: 480px) {
+  .profile-container {
+    padding: 16px 12px;
+    gap: 16px;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px 16px;
+  }
+
+  .profile-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+
+  .profile-header-info h1 {
+    font-size: 18px;
+  }
+
+  .phone-number {
+    font-size: 13px;
+  }
+
+  .profile-body {
+    padding: 16px;
+  }
+
+  .section-header h2 {
+    font-size: 16px;
+  }
+
+  .edit-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .detail-item {
+    padding: 12px 8px;
+  }
+
+  .detail-label {
+    font-size: 11px;
+  }
+
+  .detail-value {
+    font-size: 13px;
+  }
+
+  .form-group label {
+    font-size: 12px;
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .action-btn {
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+
+  .action-icon {
+    width: 36px;
+    height: 36px;
+  }
+}

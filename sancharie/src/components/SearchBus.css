@@ -27,8 +27,13 @@
   align-items: center;
   gap: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  animation: slideUp 0.5s ease;
+  animation: fadeInUp 0.6s ease-out 0.3s both;
   border: 18px solid #FFFFFF;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.search-card-figma:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
 }
 
 /* Search Field Group */
@@ -92,7 +97,7 @@
 }
 
 .field-input-figma::placeholder {
-  color: rgba(0, 0, 0, 0.35);
+  color: rgba(0, 0, 0, 0.55);  /* Audit Fix: Darker placeholder for better readability */
   font-weight: 600;
 }
 
@@ -105,7 +110,7 @@
   line-height: 1.2;
 }
 
-/* Swap Button */
+/* Swap Button - Audit Fix: Added tooltip support */
 .swap-btn-figma {
   width: 48px;
   height: 48px;
@@ -118,10 +123,26 @@
   transition: transform 0.2s ease;
   flex-shrink: 0;
   padding: 0;
+  position: relative;
 }
 
 .swap-btn-figma:hover {
-  transform: scale(1.05);
+  transform: scale(1.1);
+}
+
+.swap-btn-figma[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 10;
 }
 
 .swap-icon-img {
@@ -138,10 +159,18 @@
   height: 0;
 }
 
+/* Date Section Wrapper - Audit Fix: Grouped date and quick buttons */
+.date-section-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
 /* Quick Date Buttons */
 .quick-dates-figma {
   display: flex;
-  gap: 18px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -190,6 +219,20 @@
   background: #8B6220;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(163, 114, 38, 0.4);
+}
+
+/* Audit Fix: More prominent search button */
+.search-btn-figma.search-btn-prominent {
+  padding: 17px 30px;
+  font-size: 17px;
+  background: linear-gradient(135deg, #002C3F 0%, #004d6d 100%);
+  box-shadow: 0 4px 20px rgba(0, 44, 63, 0.4);
+}
+
+.search-btn-figma.search-btn-prominent:hover {
+  background: linear-gradient(135deg, #003d57 0%, #005a82 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 44, 63, 0.5);
 }
 
 .search-btn-figma svg {
@@ -245,6 +288,63 @@
 
 .city-dropdown::-webkit-scrollbar-thumb:hover {
   background: #aaa;
+}
+
+/* Recent Searches Section */
+.recent-searches-section {
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.dropdown-section-header {
+  padding: 8px 16px 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #A37226;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-icon {
+  font-size: 14px;
+}
+
+.recent-list,
+.suggestions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recent-list li,
+.suggestions-list li {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #333;
+  transition: background 0.2s ease;
+}
+
+.recent-list li:hover,
+.suggestions-list li:hover {
+  background: #FFF8ED;
+  color: #A37226;
+}
+
+.recent-route {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.suggestions-section {
+  padding-top: 4px;
 }
 
 /* Popup Styles */
@@ -397,7 +497,7 @@
 
 @media (max-width: 600px) {
   .search-bus-wrapper {
-    margin-top: -30px;
+    margin-top: -200px;
     padding: 0 12px;
   }
   
@@ -406,6 +506,7 @@
     border-radius: 16px;
     padding: 20px;
     gap: 16px;
+    border-width: 10px;
   }
   
   .search-field-figma {
@@ -453,6 +554,93 @@
   }
 }
 
+@media (max-width: 480px) {
+  .search-bus-wrapper {
+    margin-top: -200px;
+    padding: 0 8px;
+  }
+  
+  .search-card-figma {
+    padding: 16px;
+    gap: 12px;
+    border-width: 8px;
+    border-radius: 12px;
+  }
+  
+  .search-field-figma {
+    padding: 6px 0;
+    gap: 10px;
+  }
+  
+  .field-icon-img {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .field-icon-img.cal-icon {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .swap-btn-figma,
+  .swap-icon-img {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .field-label-figma {
+    font-size: 11px;
+  }
+  
+  .field-input-figma,
+  .field-value-figma {
+    font-size: 13px;
+  }
+  
+  .quick-date-btn-figma {
+    padding: 10px 12px;
+    font-size: 12px;
+    border-radius: 30px;
+  }
+  
+  .search-btn-figma {
+    padding: 14px;
+    font-size: 14px;
+    border-radius: 30px;
+  }
+  
+  .city-dropdown {
+    border-radius: 10px;
+    max-height: 200px;
+  }
+  
+  .city-dropdown li {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 360px) {
+  .search-card-figma {
+    padding: 12px;
+    border-width: 6px;
+  }
+  
+  .quick-dates-figma {
+    gap: 8px;
+  }
+  
+  .quick-date-btn-figma {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  
+  .field-icon-img {
+    width: 32px;
+    height: 32px;
+  }
+}
+
 /* Animation */
 @keyframes slideUp {
   from {
@@ -462,5 +650,140 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+/* Compact Mode - For Search Results Page */
+.search-bus-wrapper.compact {
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding: 0;
+}
+
+.search-bus-wrapper.compact .search-container-figma {
+  max-width: 100%;
+}
+
+.search-bus-wrapper.compact .search-card-figma {
+  border-radius: 16px;
+  padding: 14px 20px;
+  border-width: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  animation: none;
+  background: #1a3c4d;
+}
+
+.search-bus-wrapper.compact .field-label-figma {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.search-bus-wrapper.compact .field-input-figma {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.search-bus-wrapper.compact .field-input-figma::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-bus-wrapper.compact .field-value-figma {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.search-bus-wrapper.compact .field-icon-img {
+  width: 36px;
+  height: 36px;
+  /* Icons already have dark bg with white icons, no filter needed */
+}
+
+.search-bus-wrapper.compact .field-icon-img.cal-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.search-bus-wrapper.compact .swap-btn-figma {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.search-bus-wrapper.compact .swap-btn-figma:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.search-bus-wrapper.compact .swap-icon-img {
+  width: 16px;
+  height: 16px;
+  /* No filter needed - swap icon should be visible */
+}
+
+.search-bus-wrapper.compact .quick-dates-figma {
+  gap: 6px;
+}
+
+.search-bus-wrapper.compact .quick-date-btn-figma {
+  padding: 6px 12px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.search-bus-wrapper.compact .quick-date-btn-figma:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.search-bus-wrapper.compact .quick-date-btn-figma.active {
+  background: #A37226;
+  border-color: #A37226;
+  color: #ffffff;
+}
+
+.search-bus-wrapper.compact .search-btn-figma {
+  padding: 12px 24px;
+  font-size: 13px;
+}
+
+.search-bus-wrapper.compact .city-dropdown {
+  background: #ffffff;
+}
+
+.search-bus-wrapper.compact .city-dropdown li,
+.search-bus-wrapper.compact .recent-list li,
+.search-bus-wrapper.compact .suggestions-list li {
+  color: #333;
+}
+
+/* Compact mode responsive */
+@media (max-width: 968px) {
+  .search-bus-wrapper.compact .search-card-figma {
+    padding: 12px 16px;
+  }
+  
+  .search-bus-wrapper.compact .field-icon-img {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 768px) {
+  .search-bus-wrapper.compact .search-card-figma {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .search-bus-wrapper.compact .search-field-figma {
+    flex: 1 1 calc(50% - 30px);
+    min-width: 140px;
+  }
+  
+  .search-bus-wrapper.compact .date-section-wrapper {
+    flex: 1 1 100%;
+  }
+  
+  .search-bus-wrapper.compact .search-btn-figma {
+    flex: 1 1 100%;
   }
 }

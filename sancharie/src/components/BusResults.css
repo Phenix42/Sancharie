@@ -20,6 +20,7 @@
   color: #002c3f;
   margin-bottom: 40px;
   text-align: left;
+  animation: slideInLeft 0.6s ease-out;
 }
 
 .discount-offers-wrapper {
@@ -122,7 +123,7 @@
 
 .why-choose-content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 60px;
   max-width: 1400px;
   margin: 0 auto;
@@ -195,11 +196,12 @@
 .why-choose-image {
   flex: 0 0 500px;
   position: sticky;
-  top: 100px;
+  top: 120px;
   align-self: flex-start;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: fit-content;
 }
 
 .image-placeholder {
@@ -266,11 +268,12 @@
 .online-booking-image {
   flex: 0 0 500px;
   position: sticky;
-  top: 100px;
+  top: 120px;
   align-self: flex-start;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: fit-content;
 }
 
 .image-placeholder.purple-bg {
@@ -381,11 +384,12 @@
 .how-to-book-image {
   flex: 0 0 500px;
   position: sticky;
-  top: 100px;
+  top: 120px;
   align-self: flex-start;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: fit-content;
 }
 
 /* ==========================================
@@ -642,5 +646,101 @@
   
   .faq-question {
     padding: 16px 20px;
+  }
+  
+  .why-choose-intro,
+  .online-booking-text p {
+    font-size: 16px;
+  }
+  
+  .benefits-list,
+  .steps-list {
+    font-size: 14px;
+    padding-left: 16px;
+  }
+  
+  .how-to-book-intro {
+    font-size: 20px;
+  }
+  
+  .key-benefits-title,
+  .subsection-title {
+    font-size: 18px;
+  }
+  
+  .faq-tabs {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .faq-tab {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    background: #f5f5f5;
+  }
+  
+  .faq-tab.active {
+    background: #fff8ed;
+  }
+  
+  .faq-tab.active::after {
+    display: none;
+  }
+  
+  .faq-question span:first-child {
+    font-size: 14px;
+  }
+  
+  .faq-answer p {
+    font-size: 14px;
+  }
+  
+  .why-choose-section,
+  .online-booking-section,
+  .how-to-book-section {
+    background-size: auto 200px;
+    background-position: center top;
+  }
+  
+  .why-choose-section::before {
+    display: none;
+  }
+  
+  .discount-offer-card {
+    flex: 0 0 280px;
+  }
+  
+  .discount-offer-image {
+    height: 180px;
+  }
+}
+
+@media (max-width: 360px) {
+  .discount-offers-section,
+  .why-choose-section,
+  .online-booking-section,
+  .how-to-book-section,
+  .faq-section {
+    padding: 30px 12px;
+  }
+  
+  .section-title {
+    font-size: 20px;
+  }
+  
+  .section-title-underline {
+    font-size: 18px;
+  }
+  
+  .faq-question {
+    padding: 12px 14px;
+  }
+  
+  .faq-icon {
+    font-size: 20px;
+    width: 24px;
+    height: 24px;
   }
 }

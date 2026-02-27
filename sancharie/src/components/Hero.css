@@ -27,12 +27,73 @@
   object-position: center center;
 }
 
+/* Desktop bg visible by default, mobile bg hidden */
+.hero-bg-desktop {
+  display: block;
+}
+
+.hero-bg-mobile {
+  display: none;
+}
+
+/* Overlay to reduce image dominance - Audit Fix */
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(0, 44, 63, 0.3) 0%, rgba(0, 44, 63, 0.5) 100%);
+  z-index: 1;
+}
+
+/* Hero Content - Clear heading for bus booking - Audit Fix */
+.hero-content {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 2;
+  padding: 0 20px;
+}
+
+.hero-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 56px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0 0 16px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  letter-spacing: -1px;
+  animation: fadeInDown 0.8s ease-out;
+}
+
+.hero-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
 /* ================= RESPONSIVE ================= */
 
 @media (max-width: 1024px) {
   .hero {
     height: 90vh;
     min-height: 600px;
+  }
+  
+  .hero-title {
+    font-size: 42px;
+  }
+  
+  .hero-subtitle {
+    font-size: 18px;
   }
 }
 
@@ -41,11 +102,42 @@
     height: 80vh;
     min-height: 500px;
   }
+  
+  /* Switch to mobile background */
+  .hero-bg-desktop {
+    display: none;
+  }
+  
+  .hero-bg-mobile {
+    display: block;
+  }
+  
+  .hero-content {
+    top: 15%;
+    width: 90%;
+  }
+  
+  .hero-title {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+  
+  .hero-subtitle {
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 480px) {
   .hero {
     height: 70vh;
     min-height: 400px;
+  }
+  
+  .hero-title {
+    font-size: 26px;
+  }
+  
+  .hero-subtitle {
+    font-size: 14px;
   }
 }

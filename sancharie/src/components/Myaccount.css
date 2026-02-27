@@ -158,3 +158,40 @@
     padding: 20px;
   }
 }
+
+@media (max-width: 480px) {
+  .my-account-dropdown {
+    width: 100%;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .menu-item {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .menu-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .menu-title {
+    font-size: 14px;
+  }
+
+  .menu-subtitle {
+    font-size: 11px;
+  }
+
+  .menu-item.user-profile {
+    padding: 16px;
+  }
+
+  .menu-item.user-profile .menu-title {
+    font-size: 15px;
+  }
+
+  .menu-item.user-profile .menu-subtitle {
+    font-size: 12px;
+  }
+}

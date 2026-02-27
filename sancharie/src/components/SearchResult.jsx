@@ -33,6 +33,7 @@ import SelectSeat from "./selectseat";
 import NoResult from "./noresult";
 import MiniSeatPreview, { clearSeatLayoutCache, prefetchAllSeatLayouts } from "./MiniSeatPreview";
 import Logo from "../assets/logosan.svg";
+import SearchBus from "./SearchBus";
 import { useBooking } from "../context/BookingContext";
 import { bus as busApi } from "../services/api";
 
@@ -136,7 +137,7 @@ const calculateDepartureHours = (departureTime) => {
   return `${hours} Hrs`;
 };
 
-export default function SearchResult({ searchParams }) {
+export default function SearchResult({ searchParams, onSearch }) {
   const { state, actions } = useBooking();
   const navigate = useNavigate();
   
@@ -157,6 +158,8 @@ export default function SearchResult({ searchParams }) {
   const [selectedOperators, setSelectedOperators] = useState([]);
   const [selectedBoarding, setSelectedBoarding] = useState([]);
   const [selectedDropping, setSelectedDropping] = useState([]);
+  const [boardingSearch, setBoardingSearch] = useState("");
+  const [droppingSearch, setDroppingSearch] = useState("");
   
   /* ----------- SELECTSEAT INLINE STATE ----------- */
   const [selectedBus, setSelectedBus] = useState(null);
@@ -165,6 +168,8 @@ export default function SearchResult({ searchParams }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalBus, setModalBus] = useState(null);
   const [modalTab, setModalTab] = useState('boarding'); // 'boarding', 'cancellation', 'amenities', 'policy'
+  const [showAllBoardingPoints, setShowAllBoardingPoints] = useState(false);
+  const [showAllDroppingPoints, setShowAllDroppingPoints] = useState(false);
   
   /* ----------- DATE SELECTOR STATE ----------- */
   const [selectedDateIndex, setSelectedDateIndex] = useState(0); // Default to first date (search date)
@@ -418,6 +423,8 @@ export default function SearchResult({ searchParams }) {
   const openBusDetailsModal = (bus, tab) => {
     setModalBus(bus);
     setModalTab(tab);
+    setShowAllBoardingPoints(false);
+    setShowAllDroppingPoints(false);
     setModalOpen(true);
     document.body.style.overflow = 'hidden'; // Prevent background scroll
   };
@@ -644,22 +651,33 @@ export default function SearchResult({ searchParams }) {
             <div className="filter-title">
               <SiGooglemaps className="filter-icon" /> Boarding Point
             </div>
-            {uniqueBoardingPoints.slice(0, 8).map((point) => (
-              <label key={point} className="check-row">
-                <input
-                  type="checkbox"
-                  checked={selectedBoarding.includes(point)}
-                  onChange={() =>
-                    setSelectedBoarding((prev) =>
-                      prev.includes(point)
-                        ? prev.filter((x) => x !== point)
-                        : [...prev, point]
-                    )
-                  }
-                />
-                {point}
-              </label>
-            ))}
+            <input
+              type="text"
+              className="filter-search-input"
+              placeholder="Search boarding point..."
+              value={boardingSearch}
+              onChange={(e) => setBoardingSearch(e.target.value)}
+            />
+            <div className="filter-scroll-list">
+              {uniqueBoardingPoints
+                .filter((point) => point.toLowerCase().includes(boardingSearch.toLowerCase()))
+                .map((point) => (
+                <label key={point} className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={selectedBoarding.includes(point)}
+                    onChange={() =>
+                      setSelectedBoarding((prev) =>
+                        prev.includes(point)
+                          ? prev.filter((x) => x !== point)
+                          : [...prev, point]
+                      )
+                    }
+                  />
+                  {point}
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* DROPPING POINT */}
@@ -667,36 +685,46 @@ export default function SearchResult({ searchParams }) {
             <div className="filter-title">
               <SiGooglemaps className="filter-icon" /> Dropping Point
             </div>
-            {uniqueDroppingPoints.slice(0, 8).map((point) => (
-              <label key={point} className="check-row">
-                <input
-                  type="checkbox"
-                  checked={selectedDropping.includes(point)}
-                  onChange={() =>
-                    setSelectedDropping((prev) =>
-                      prev.includes(point)
-                        ? prev.filter((x) => x !== point)
-                        : [...prev, point]
-                    )
-                  }
-                />
-                {point}
-              </label>
-            ))}
+            <input
+              type="text"
+              className="filter-search-input"
+              placeholder="Search dropping point..."
+              value={droppingSearch}
+              onChange={(e) => setDroppingSearch(e.target.value)}
+            />
+            <div className="filter-scroll-list">
+              {uniqueDroppingPoints
+                .filter((point) => point.toLowerCase().includes(droppingSearch.toLowerCase()))
+                .map((point) => (
+                <label key={point} className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={selectedDropping.includes(point)}
+                    onChange={() =>
+                      setSelectedDropping((prev) =>
+                        prev.includes(point)
+                          ? prev.filter((x) => x !== point)
+                          : [...prev, point]
+                      )
+                    }
+                  />
+                  {point}
+                </label>
+              ))}
+            </div>
           </div>
         </aside>
 
         {/* RESULTS */}
         <section className="sr-results">
-          {/* ROUTE HEADER */}
-          <div className="route-header">
-            <div className="route-header-left">
-              <h2>{searchParams?.from} → {searchParams?.to}</h2>
-              <p>{filteredBuses.length} buses found</p>
-            </div>
-          </div>
+          {/* SEARCH BAR */}
+          <SearchBus 
+            onSearch={onSearch} 
+            initialValues={searchParams}
+            compact={true}
+          />
 
-          {/* DATE SELECTOR */}
+          {/* DATE SELECTOR */}}
           <div className="date-selector">
             <button className="date-nav prev" onClick={handleDateNavPrev}>
               <svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -953,7 +981,9 @@ export default function SearchResult({ searchParams }) {
                 <div className="boarding-dropping-content">
                   <h4 className="content-section-title">Boarding Points</h4>
                   <div className="points-timeline">
-                    {(modalBus.BoardingPointsDetails || []).slice(0, 5).map((point, idx) => (
+                    {(modalBus.BoardingPointsDetails || [])
+                      .slice(0, showAllBoardingPoints ? undefined : 5)
+                      .map((point, idx, arr) => (
                       <div key={idx} className="timeline-item">
                         <div className="timeline-time">
                           <span className="point-time">{formatTime(point.CityPointTime)}</span>
@@ -961,7 +991,7 @@ export default function SearchResult({ searchParams }) {
                         </div>
                         <div className="timeline-marker">
                           <span className="marker-dot"></span>
-                          {idx < (modalBus.BoardingPointsDetails?.length || 1) - 1 && <span className="marker-line"></span>}
+                          {idx < arr.length - 1 && <span className="marker-line"></span>}
                         </div>
                         <div className="timeline-details">
                           <span className="point-name">{point.CityPointName}</span>
@@ -969,14 +999,29 @@ export default function SearchResult({ searchParams }) {
                         </div>
                       </div>
                     ))}
-                    {(modalBus.BoardingPointsDetails?.length || 0) > 5 && (
-                      <button className="view-more-btn">View more Boarding points</button>
+                    {(modalBus.BoardingPointsDetails?.length || 0) > 5 && !showAllBoardingPoints && (
+                      <button 
+                        className="view-more-btn"
+                        onClick={() => setShowAllBoardingPoints(true)}
+                      >
+                        View more Boarding points
+                      </button>
+                    )}
+                    {showAllBoardingPoints && (modalBus.BoardingPointsDetails?.length || 0) > 5 && (
+                      <button 
+                        className="view-more-btn"
+                        onClick={() => setShowAllBoardingPoints(false)}
+                      >
+                        Show less
+                      </button>
                     )}
                   </div>
 
                   <h4 className="content-section-title">Dropping Points</h4>
                   <div className="points-timeline">
-                    {(modalBus.DroppingPointsDetails || []).slice(0, 5).map((point, idx) => (
+                    {(modalBus.DroppingPointsDetails || [])
+                      .slice(0, showAllDroppingPoints ? undefined : 5)
+                      .map((point, idx, arr) => (
                       <div key={idx} className="timeline-item">
                         <div className="timeline-time">
                           <span className="point-time">{formatTime(point.CityPointTime)}</span>
@@ -984,7 +1029,7 @@ export default function SearchResult({ searchParams }) {
                         </div>
                         <div className="timeline-marker">
                           <span className="marker-dot"></span>
-                          {idx < (modalBus.DroppingPointsDetails?.length || 1) - 1 && <span className="marker-line"></span>}
+                          {idx < arr.length - 1 && <span className="marker-line"></span>}
                         </div>
                         <div className="timeline-details">
                           <span className="point-name">{point.CityPointName}</span>
@@ -992,8 +1037,21 @@ export default function SearchResult({ searchParams }) {
                         </div>
                       </div>
                     ))}
-                    {(modalBus.DroppingPointsDetails?.length || 0) > 5 && (
-                      <button className="view-more-btn">View more Dropping points</button>
+                    {(modalBus.DroppingPointsDetails?.length || 0) > 5 && !showAllDroppingPoints && (
+                      <button 
+                        className="view-more-btn"
+                        onClick={() => setShowAllDroppingPoints(true)}
+                      >
+                        View more Dropping points
+                      </button>
+                    )}
+                    {showAllDroppingPoints && (modalBus.DroppingPointsDetails?.length || 0) > 5 && (
+                      <button 
+                        className="view-more-btn"
+                        onClick={() => setShowAllDroppingPoints(false)}
+                      >
+                        Show less
+                      </button>
                     )}
                   </div>
                 </div>

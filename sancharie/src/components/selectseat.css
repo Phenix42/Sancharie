@@ -1356,6 +1356,118 @@
     padding: 10px 12px;
     font-size: 13px;
   }
+  
+  /* Ensure bus view scrolls horizontally on small screens */
+  .bus-view {
+    min-width: 0;
+    padding: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Compact points panel on mobile */
+  .points-panel {
+    padding: 10px;
+  }
+  
+  .tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  
+  .tabs button {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+  
+  .points-list {
+    max-height: 200px;
+  }
+  
+  .point-item {
+    padding: 10px;
+  }
+  
+  .point-head strong {
+    font-size: 12px;
+  }
+  
+  .point-details,
+  .point-address {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .selectseat-body {
+    padding: 6px;
+    gap: 8px;
+  }
+  
+  .selectseat-header {
+    padding: 10px 12px;
+  }
+  
+  .selectseat-header h4 {
+    font-size: 12px;
+  }
+  
+  .bus-type-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+  
+  .legend {
+    gap: 8px;
+    padding: 8px 10px;
+    font-size: 9px;
+  }
+  
+  .seat {
+    width: 20px;
+    height: 16px;
+  }
+  
+  .seat-number-label {
+    font-size: 7px;
+    min-width: 10px;
+  }
+  
+  .sleeper {
+    min-width: 42px;
+    height: 24px;
+  }
+  
+  .sleeper span {
+    font-size: 8px;
+  }
+  
+  .fare-action-bar {
+    padding: 8px;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .fare-summary {
+    border-right: none;
+    padding-right: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+  }
+  
+  .seat-count {
+    border-left: none;
+    padding: 8px 0;
+  }
+  
+  .fare-action-bar .proceed-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 14px;
+  }
 }
 
 /* ================= SESSION EXPIRED POPUP ================= */

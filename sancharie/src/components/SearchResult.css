@@ -293,6 +293,51 @@
   color: #0f2a3a;
 }
 
+/* Filter search input */
+.filter-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 10px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.filter-search-input:focus {
+  border-color: #0f2a3a;
+}
+
+.filter-search-input::placeholder {
+  color: #999;
+}
+
+/* Scrollable filter list */
+.filter-scroll-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.filter-scroll-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.filter-scroll-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.filter-scroll-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.filter-scroll-list::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
 /* Price slider */
 .price-slider {
   width: 100%;
@@ -392,6 +437,24 @@
   margin: 0;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.7);
+}
+
+/* ================= RESULTS COUNT ================= */
+.results-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(26, 60, 77, 0.05);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.results-count p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a3c4d;
 }
 
 /* ================= SESSION TIMER ================= */
@@ -1320,6 +1383,39 @@
     width: 100%;
     padding: 14px;
   }
+  
+  .route-header {
+    padding: 10px 12px;
+  }
+  
+  .route-header-left h2 {
+    font-size: 16px;
+  }
+  
+  .bus-type {
+    font-size: 12px;
+  }
+  
+  .sr-card {
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .time-block .time {
+    font-size: 14px;
+  }
+  
+  .time-block .location-name {
+    font-size: 12px;
+  }
+  
+  .current-price {
+    font-size: 16px;
+  }
+  
+  .old-price {
+    font-size: 14px;
+  }
 }
 
 /* ================= LOAD MORE BUTTON ================= */
@@ -1546,25 +1642,41 @@
 /* Modal Tabs */
 .modal-tabs {
   display: flex;
-  gap: 6px;
-  padding: 10px 20px;
+  gap: 10px;
+  padding: 16px 20px;
   border-bottom: 1px solid #e0e0e0;
   overflow-x: auto;
+  overflow-y: visible;
   background: #fff;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.modal-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .modal-tab {
-  padding: 8px 14px;
+  padding: 12px 20px;
   background: #ffffff;
   border: 1px solid #e0e0e0;
-  border-radius: 18px;
+  border-radius: 24px;
   font-family: 'Montserrat', sans-serif;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: #555;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: 44px;
+  overflow: visible;
 }
 
 .modal-tab:hover {
@@ -1851,12 +1963,17 @@
   }
   
   .modal-tabs {
-    padding: 10px 16px;
+    padding: 14px 16px;
+    gap: 8px;
   }
   
   .modal-tab {
-    padding: 6px 10px;
-    font-size: 11px;
+    padding: 10px 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    border-radius: 22px;
+    min-height: 40px;
+    overflow: visible;
   }
   
   .amenities-grid {

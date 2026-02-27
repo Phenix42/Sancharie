@@ -58,6 +58,14 @@ export default function Payment() {
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [paymentId, setPaymentId] = useState(null);
 
+  // GST Invoice state
+  const [requireGstInvoice, setRequireGstInvoice] = useState(false);
+  const [gstDetails, setGstDetails] = useState({
+    companyName: '',
+    gstin: '',
+    address: ''
+  });
+
   // Load Razorpay script on mount
   useEffect(() => {
     payment.loadScript().then(setRazorpayLoaded);
@@ -757,6 +765,58 @@ export default function Payment() {
                   <span>₹{grandTotal}</span>
                 </div>
               </div>
+            </section>
+
+            {/* GST Invoice Option */}
+            <section className="gst-invoice-section">
+              <div className="gst-checkbox-wrapper">
+                <label className="gst-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={requireGstInvoice}
+                    onChange={(e) => setRequireGstInvoice(e.target.checked)}
+                    className="gst-checkbox"
+                  />
+                  <span className="gst-checkbox-custom"></span>
+                  <span className="gst-checkbox-text">
+                    <FileText size={18} />
+                    Required for GST Invoice
+                  </span>
+                </label>
+              </div>
+              
+              {requireGstInvoice && (
+                <div className="gst-details-form">
+                  <div className="gst-input-group">
+                    <label>Company Name</label>
+                    <input
+                      type="text"
+                      placeholder="Enter company name"
+                      value={gstDetails.companyName}
+                      onChange={(e) => setGstDetails({...gstDetails, companyName: e.target.value})}
+                    />
+                  </div>
+                  <div className="gst-input-group">
+                    <label>GSTIN</label>
+                    <input
+                      type="text"
+                      placeholder="Enter 15-digit GSTIN"
+                      value={gstDetails.gstin}
+                      onChange={(e) => setGstDetails({...gstDetails, gstin: e.target.value.toUpperCase()})}
+                      maxLength={15}
+                    />
+                  </div>
+                  <div className="gst-input-group">
+                    <label>Billing Address</label>
+                    <input
+                      type="text"
+                      placeholder="Enter billing address"
+                      value={gstDetails.address}
+                      onChange={(e) => setGstDetails({...gstDetails, address: e.target.value})}
+                    />
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* Trust Badges */}

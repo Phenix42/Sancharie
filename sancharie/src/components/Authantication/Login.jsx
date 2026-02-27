@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Login.css";
 import { IoClose } from "react-icons/io5";
-import { FaPhone, FaMobileAlt, FaShieldAlt } from "react-icons/fa";
+import { FaMobileAlt } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import Logo from "../../assets/logosan.svg";
 // Import our secure API service
@@ -218,7 +218,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           <p className="auth-subtitle">
             {step === "phone" 
               ? "Login or create account with your mobile number" 
-              : `Enter OTP sent to +91 ${phoneNumber}`}
+              : `Enter OTP sent to +91 ${phoneNumber.slice(0, 2)}****${phoneNumber.slice(-2)}`}
           </p>
         </div>
 
@@ -291,16 +291,22 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         {/* OTP Step */}
         {step === "otp" && (
           <div className="auth-form otp-form">
-            <button className="back-btn" onClick={handleBack}>
-              ← Change Number
-            </button>
+            <div className="otp-phone-display">
+              <span className="otp-phone-number">+91 {phoneNumber.slice(0, 2)}****{phoneNumber.slice(-2)}</span>
+              <button className="change-number-link" onClick={handleBack}>
+                Wrong number? Change
+              </button>
+            </div>
 
             <div className="otp-illustration">
-              <div className="otp-icon"><FaShieldAlt /></div>
+              <div className="otp-icon-wrapper">
+                <span className="otp-lock-icon">🔐</span>
+              </div>
             </div>
 
             <div className={`form-group ${error ? 'error' : ''}`}>
               <label>Enter 6-digit OTP</label>
+              <p className="otp-helper-text">We've sent a verification code to your mobile number</p>
               <div className="otp-inputs" onPaste={handleOtpPaste}>
                 {otp.map((digit, index) => (
                   <input
@@ -337,7 +343,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               {isLoading ? (
                 <span className="btn-loader"></span>
               ) : (
-                "Verify & Login"
+                "Verify OTP"
               )}
             </button>
           </div>

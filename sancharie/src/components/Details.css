@@ -1372,4 +1372,41 @@
   .trust-badges {
     padding: 14px;
   }
+  
+  .details-container {
+    border-radius: 12px;
+  }
+  
+  .progress-step {
+    font-size: 10px;
+    gap: 4px;
+  }
+  
+  .progress-step span:not(.step-icon) {
+    display: none;
+  }
+  
+  .phone-input-group {
+    flex-direction: column;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .journey-route {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .journey-point {
+    text-align: center;
+    width: 100%;
+  }
+  
+  .route-line {
+    width: 2px;
+    height: 40px;
+  }
 }

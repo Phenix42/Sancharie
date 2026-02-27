@@ -6,6 +6,7 @@ import Hero from "./components/Hero";
 import SearchBus from "./components/SearchBus";
 import Features from "./components/Features";
 import OurService from "./components/OurService";
+import BookingSteps from "./components/BookingSteps";
 import BusResults from "./components/BusResults";
 import SearchResult from "./components/SearchResult";
 import Footer from "./components/Footer";
@@ -66,13 +67,13 @@ function App() {
           <>
             <Header onBackToHome={handleBackToHome} />
             {showSearchResult ? (
-              <SearchResult searchParams={searchParams} />
+              <SearchResult searchParams={searchParams} onSearch={handleSearch} />
             ) : (
               <>
                 <Hero />
                 <SearchBus onSearch={handleSearch} />
                 <OurService />
-              
+                <BookingSteps />
                 <BusResults />
               </>
             )}

@@ -10,27 +10,28 @@ import ScheduleIcon from '../assets/servicesicons/intimeshedule.svg'
 import SupportIcon from '../assets/servicesicons/customersupport.svg'
 
 function OurService() {
+  // Audit Fix: Shorter card descriptions (1-2 lines only)
   const topRowServices = [
     {
       id: 1,
       title: 'Safety Guarantee',
-      description: 'Travel with confidence through verified operators, secure payments, and safety-first standards.',
+      description: 'Verified operators and secure payments.',
       icon: 'shield-check',
       featured: false,
       position: 'top'
     },
     {
       id: 2,
-      title: 'Faster Booking Experience',
-      description: 'Less clicks, less confusion, and quicker decisions—designed to save your time.',
+      title: 'Faster Booking',
+      description: 'Quick decisions with less clicks.',
       icon: FastIcon,
       featured: true,
       position: 'top'
     },
     {
       id: 3,
-      title: 'Smart Deals & Rewards',
-      description: 'Get real value on every booking with exclusive offers and meaningful rewards.',
+      title: 'Smart Deals',
+      description: 'Exclusive offers and rewards.',
       icon: SmartDealsIcon,
       featured: false,
       position: 'top'
@@ -41,7 +42,7 @@ function OurService() {
     {
       id: 4,
       title: 'Professional Staff',
-      description: 'Experienced drivers and trained staff ensure comfort, care, and professionalism',
+      description: 'Trained staff for your comfort.',
       icon: ProfessionalIcon,
       featured: false,
       position: 'bottom'
@@ -49,15 +50,15 @@ function OurService() {
     {
       id: 5,
       title: 'On-Time Scheduling',
-      description: 'Punctual departures and accurate schedules—because your time matters.',
+      description: 'Punctual departures always.',
       icon: ScheduleIcon,
       featured: false,
       position: 'bottom'
     },
     {
       id: 6,
-      title: '24/7 Customer Support',
-      description: 'Round-the-clock assistance to support you before, during, and after your journey',
+      title: '24/7 Support',
+      description: 'Round-the-clock assistance.',
       icon: SupportIcon,
       featured: false,
       position: 'bottom'
@@ -79,7 +80,7 @@ function OurService() {
           {topRowServices.map((service, index) => (
             <div 
               key={service.id} 
-              className={`service-card ${service.featured ? 'featured' : ''} ${index === 0 ? 'offset-down' : ''} ${index === 1 ? 'offset-up' : ''}`}
+              className={`service-card ${service.featured ? 'featured' : ''} ${index === 0 ? 'offset-down' : ''} ${index === 1 ? 'offset-up' : ''} ${index === 2 ? 'offset-down' : ''}`}
             >
               <div className="service-icon-wrapper">
                 {service.icon === 'shield-check' ? (
