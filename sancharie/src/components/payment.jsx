@@ -168,7 +168,7 @@ export default function Payment() {
   };
 
   // TEST MODE - Set to true to bypass Razorpay payment
-  const TEST_MODE = true;
+  const TEST_MODE = false;
 
   const handlePayNow = async () => {
     if (!validatePayment()) return;
