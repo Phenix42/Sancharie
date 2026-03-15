@@ -49,7 +49,20 @@ const handleResponse = async (response) => {
   const data = await response.json();
   
   if (!response.ok) {
-    const error = new Error(data.message || `HTTP error: ${response.status}`);
+    // Map HTTP status codes to user-friendly messages
+    const friendlyMessages = {
+      400: 'Invalid request. Please check your input and try again.',
+      401: 'Session expired. Please log in again.',
+      403: 'You don\'t have permission to perform this action.',
+      404: 'The requested information was not found.',
+      408: 'Request timed out. Please try again.',
+      429: 'Too many requests. Please wait a moment and try again.',
+      500: 'Something went wrong on our end. Please try again later.',
+      502: 'Service temporarily unavailable. Please try again.',
+      503: 'Service temporarily unavailable. Please try again later.',
+    };
+    const fallback = 'Something went wrong. Please try again.';
+    const error = new Error(data.message || friendlyMessages[response.status] || fallback);
     error.status = response.status;
     error.data = data;
     throw error;

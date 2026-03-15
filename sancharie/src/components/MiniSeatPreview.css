@@ -307,6 +307,59 @@
 
 @media (max-width: 768px) {
   .mini-seat-preview-container {
-    display: none; /* Hide on mobile to save space */
+    min-width: 100px;
+    padding: 2px;
+  }
+
+  .mini-seat-layout {
+    padding: 4px 6px;
+  }
+
+  .mini-seat-cell {
+    width: 9px;
+    height: 7px;
+  }
+
+  .mini-seat-cell.empty {
+    width: 9px;
+    height: 7px;
+  }
+
+  .mini-seat-cell.seater {
+    width: 9px;
+    height: 7px;
+  }
+
+  .mini-seat-cell.sleeper {
+    width: 9px;
+    height: 7px;
+  }
+
+  .mini-seat-cell.sleeper.horizontal {
+    min-width: 18px;
+  }
+
+  .mini-seat-cell.sleeper.vertical {
+    height: 16px;
+  }
+
+  .mini-seat-row {
+    grid-auto-columns: 9px;
+    grid-template-columns: repeat(auto-fill, 9px);
+    gap: 2px;
+  }
+
+  .mini-deck .deck-label {
+    font-size: 5px;
+    min-width: 8px;
+  }
+
+  .mini-deck .deck-label.driver-cell {
+    font-size: 10px;
+    min-width: 12px;
+  }
+
+  .deck-divider {
+    margin: 2px 0;
   }
 }

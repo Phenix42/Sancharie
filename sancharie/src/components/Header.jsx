@@ -6,7 +6,7 @@ import MyAccount from './Myaccount'
 import ProfileCompletion from './ProfileCompletion'
 import { useAuth } from '../context/AuthContext'
 import { useBooking } from '../context/BookingContext'
-import { Timer } from 'lucide-react'
+import { Timer, Home, BookOpen, HelpCircle, X, LogIn, ChevronDown } from 'lucide-react'
 
 function Header({ onBackToHome }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -125,11 +125,60 @@ function Header({ onBackToHome }) {
           )}
 
           <nav className={`nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-            <a href="#home" className={isHomePage ? 'active' : ''} onClick={handleLogoClick}>Home</a>
-            <a href="#bookings" className={location.pathname === '/my-bookings' ? 'active' : ''} onClick={handleMyBookingsClick}>My Bookings</a>
-            <a href="#help">Help</a>
+            {/* Mobile drawer backdrop */}
+            <div className="nav-backdrop" onClick={() => setMobileMenuOpen(false)} />
             
-            <div className="auth-wrapper">
+            <div className="nav-drawer">
+              {/* Drawer header */}
+              <div className="nav-drawer-header">
+                <span className="nav-drawer-logo">Sancharie</span>
+                <button className="nav-close-btn" onClick={() => setMobileMenuOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* User profile section in drawer */}
+              {isAuthenticated && (
+                <div className="nav-user-section" onClick={handleAuthClick}>
+                  <div className="nav-user-avatar">
+                    {user?.name ? user.name.charAt(0).toUpperCase() : '👤'}
+                  </div>
+                  <div className="nav-user-info">
+                    <span className="nav-user-name">{getDisplayName()}</span>
+                    <span className="nav-user-phone">{user?.phone || ''}</span>
+                  </div>
+                  <ChevronDown size={16} className="nav-user-chevron" />
+                </div>
+              )}
+
+              {/* Nav links */}
+              <div className="nav-links">
+                <a href="#home" className={isHomePage ? 'active' : ''} onClick={handleLogoClick}>
+                  <Home size={18} />
+                  <span>Home</span>
+                </a>
+                <a href="#bookings" className={location.pathname === '/my-bookings' ? 'active' : ''} onClick={handleMyBookingsClick}>
+                  <BookOpen size={18} />
+                  <span>My Bookings</span>
+                </a>
+                <a href="#help">
+                  <HelpCircle size={18} />
+                  <span>Help</span>
+                </a>
+              </div>
+              
+              {/* Auth button at bottom for non-authenticated */}
+              {!isAuthenticated && (
+                <div className="nav-auth-section">
+                  <button className="nav-login-btn" onClick={handleAuthClick}>
+                    <LogIn size={18} />
+                    Login / Sign Up
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            <div className="auth-wrapper desktop-auth">
               {isLoading ? (
                 <button className="login-btn" disabled>
                   Loading...
@@ -155,12 +204,14 @@ function Header({ onBackToHome }) {
                   Login
                 </button>
               )}
-              
-              {showAccountDropdown && isAuthenticated && (
-                <MyAccount onClose={() => setShowAccountDropdown(false)} />
-              )}
             </div>
           </nav>
+
+          {showAccountDropdown && isAuthenticated && (
+            <div className="auth-wrapper">
+              <MyAccount onClose={() => setShowAccountDropdown(false)} />
+            </div>
+          )}
         </div>
       </header>
 

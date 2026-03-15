@@ -1216,23 +1216,22 @@
 
   .fare-action-bar {
     position: fixed;
-    bottom: 0;
+    bottom: 60px;
     left: 0;
     right: 0;
-    z-index: 99;
+    z-index: 1001;
     margin: 0;
     border-radius: 0;
     border: none;
     border-top: 1px solid #e0e0e0;
     padding: 12px 16px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
     gap: 12px;
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
   }
 
-  /* Add space below points panel so content isn't hidden behind fixed bar */
+  /* Add space below points panel so content isn't hidden behind fixed bar + bottom nav */
   .points-panel {
-    padding-bottom: 80px;
+    padding-bottom: 140px;
   }
 
   .fare-amount .final-price {

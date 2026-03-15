@@ -280,7 +280,7 @@ export default function Details() {
       });
     } catch (error) {
       console.error("Block seat error:", error);
-      toast.error(`Failed to block seats: ${error.message}`);
+      toast.error(error.message || 'Unable to reserve seats. Please try again.');
     } finally {
       setIsBlocking(false);
     }

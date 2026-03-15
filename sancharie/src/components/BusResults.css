@@ -579,7 +579,7 @@
   }
   
   .discount-offers-track {
-    animation-duration: 12s;
+    animation: none;
     gap: 16px;
   }
   

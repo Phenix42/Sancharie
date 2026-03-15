@@ -159,7 +159,6 @@
 @media (max-width: 768px) {
   * {
     -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
   }
   
   /* Smoother scrolling on mobile */

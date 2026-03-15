@@ -406,7 +406,7 @@ export default function Payment() {
         setBookingError(null);
       } else {
         setBookingError(error.message || "Payment failed. Please try again.");
-        toast.error(`Payment failed: ${error.message}`);
+        toast.error(error.message || 'Payment failed. Please try again.');
       }
     } finally {
       setIsProcessing(false);

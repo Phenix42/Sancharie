@@ -92,7 +92,7 @@ button:focus-visible {
    ========================================== */
 
 /* Prevent horizontal scroll on mobile */
-html, body {
+body {
   overflow-x: hidden;
 }
 
@@ -167,7 +167,6 @@ html {
   *,
   *::before,
   *::after {
-    animation-duration: 0.3s !important;
     transition-duration: 0.2s !important;
   }
   
@@ -233,7 +232,6 @@ html {
   /* Smooth momentum scrolling */
   .app, main, .page-content {
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
   }
 
   /* Disable text selection for UI elements (app-like) */
