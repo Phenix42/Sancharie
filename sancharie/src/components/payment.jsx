@@ -305,13 +305,24 @@ export default function Payment() {
       });
 
       if (paymentResult.verified) {
-        const bookingResult = await bus.bookTicket({
-          searchTokenId: busData?.searchTokenId,
-          resultIndex: busData?.resultIndex || busData?.ResultIndex,
-          boardingPointId: boardingPoint?.id,
-          droppingPointId: droppingPoint?.id,
-          passengers,
-        });
+        // Use blockTicketKey from blockSeat response for final booking
+        const blockTicketKey = blockSeatData?.blockTicketKey;
+        
+        if (!blockTicketKey) {
+          throw new Error('Block ticket key not found. Please try booking again.');
+        }
+        
+        // For RTC services, get updated fare first (optional but recommended)
+        if (busData?.isRTC) {
+          try {
+            await bus.getRtcUpdatedFare(blockTicketKey);
+          } catch (rtcError) {
+            console.warn('RTC fare update failed, proceeding with booking:', rtcError);
+          }
+        }
+        
+        // Book the ticket using blockTicketKey
+        const bookingResult = await bus.bookTicket(blockTicketKey);
         
         setBookingResponse({
           ...bookingResult,
@@ -349,9 +360,9 @@ export default function Payment() {
               paymentId: paymentResult.data?.payment_id,
               paymentStatus: 'completed',
               paymentMethod: 'razorpay',
-              externalBookingId: bookingResult?.bookingId,
-              ticketNo: bookingResult?.ticketNo,
-              pnr: bookingResult?.travelOperatorPNR
+              externalBookingId: bookingResult?.etsTicketNumber || bookingResult?.bookingId,
+              ticketNo: bookingResult?.etsTicketNumber || bookingResult?.ticketNo,
+              pnr: bookingResult?.opPNR || bookingResult?.travelOperatorPNR
             });
             console.log('Booking saved to database');
           } catch (dbError) {
@@ -361,7 +372,7 @@ export default function Payment() {
         
         const ticketData = {
           bookingId: bookingResult?.bookingId || `SAN${Date.now().toString().slice(-8)}`,
-          pnr: bookingResult?.travelOperatorPNR,
+          pnr: bookingResult?.opPNR || bookingResult?.travelOperatorPNR,
           busName: busData?.name || busData?.TravelName || 'Bus Service',
           busType: busData?.type || busData?.BusType || 'Sleeper',
           fromCity: fromCity,

@@ -240,6 +240,7 @@ router.get('/bookings', authenticateToken, async (req, res) => {
         bookingId: b.bookingId,
         pnr: b.pnr,
         ticketNo: b.ticketNo,
+        externalBookingId: b.externalBookingId,
         busName: b.busName,
         busType: b.busType,
         busNumber: b.busNumber,
@@ -356,6 +357,50 @@ router.get('/bookings/:id', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get booking error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+/**
+ * PUT /user/bookings/:id
+ * Update booking (e.g. status after cancellation)
+ */
+router.put('/bookings/:id', authenticateToken, async (req, res) => {
+  try {
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      userId: req.user.userId
+    });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const { status, refundAmount, refundStatus, cancellationReason } = req.body;
+
+    const allowedStatuses = ['confirmed', 'cancelled', 'pending', 'completed'];
+    if (status && allowedStatuses.includes(status)) {
+      booking.status = status;
+    }
+    if (refundAmount !== undefined) booking.refundAmount = refundAmount;
+    if (refundStatus) booking.refundStatus = refundStatus;
+    if (cancellationReason) booking.cancellationReason = cancellationReason;
+
+    await booking.save();
+
+    console.log(`✅ Booking updated: ${booking.bookingId} → status: ${booking.status}`);
+
+    res.json({
+      success: true,
+      message: 'Booking updated successfully',
+      booking: {
+        id: booking._id,
+        bookingId: booking.bookingId,
+        status: booking.status
+      }
+    });
+  } catch (error) {
+    console.error('Update booking error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

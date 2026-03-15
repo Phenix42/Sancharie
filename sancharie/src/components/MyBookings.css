@@ -47,6 +47,10 @@
     gap: 20px;
   }
   
+  .my-bookings-page {
+    padding-bottom: 72px;
+  }
+  
   .mobile-sidebar-toggle {
     display: flex;
   }
@@ -747,8 +751,9 @@
   border-radius: 16px;
   width: 100%;
   max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
@@ -758,6 +763,7 @@
   align-items: center;
   padding: 20px 24px;
   border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
 }
 
 .cancel-modal-header h3 {
@@ -790,6 +796,9 @@
 
 .cancel-modal-body {
   padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
 }
 
 .cancel-warning {
@@ -878,10 +887,98 @@
   margin: 0;
 }
 
+/* Loading Cancellation State */
+.loading-cancellation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.loading-cancellation .btn-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #1a365d;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-cancellation p {
+  margin-top: 12px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Cancellation Details Card */
+.cancellation-details-card {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.cancellation-details-card h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c53030;
+}
+
+.cancellation-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cancellation-breakdown .breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #4a5568;
+  border-bottom: 1px solid #fed7d7;
+}
+
+.cancellation-breakdown .breakdown-row:last-child {
+  border-bottom: none;
+}
+
+.cancellation-breakdown .breakdown-row .negative {
+  color: #c53030;
+}
+
+.cancellation-breakdown .breakdown-row.total-row {
+  font-weight: 600;
+  padding-top: 12px;
+  margin-top: 4px;
+  border-top: 1px solid #c53030;
+  border-bottom: none;
+}
+
+.cancellation-breakdown .breakdown-row .refund-amount {
+  color: #38a169;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.partial-note {
+  margin: 12px 0 0 0;
+  font-size: 12px;
+  color: #718096;
+  font-style: italic;
+}
+
 .cancel-modal-actions {
   display: flex;
   gap: 12px;
-  margin-top: 24px;
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 0 0 16px 16px;
 }
 
 .keep-ticket-btn {
@@ -1067,6 +1164,7 @@
     max-width: 100%;
     margin: 10px;
     border-radius: 12px;
+    max-height: 80vh;
   }
 
   .cancel-modal-header {
@@ -1083,6 +1181,7 @@
 
   .cancel-modal-actions {
     flex-direction: column;
+    padding: 14px 20px;
   }
 
   .action-buttons {

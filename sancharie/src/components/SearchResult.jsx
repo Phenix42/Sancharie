@@ -27,7 +27,8 @@ import {
   Info,
   AlertTriangle,
   Home,
-  RefreshCw
+  RefreshCw,
+  SlidersHorizontal
 } from "lucide-react";
 import SelectSeat from "./selectseat";
 import NoResult from "./noresult";
@@ -174,6 +175,7 @@ export default function SearchResult({ searchParams, onSearch }) {
   /* ----------- DATE SELECTOR STATE ----------- */
   const [selectedDateIndex, setSelectedDateIndex] = useState(0); // Default to first date (search date)
   const [dateOffset, setDateOffset] = useState(0); // For navigation
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   /* ---------------- FETCH BUSES ON MOUNT ---------------- */
   useEffect(() => {
@@ -514,11 +516,46 @@ export default function SearchResult({ searchParams, onSearch }) {
   }
 
   if (error) {
+    const isInvalidCity = error.toLowerCase().includes('city name') || error.toLowerCase().includes('source or destination');
     return (
       <div className="sr-page">
         <div className="sr-error">
-          <p>Error: {error}</p>
-          <button onClick={() => window.location.reload()}>Try Again</button>
+          <div className="sr-error-icon">
+            <AlertTriangle size={48} strokeWidth={1.5} />
+          </div>
+          <h2 className="sr-error-title">
+            {isInvalidCity ? 'Route Not Found' : 'Something Went Wrong'}
+          </h2>
+          <p className="sr-error-message">
+            {isInvalidCity
+              ? "We couldn't recognize the city names you entered. Please check the spelling and try again."
+              : error}
+          </p>
+          {searchParams?.from && searchParams?.to && (
+            <div className="sr-error-route">
+              <span>{searchParams.from}</span>
+              <span className="sr-error-route-arrow">→</span>
+              <span>{searchParams.to}</span>
+            </div>
+          )}
+          <div className="sr-error-tips">
+            <p className="sr-error-tips-title">Suggestions</p>
+            <ul>
+              <li>Double-check your source and destination city names</li>
+              <li>Use the search bar suggestions to pick a valid city</li>
+              <li>Try a different date or route</li>
+            </ul>
+          </div>
+          <div className="sr-error-actions">
+            <button className="sr-error-btn-home" onClick={handleGoHome}>
+              <Home size={16} />
+              Go Home
+            </button>
+            <button className="sr-error-btn-retry" onClick={() => window.location.reload()}>
+              <RefreshCw size={16} />
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -724,7 +761,7 @@ export default function SearchResult({ searchParams, onSearch }) {
             compact={true}
           />
 
-          {/* DATE SELECTOR */}}
+          {/* DATE SELECTOR */}
           <div className="date-selector">
             <button className="date-nav prev" onClick={handleDateNavPrev}>
               <svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -924,6 +961,74 @@ export default function SearchResult({ searchParams, onSearch }) {
             </div>
           )}
         </section>
+      </div>
+
+      {/* MOBILE FILTER FAB */}
+      {(() => {
+        const activeFilterCount = selectedBusTypes.length + selectedTimes.length + selectedOperators.length + selectedBoarding.length + selectedDropping.length + (maxPrice < 5000 ? 1 : 0);
+        return (
+          <button className="mobile-filter-fab" onClick={() => setMobileFilterOpen(true)}>
+            <SlidersHorizontal size={22} />
+            {activeFilterCount > 0 && <span className="filter-count-badge">{activeFilterCount}</span>}
+          </button>
+        );
+      })()}
+
+      {/* MOBILE FILTER BOTTOM SHEET */}
+      <div className={`mobile-filter-overlay ${mobileFilterOpen ? 'open' : ''}`} onClick={() => setMobileFilterOpen(false)}>
+        <div className="mobile-filter-sheet" onClick={(e) => e.stopPropagation()}>
+          <div className="mobile-filter-sheet-header">
+            <h3>Filters</h3>
+            <button className="mobile-filter-sheet-close" onClick={() => setMobileFilterOpen(false)}>
+              <X size={22} />
+            </button>
+          </div>
+          <div className="mobile-filter-sheet-body">
+            {/* PRICE */}
+            <div className="filter-block">
+              <div className="filter-title">Price</div>
+              <input type="range" min="100" max="5000" value={maxPrice} onChange={(e) => setMaxPrice(+e.target.value)} className="price-slider" />
+              <div className="price-values"><span>₹100</span><span>₹{maxPrice}</span></div>
+            </div>
+            {/* BUS TYPE */}
+            <div className="filter-block">
+              <div className="filter-title"><Bus className="filter-icon" size={16} /> Bus Type</div>
+              <div className="bus-type-grid">
+                {["AC", "Non-AC", "Sleeper", "Seating"].map((t) => (
+                  <div key={t} className={`bus-type-box ${selectedBusTypes.includes(t) ? "active" : ""}`}
+                    onClick={() => setSelectedBusTypes((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])}>{t}</div>
+                ))}
+              </div>
+            </div>
+            {/* DEPARTURE TIME */}
+            <div className="filter-block">
+              <div className="filter-title"><Clock className="filter-icon" size={16} /> Departure Time</div>
+              <div className="departure-grid">
+                {[["before10", "Before 10 AM"], ["10to5", "10 AM - 5 PM"], ["5to11", "5 PM - 11 PM"], ["after11", "After 11 PM"]].map(([key, label]) => (
+                  <div key={key} className={`departure-box ${selectedTimes.includes(key) ? "active" : ""}`}
+                    onClick={() => setSelectedTimes((prev) => prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key])}>{label}</div>
+                ))}
+              </div>
+            </div>
+            {/* OPERATORS */}
+            <div className="filter-block">
+              <div className="filter-title">Bus Operators</div>
+              {uniqueOperators.slice(0, 10).map((op) => (
+                <label key={op} className="check-row">
+                  <input type="checkbox" checked={selectedOperators.includes(op)}
+                    onChange={() => setSelectedOperators((prev) => prev.includes(op) ? prev.filter((x) => x !== op) : [...prev, op])} />
+                  {op}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="mobile-filter-sheet-footer">
+            <button className="mobile-filter-clear-btn" onClick={() => {
+              setMaxPrice(5000); setSelectedBusTypes([]); setSelectedTimes([]); setSelectedOperators([]); setSelectedBoarding([]); setSelectedDropping([]);
+            }}>Clear All</button>
+            <button className="mobile-filter-apply-btn" onClick={() => setMobileFilterOpen(false)}>Apply Filters</button>
+          </div>
+        </div>
       </div>
 
       {/* BUS DETAILS MODAL */}

@@ -390,6 +390,10 @@
 
 /* Mobile Responsive */
 @media (max-width: 640px) {
+  .profile-page {
+    padding-bottom: 72px;
+  }
+
   .profile-container {
     padding: 16px;
   }

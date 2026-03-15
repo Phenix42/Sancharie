@@ -14,9 +14,11 @@ import PrivacyPolicies from "./components/privacypolacies";
 import Details from "./components/Details";
 import Payment from "./components/payment";
 import MyBookings from "./components/MyBookings";
+import BookingDetails from "./components/BookingDetails";
 import Profile from "./components/Profile";
 import Travellers from "./components/Travellers";
 import { ToastProvider } from "./components/Toast";
+import MobileBottomNav from "./components/MobileBottomNav";
 
 function App() {
   const [showSearchResult, setShowSearchResult] = useState(false);
@@ -44,6 +46,7 @@ function App() {
             <Header onBackToHome={handleBackToHome} />
             <PrivacyPolicies />
             <Footer />
+            <MobileBottomNav onHomeClick={handleBackToHome} />
           </>
         } />
         <Route path="/booking-details" element={
@@ -60,9 +63,10 @@ function App() {
             <Footer />
           </>
         } />
-        <Route path="/my-bookings" element={<MyBookings />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/travellers" element={<Travellers />} />
+        <Route path="/my-bookings" element={<><MyBookings /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
+        <Route path="/ticket/:ticketNumber" element={<><BookingDetails /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
+        <Route path="/profile" element={<><Profile /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
+        <Route path="/travellers" element={<><Travellers /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
         <Route path="/*" element={
           <>
             <Header onBackToHome={handleBackToHome} />
@@ -78,6 +82,10 @@ function App() {
               </>
             )}
             <Footer />
+            <MobileBottomNav 
+              onHomeClick={handleBackToHome}
+              onSearchClick={showSearchResult ? undefined : null}
+            />
           </>
         } />
       </Routes>

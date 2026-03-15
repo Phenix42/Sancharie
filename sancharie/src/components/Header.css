@@ -231,12 +231,23 @@
 }
 
 @media (max-width: 768px) {
+  .header {
+    padding: 0.35rem 0;
+  }
+
   .header-container {
     padding: 0 1rem;
   }
 
   .mobile-menu-btn {
     display: block;
+    font-size: 1.3rem;
+    padding: 6px;
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .header-timer {
@@ -249,45 +260,72 @@
 
   .nav {
     display: none;
-    position: absolute;
-    top: 100%;
+    position: fixed;
+    top: 0;
     left: 0;
     right: 0;
-    background: white;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 200;
+    padding: 0;
     flex-direction: column;
-    gap: 1rem;
-    padding: 2rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    z-index: 90;
+    gap: 0;
+    box-shadow: none;
   }
 
   .nav.mobile-open {
     display: flex;
   }
 
+  .nav.mobile-open::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .nav a,
+  .nav .auth-wrapper {
+    position: relative;
+    z-index: 201;
+    background: #fff;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .nav a:first-child {
+    margin-top: 56px;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .nav a:last-of-type {
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .nav a::after {
+    display: none;
+  }
+
   .auth-wrapper {
     width: 100%;
-    position: static;
-  }
-
-  .nav a {
-    border-bottom: 1px solid #eee;
-    padding-bottom: 1rem;
-  }
-
-  .nav a:last-child {
-    border-bottom: none;
-  }
-
-  .account-btn {
-    width: 100%;
-    text-align: center;
+    position: relative;
+    z-index: 201;
+    background: #fff;
+    padding: 12px 20px;
+    border-radius: 0 0 12px 12px;
   }
 
   .login-btn {
     width: 100%;
     text-align: center;
-    margin-top: 0.5rem;
+    margin-top: 0;
+    padding: 14px 1.5rem;
+    font-size: 15px;
+    border-radius: 10px;
   }
   
   .logo-img {

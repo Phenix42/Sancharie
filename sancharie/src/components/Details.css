@@ -491,6 +491,62 @@
   color: #aaa;
 }
 
+/* ---------- VALIDATION ERROR STYLES ---------- */
+.field-error {
+  display: block;
+  font-size: 12px;
+  color: #d84e55;
+  margin-top: 5px;
+  padding-left: 2px;
+  animation: fieldErrorIn 0.25s ease;
+}
+
+@keyframes fieldErrorIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.form-group.has-error input,
+.form-group.has-error select,
+.input-error,
+.phone-field.input-error,
+.has-error .contact-input,
+.has-error select {
+  border-color: #d84e55 !important;
+  box-shadow: 0 0 0 3px rgba(216, 78, 85, 0.1) !important;
+}
+
+.form-group.has-error label {
+  color: #d84e55;
+}
+
+.phone-input-group.has-error .phone-field {
+  border-color: #d84e55;
+  box-shadow: 0 0 0 3px rgba(216, 78, 85, 0.1);
+}
+
+.has-error.input-with-icon {
+  border-color: #d84e55 !important;
+  box-shadow: 0 0 0 3px rgba(216, 78, 85, 0.1) !important;
+}
+
+.contact-field-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-field-wrapper > .field-error {
+  margin-top: 5px;
+  padding-left: 2px;
+}
+
+.contact-field-wrapper > .input-hint {
+  font-size: 11px;
+  color: #999;
+  margin-top: 6px;
+  padding-left: 2px;
+}
+
 /* ---------- CONTACT FORM ---------- */
 .contact-form {
   display: flex;
@@ -1196,6 +1252,7 @@
 @media (max-width: 900px) {
   .details-page {
     padding: 12px;
+    padding-bottom: 80px;
   }
 
   .booking-progress {
@@ -1219,6 +1276,22 @@
 
   .fare-section {
     order: 0;
+  }
+
+  /* Sticky proceed button on mobile */
+  .fare-section .proceed-btn {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 99;
+    margin: 0;
+    border-radius: 0;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    font-size: 16px;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    width: 100%;
   }
 }
 

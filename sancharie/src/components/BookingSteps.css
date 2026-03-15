@@ -222,7 +222,6 @@
   border-radius: 50px;
   box-shadow: 0 8px 30px rgba(163, 114, 38, 0.35);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  animation: pulse 2s ease-in-out infinite;
 }
 
 .stat-badge:hover {
@@ -251,6 +250,15 @@
   font-weight: 400;
   color: rgba(255, 255, 255, 0.5);
   margin: 1rem 0 0;
+}
+
+@keyframes statBadgePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
 }
 
 /* Responsive Design */

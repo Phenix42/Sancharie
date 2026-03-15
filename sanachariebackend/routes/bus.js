@@ -152,8 +152,9 @@ const isValidEmail = (email) => {
  */
 const isValidETSTicketNumber = (ticketNo) => {
   if (!ticketNo || typeof ticketNo !== 'string') return false;
-  // ETS ticket numbers typically start with ETS
-  return /^[A-Z0-9]{6,20}$/.test(ticketNo.toUpperCase());
+  const trimmed = ticketNo.trim();
+  if (trimmed.length < 1 || trimmed.length > 50) return false;
+  return /^[A-Za-z0-9\-_]+$/.test(trimmed);
 };
 
 /**
@@ -163,7 +164,10 @@ const isValidETSTicketNumber = (ticketNo) => {
  */
 const isValidBlockTicketKey = (key) => {
   if (!key || typeof key !== 'string') return false;
-  return /^[A-Z0-9]{6,30}$/.test(key.toUpperCase());
+  const trimmed = key.trim();
+  if (trimmed.length < 1 || trimmed.length > 500) return false;
+  // Allow alphanumeric, hyphens, underscores, equals, plus, slashes (base64/UUID formats)
+  return /^[A-Za-z0-9\-_=+/:.]+$/.test(trimmed);
 };
 
 // ============================================
@@ -721,7 +725,7 @@ router.get('/ets/seatBooking', async (req, res) => {
     const data = await makeETSRequest({
       method: 'GET',
       url: `${ETS_API_CONFIG.baseUrl}/seatBooking`,
-      params: { blockTicketKey: blockTicketKey.toUpperCase() },
+      params: { blockTicketKey: blockTicketKey},
     });
 
     // Log successful booking (for audit)

@@ -290,6 +290,10 @@
 
 /* Mobile Responsive */
 @media (max-width: 640px) {
+  .travellers-page {
+    padding-bottom: 72px;
+  }
+
   .travellers-container {
     padding: 20px 16px;
   }

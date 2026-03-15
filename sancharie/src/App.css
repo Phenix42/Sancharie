@@ -167,6 +167,13 @@
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Hide footer on mobile (bottom nav replaces it for navigation) */
+  /* Footer stays visible but add spacing for bottom nav */
+  .app > footer,
+  .app .footer {
+    padding-bottom: 64px;
+  }
 }
 
 /* ==========================================

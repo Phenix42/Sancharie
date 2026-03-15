@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import Header from './Header';
 import Footer from './Footer';
 import { generateTicketPDF } from '../utils/ticketGenerator';
-import { bus } from '../services/api';
+import { bus, user as userApi } from '../services/api';
 import './MyBookings.css';
 
 export default function MyBookings() {
@@ -30,6 +30,8 @@ export default function MyBookings() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
   const [cancelSuccess, setCancelSuccess] = useState('');
+  const [cancellationDetails, setCancellationDetails] = useState(null);
+  const [isLoadingCancellation, setIsLoadingCancellation] = useState(false);
 
   const tabs = ['All', 'Upcoming', 'Completed', 'Failed', 'Cancelled'];
 
@@ -180,63 +182,124 @@ export default function MyBookings() {
     }
   };
 
-  // Open cancel confirmation modal
-  const openCancelModal = (booking) => {
-    setCancellingBooking(booking);
-    setCancelError('');
-    setCancelSuccess('');
-    setShowCancelModal(true);
-  };
-
-  // Close cancel modal
+  // Close cancel modal and reset state
   const closeCancelModal = () => {
     setShowCancelModal(false);
     setCancellingBooking(null);
     setCancelError('');
+    setCancellationDetails(null);
   };
 
-  // Handle ticket cancellation
+  // Get cancellation details before showing confirmation
+  const getCancellationDetails = async (booking) => {
+    setIsLoadingCancellation(true);
+    setCancelError('');
+    
+    try {
+      // Get ETS ticket number from booking
+      const etsTicketNo = booking.ticketNo || booking.etsTicketNumber || booking.externalBookingId;
+      
+      // Get seat numbers to cancel
+      const seatNbrsToCancel = booking.passengers?.map(p => p.seatNumber || p.seatNbr) || 
+                               booking.selectedSeats || 
+                               booking.seats || [];
+      
+      if (!etsTicketNo || seatNbrsToCancel.length === 0) {
+        setCancelError(!etsTicketNo 
+          ? 'ETS ticket number not found for this booking. Please contact support for cancellation.' 
+          : 'Missing seat information. Please contact support.');
+        return;
+      }
+
+      // Call cancelTicketConfirmation to get refund details
+      const result = await bus.cancelTicketConfirmation(etsTicketNo, seatNbrsToCancel);
+      
+      if (result.success && result.cancellable) {
+        setCancellationDetails({
+          etsTicketNo,
+          seatNbrsToCancel,
+          totalTicketFare: result.totalTicketFare,
+          totalRefundAmount: result.totalRefundAmount,
+          cancellationCharges: result.cancellationCharges,
+          cancelChargesPercentage: result.cancelChargesPercentage,
+          partiallyCancellable: result.partiallyCancellable,
+        });
+      } else {
+        setCancelError('This ticket cannot be cancelled. Please contact support.');
+      }
+    } catch (err) {
+      console.error('Get cancellation details error:', err);
+      setCancelError(err.message || 'Failed to get cancellation details. Please try again.');
+    } finally {
+      setIsLoadingCancellation(false);
+    }
+  };
+
+  // Open cancel confirmation modal and fetch cancellation details
+  const openCancelModal = async (booking) => {
+    setCancellingBooking(booking);
+    setCancelError('');
+    setCancelSuccess('');
+    setCancellationDetails(null);
+    setShowCancelModal(true);
+    
+    // Fetch cancellation details from ETS API
+    await getCancellationDetails(booking);
+  };
+
+  // Handle ticket cancellation using ETS API
   const handleCancelTicket = async () => {
-    if (!cancellingBooking) return;
+    if (!cancellingBooking || !cancellationDetails) return;
 
     setIsCancelling(true);
     setCancelError('');
 
     try {
-      // Get seat IDs from the booking
-      const seatIds = cancellingBooking.passengers?.map(p => p.seatId || p.seatNumber) || 
-                      cancellingBooking.selectedSeats || 
-                      cancellingBooking.seats || [];
-      
-      const seatId = seatIds[0] || cancellingBooking.seatId || '0';
+      const { etsTicketNo, seatNbrsToCancel } = cancellationDetails;
 
-      const result = await bus.cancelBooking({
-        searchTokenId: cancellingBooking.searchTokenId || cancellingBooking.tokenId,
-        bookingId: cancellingBooking.apiBookingId || cancellingBooking.bookingId,
-        seatId,
-        remarks: 'User requested cancellation'
-      });
+      // Call cancelTicket API with ETS parameters
+      const result = await bus.cancelBooking(etsTicketNo, seatNbrsToCancel);
 
-      if (result.responseStatus === 1 || result.traceId) {
-        setCancelSuccess('Ticket cancelled successfully! Refund will be processed as per cancellation policy.');
+      if (result.success) {
+        const refundMsg = result.totalRefundAmount 
+          ? `Refund of ₹${result.totalRefundAmount} will be processed within 5-7 business days.`
+          : 'Refund will be processed as per cancellation policy.';
+        
+        setCancelSuccess(`Ticket cancelled successfully! ${refundMsg}`);
         
         // Update the booking status locally
+        const bookingDbId = cancellingBooking.id || cancellingBooking._id;
         setBookings(prevBookings => 
-          prevBookings.map(b => 
-            b._id === cancellingBooking._id 
-              ? { ...b, status: 'cancelled' } 
-              : b
-          )
+          prevBookings.map(b => {
+            const bId = b.id || b._id;
+            return bId === bookingDbId
+              ? { ...b, status: 'cancelled', refundAmount: result.totalRefundAmount } 
+              : b;
+          })
         );
+
+        // Persist cancelled status to database
+        if (bookingDbId) {
+          try {
+            await userApi.updateBooking(bookingDbId, {
+              status: 'cancelled',
+              refundAmount: parseFloat(result.totalRefundAmount) || 0,
+              refundStatus: 'processing',
+            });
+          } catch (dbErr) {
+            console.error('Failed to update booking status in DB:', dbErr);
+          }
+        }
 
         // Close modal after a delay
         setTimeout(() => {
           closeCancelModal();
           setCancelSuccess('');
+          setCancellationDetails(null);
           fetchBookings(); // Refresh bookings
-        }, 2000);
+        }, 3000);
       } else {
-        setCancelError('Cancellation request submitted. Please check back for status update.');
+        setCancelError(result.message || 'Cancellation failed. Please try again or contact support.');
       }
     } catch (err) {
       console.error('Cancel ticket error:', err);
@@ -355,9 +418,9 @@ export default function MyBookings() {
             <div className="bookings-list">
               {filteredBookings.map((booking) => (
                 <div 
-                  key={booking._id} 
-                  className={`trip-card ${expandedCard === booking._id ? 'expanded' : ''}`}
-                  onClick={() => toggleCard(booking._id)}
+                  key={booking.id || booking._id} 
+                  className={`trip-card ${expandedCard === (booking.id || booking._id) ? 'expanded' : ''}`}
+                  onClick={() => toggleCard(booking.id || booking._id)}
                 >
                   {/* Card Header - Always Visible */}
                   <div className="trip-card-main">
@@ -396,7 +459,7 @@ export default function MyBookings() {
                   </div>
 
                   {/* Expanded Details */}
-                  {expandedCard === booking._id && (
+                  {expandedCard === (booking.id || booking._id) && (
                     <div className="trip-card-details" onClick={(e) => e.stopPropagation()}>
                       {/* Travels Section */}
                       <div className="details-section travels-section">
@@ -529,6 +592,11 @@ export default function MyBookings() {
                   </svg>
                   <p>{cancelSuccess}</p>
                 </div>
+              ) : isLoadingCancellation ? (
+                <div className="loading-cancellation">
+                  <div className="btn-spinner"></div>
+                  <p>Loading cancellation details...</p>
+                </div>
               ) : (
                 <>
                   <div className="cancel-booking-info">
@@ -540,7 +608,32 @@ export default function MyBookings() {
                       <p><strong>Booking ID:</strong> {cancellingBooking?.bookingId}</p>
                     </div>
                     
-                    {cancellingBooking?.cancelPolicy && cancellingBooking.cancelPolicy.length > 0 && (
+                    {/* Cancellation Details from ETS API */}
+                    {cancellationDetails && (
+                      <div className="cancellation-details-card">
+                        <h4>Cancellation Charges</h4>
+                        <div className="cancellation-breakdown">
+                          <div className="breakdown-row">
+                            <span>Total Ticket Fare:</span>
+                            <span>₹{cancellationDetails.totalTicketFare || '0'}</span>
+                          </div>
+                          <div className="breakdown-row">
+                            <span>Cancellation Charges ({cancellationDetails.cancelChargesPercentage}):</span>
+                            <span className="negative">-₹{cancellationDetails.cancellationCharges || '0'}</span>
+                          </div>
+                          <div className="breakdown-row total-row">
+                            <span>Refund Amount:</span>
+                            <span className="refund-amount">₹{cancellationDetails.totalRefundAmount || '0'}</span>
+                          </div>
+                        </div>
+                        {cancellationDetails.partiallyCancellable && (
+                          <p className="partial-note">Note: Partial cancellation is allowed for this ticket.</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Fallback to booking's cancel policy if API details not available */}
+                    {!cancellationDetails && cancellingBooking?.cancelPolicy && cancellingBooking.cancelPolicy.length > 0 && (
                       <div className="cancellation-policy">
                         <h4>Cancellation Policy</h4>
                         <ul>
@@ -559,33 +652,36 @@ export default function MyBookings() {
                       <p>{cancelError}</p>
                     </div>
                   )}
-
-                  <div className="cancel-modal-actions">
-                    <button 
-                      className="keep-ticket-btn" 
-                      onClick={closeCancelModal}
-                      disabled={isCancelling}
-                    >
-                      Keep Ticket
-                    </button>
-                    <button 
-                      className="confirm-cancel-btn" 
-                      onClick={handleCancelTicket}
-                      disabled={isCancelling}
-                    >
-                      {isCancelling ? (
-                        <>
-                          <span className="btn-spinner"></span>
-                          Cancelling...
-                        </>
-                      ) : (
-                        'Confirm Cancel'
-                      )}
-                    </button>
-                  </div>
                 </>
               )}
             </div>
+
+            {/* Actions pinned at bottom */}
+            {!cancelSuccess && !isLoadingCancellation && (
+              <div className="cancel-modal-actions">
+                <button 
+                  className="keep-ticket-btn" 
+                  onClick={closeCancelModal}
+                  disabled={isCancelling}
+                >
+                  Keep Ticket
+                </button>
+                <button 
+                  className="confirm-cancel-btn" 
+                  onClick={handleCancelTicket}
+                  disabled={isCancelling || !cancellationDetails}
+                >
+                  {isCancelling ? (
+                    <>
+                      <span className="btn-spinner"></span>
+                      Cancelling...
+                    </>
+                  ) : (
+                    'Confirm Cancel'
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

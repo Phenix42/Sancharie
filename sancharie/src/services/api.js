@@ -578,7 +578,10 @@ export const bus = {
 
     return {
       opPNR: data.opPNR,
+      travelOperatorPNR: data.opPNR,
       etsTicketNumber: data.etstnumber,
+      ticketNo: data.etstnumber,
+      bookingId: data.etstnumber,
       commPCT: data.commPCT,
       totalFare: data.totalFare,
       cancellationPolicy: data.cancellationPolicy,

@@ -69,6 +69,54 @@ export default function Details() {
   const [assurance, setAssurance] = useState("no"); // "yes" or "no"
   const assurancePrice = 24; // per passenger
 
+  // Validation errors state
+  const [passengerErrors, setPassengerErrors] = useState(() => {
+    if (!selectedSeats) return [];
+    return selectedSeats.map(() => ({ name: '', age: '' }));
+  });
+  const [contactErrors, setContactErrors] = useState({ phone: '', email: '', state: '' });
+  const [touched, setTouched] = useState({
+    passengers: selectedSeats ? selectedSeats.map(() => ({ name: false, age: false })) : [],
+    contact: { phone: false, email: false, state: false },
+  });
+
+  // Validation helpers
+  const validateName = (name) => {
+    if (!name.trim()) return 'Name is required';
+    if (name.trim().length < 2) return 'Name must be at least 2 characters';
+    if (!/^[a-zA-Z\s.'-]+$/.test(name.trim())) return 'Name can only contain letters, spaces, dots, hyphens';
+    if (name.trim().length > 50) return 'Name must be under 50 characters';
+    return '';
+  };
+
+  const validateAge = (age) => {
+    if (!age && age !== 0) return 'Age is required';
+    const ageNum = Number(age);
+    if (!Number.isInteger(ageNum) || ageNum < 1) return 'Enter a valid age';
+    if (ageNum < 5) return 'Passenger must be at least 5 years old';
+    if (ageNum > 120) return 'Enter a valid age';
+    return '';
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone.trim()) return 'Phone number is required';
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length !== 10) return 'Phone number must be 10 digits';
+    if (!/^[6-9]/.test(digits)) return 'Enter a valid Indian mobile number';
+    return '';
+  };
+
+  const validateEmail = (email) => {
+    if (!email.trim()) return ''; // email is optional
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Enter a valid email address';
+    return '';
+  };
+
+  const validateState = (state) => {
+    if (!state) return 'State of residence is required';
+    return '';
+  };
+
   // Redirect to home if no booking data
   if (!fareData || !selectedSeats) {
     return (
@@ -105,32 +153,88 @@ export default function Details() {
       updated[index] = { ...updated[index], [name]: value };
       return updated;
     });
+
+    // Validate on change if field was already touched
+    if (touched.passengers[index]?.[name]) {
+      setPassengerErrors(prev => {
+        const updated = [...prev];
+        if (name === 'name') updated[index] = { ...updated[index], name: validateName(value) };
+        if (name === 'age') updated[index] = { ...updated[index], age: validateAge(value) };
+        return updated;
+      });
+    }
+  };
+
+  const handlePassengerBlur = (index, fieldName) => {
+    setTouched(prev => {
+      const updatedPassengers = [...prev.passengers];
+      updatedPassengers[index] = { ...updatedPassengers[index], [fieldName]: true };
+      return { ...prev, passengers: updatedPassengers };
+    });
+    const value = passengers[index][fieldName];
+    setPassengerErrors(prev => {
+      const updated = [...prev];
+      if (fieldName === 'name') updated[index] = { ...updated[index], name: validateName(value) };
+      if (fieldName === 'age') updated[index] = { ...updated[index], age: validateAge(value) };
+      return updated;
+    });
   };
 
   const handleContactChange = (e) => {
     const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
     setContactDetails(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: newValue
     }));
+
+    // Validate on change if already touched
+    if (touched.contact[name]) {
+      if (name === 'phone') setContactErrors(prev => ({ ...prev, phone: validatePhone(value) }));
+      if (name === 'email') setContactErrors(prev => ({ ...prev, email: validateEmail(value) }));
+      if (name === 'state') setContactErrors(prev => ({ ...prev, state: validateState(value) }));
+    }
+  };
+
+  const handleContactBlur = (fieldName) => {
+    setTouched(prev => ({
+      ...prev,
+      contact: { ...prev.contact, [fieldName]: true }
+    }));
+    const value = contactDetails[fieldName];
+    if (fieldName === 'phone') setContactErrors(prev => ({ ...prev, phone: validatePhone(value) }));
+    if (fieldName === 'email') setContactErrors(prev => ({ ...prev, email: validateEmail(value) }));
+    if (fieldName === 'state') setContactErrors(prev => ({ ...prev, state: validateState(value) }));
   };
 
   const handleProceedToPayment = async () => {
-    // Validate all passengers have required fields
-    for (let i = 0; i < passengers.length; i++) {
-      const p = passengers[i];
-      if (!p.name) {
-        toast.warning(`Please enter name for Passenger ${i + 1} (Seat ${p.seatNumber})`);
-        return;
-      }
-    }
-    // Validate contact details
-    if (!contactDetails.phone) {
-      toast.warning("Please enter phone number");
-      return;
-    }
-    if (!contactDetails.state) {
-      toast.warning("Please select state of residence");
+    // Run full validation on all fields
+    let hasErrors = false;
+
+    // Validate all passengers
+    const newPassengerErrors = passengers.map((p) => {
+      const nameErr = validateName(p.name);
+      const ageErr = validateAge(p.age);
+      if (nameErr || ageErr) hasErrors = true;
+      return { name: nameErr, age: ageErr };
+    });
+    setPassengerErrors(newPassengerErrors);
+
+    // Validate contact
+    const phoneErr = validatePhone(contactDetails.phone);
+    const emailErr = validateEmail(contactDetails.email);
+    const stateErr = validateState(contactDetails.state);
+    if (phoneErr || emailErr || stateErr) hasErrors = true;
+    setContactErrors({ phone: phoneErr, email: emailErr, state: stateErr });
+
+    // Mark all fields as touched
+    setTouched({
+      passengers: passengers.map(() => ({ name: true, age: true })),
+      contact: { phone: true, email: true, state: true },
+    });
+
+    if (hasErrors) {
+      toast.warning('Please fix the errors in the form before proceeding');
       return;
     }
     
@@ -285,7 +389,7 @@ export default function Details() {
                 </div>
 
                 <div className="form-row three-cols">
-                  <div className="form-group">
+                  <div className={`form-group ${passengerErrors[index]?.name ? 'has-error' : ''}`}>
                     <label>
                       <User size={14} />
                       Full Name <span className="required">*</span>
@@ -296,19 +400,30 @@ export default function Details() {
                       placeholder="Enter full name"
                       value={passenger.name}
                       onChange={(e) => handlePassengerChange(index, e)}
-                      required
+                      onBlur={() => handlePassengerBlur(index, 'name')}
+                      className={passengerErrors[index]?.name ? 'input-error' : ''}
                     />
+                    {passengerErrors[index]?.name && (
+                      <span className="field-error">{passengerErrors[index].name}</span>
+                    )}
                   </div>
 
-                  <div className="form-group">
-                    <label>Age</label>
+                  <div className={`form-group ${passengerErrors[index]?.age ? 'has-error' : ''}`}>
+                    <label>Age <span className="required">*</span></label>
                     <input
                       type="number"
                       name="age"
                       placeholder="Age"
+                      min="5"
+                      max="120"
                       value={passenger.age}
                       onChange={(e) => handlePassengerChange(index, e)}
+                      onBlur={() => handlePassengerBlur(index, 'age')}
+                      className={passengerErrors[index]?.age ? 'input-error' : ''}
                     />
+                    {passengerErrors[index]?.age && (
+                      <span className="field-error">{passengerErrors[index].age}</span>
+                    )}
                   </div>
 
                   <div className="form-group">
@@ -341,72 +456,90 @@ export default function Details() {
             </div>
 
             <div className="contact-form">
-              <div className="phone-input-group">
-                <div className="country-code">
-                  <span className="code-label">Country</span>
-                  <select
-                    name="countryCode"
-                    value={contactDetails.countryCode}
-                    onChange={handleContactChange}
-                  >
-                    <option value="+91">🇮🇳 +91</option>
-                    <option value="+1">🇺🇸 +1</option>
-                    <option value="+44">🇬🇧 +44</option>
-                    <option value="+971">🇦🇪 +971</option>
-                  </select>
+              <div className="contact-field-wrapper">
+                <div className={`phone-input-group ${contactErrors.phone ? 'has-error' : ''}`}>
+                  <div className="country-code">
+                    <span className="code-label">Country</span>
+                    <select
+                      name="countryCode"
+                      value={contactDetails.countryCode}
+                      onChange={handleContactChange}
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+971">🇦🇪 +971</option>
+                    </select>
+                  </div>
+                  <div className={`phone-field ${contactErrors.phone ? 'input-error' : ''}`}>
+                    <Phone size={18} className="field-icon" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder="Enter phone number *"
+                      maxLength={10}
+                      value={contactDetails.phone}
+                      onChange={handleContactChange}
+                      onBlur={() => handleContactBlur('phone')}
+                    />
+                  </div>
                 </div>
-                <div className="phone-field">
-                  <Phone size={18} className="field-icon" />
+                {contactErrors.phone && (
+                  <span className="field-error">{contactErrors.phone}</span>
+                )}
+              </div>
+
+              <div className="contact-field-wrapper">
+                <div className={`input-with-icon ${contactErrors.email ? 'has-error' : ''}`}>
+                  <Mail size={18} className="field-icon" />
                   <input
-                    type="tel"
-                    name="phone"
-                    placeholder="Enter phone number *"
-                    value={contactDetails.phone}
+                    type="email"
+                    name="email"
+                    placeholder="Email ID (for ticket confirmation)"
+                    value={contactDetails.email}
                     onChange={handleContactChange}
-                    required
+                    onBlur={() => handleContactBlur('email')}
+                    className={`contact-input ${contactErrors.email ? 'input-error' : ''}`}
                   />
                 </div>
+                {contactErrors.email && (
+                  <span className="field-error">{contactErrors.email}</span>
+                )}
               </div>
 
-              <div className="input-with-icon">
-                <Mail size={18} className="field-icon" />
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email ID (for ticket confirmation)"
-                  value={contactDetails.email}
-                  onChange={handleContactChange}
-                  className="contact-input"
-                />
-              </div>
-
-              <div className="input-with-icon state-wrapper">
-                <MapPin size={18} className="field-icon" />
-                <select
-                  name="state"
-                  value={contactDetails.state}
-                  onChange={handleContactChange}
-                  className="contact-input"
-                  required
-                >
-                  <option value="">Select State of Residence *</option>
-                  <option value="AP">Andhra Pradesh</option>
-                  <option value="TS">Telangana</option>
-                  <option value="KA">Karnataka</option>
-                  <option value="TN">Tamil Nadu</option>
-                  <option value="MH">Maharashtra</option>
-                  <option value="KL">Kerala</option>
-                  <option value="DL">Delhi</option>
-                  <option value="UP">Uttar Pradesh</option>
-                  <option value="GJ">Gujarat</option>
-                  <option value="RJ">Rajasthan</option>
-                  <option value="WB">West Bengal</option>
-                  <option value="OR">Odisha</option>
-                  <option value="MP">Madhya Pradesh</option>
-                  <option value="BR">Bihar</option>
-                  <option value="PB">Punjab</option>
-                </select>
-                <span className="input-hint">Required for GST invoicing</span>
+              <div className="contact-field-wrapper">
+                <div className={`input-with-icon state-wrapper ${contactErrors.state ? 'has-error' : ''}`}>
+                  <MapPin size={18} className="field-icon" />
+                  <select
+                    name="state"
+                    value={contactDetails.state}
+                    onChange={handleContactChange}
+                    onBlur={() => handleContactBlur('state')}
+                    className={`contact-input ${contactErrors.state ? 'input-error' : ''}`}
+                  >
+                    <option value="">Select State of Residence *</option>
+                    <option value="AP">Andhra Pradesh</option>
+                    <option value="TS">Telangana</option>
+                    <option value="KA">Karnataka</option>
+                    <option value="TN">Tamil Nadu</option>
+                    <option value="MH">Maharashtra</option>
+                    <option value="KL">Kerala</option>
+                    <option value="DL">Delhi</option>
+                    <option value="UP">Uttar Pradesh</option>
+                    <option value="GJ">Gujarat</option>
+                    <option value="RJ">Rajasthan</option>
+                    <option value="WB">West Bengal</option>
+                    <option value="OR">Odisha</option>
+                    <option value="MP">Madhya Pradesh</option>
+                    <option value="BR">Bihar</option>
+                    <option value="PB">Punjab</option>
+                  </select>
+                </div>
+                {contactErrors.state ? (
+                  <span className="field-error">{contactErrors.state}</span>
+                ) : (
+                  <span className="input-hint">Required for GST invoicing</span>
+                )}
               </div>
 
               <div className="whatsapp-toggle">
