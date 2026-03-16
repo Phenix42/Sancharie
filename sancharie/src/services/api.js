@@ -241,11 +241,7 @@ export const bus = {
    * @param {string} dateOfJourney - Journey date (yyyy-MM-dd)
    */
   search: async (sourceCity, destinationCity, dateOfJourney) => {
-    const params = new URLSearchParams({
-      sourceCity,
-      destinationCity,
-      doj: dateOfJourney,
-    });
+    const params = `sourceCity=${sourceCity}&destinationCity=${destinationCity}&doj=${dateOfJourney}`;
 
     const data = await apiRequest(`/api/ets/getAvailableBuses?${params}`);
 
@@ -397,13 +393,7 @@ export const bus = {
    * @param {string} routeScheduleId - Route schedule ID
    */
   getSeatLayout: async (sourceCity, destinationCity, dateOfJourney, inventoryType, routeScheduleId) => {
-    const params = new URLSearchParams({
-      sourceCity,
-      destinationCity,
-      doj: dateOfJourney,
-      inventoryType: String(inventoryType),
-      routeScheduleId,
-    });
+    const params = `sourceCity=${sourceCity}&destinationCity=${destinationCity}&doj=${dateOfJourney}&inventoryType=${inventoryType}&routeScheduleId=${routeScheduleId}`;
 
     const data = await apiRequest(`/api/ets/getBusLayout?${params}`);
 
@@ -429,13 +419,7 @@ export const bus = {
   getSeatLayoutForBus: async (bus) => {
     if (!bus) throw new Error('Bus object is required');
     
-    const params = new URLSearchParams({
-      sourceCity: bus.sourceCity,
-      destinationCity: bus.destinationCity,
-      doj: bus.dateOfJourney,
-      inventoryType: String(bus.inventoryType),
-      routeScheduleId: bus.routeScheduleId,
-    });
+    const params = `sourceCity=${bus.sourceCity}&destinationCity=${bus.destinationCity}&doj=${bus.dateOfJourney}&inventoryType=${bus.inventoryType}&routeScheduleId=${bus.routeScheduleId}`;
 
     const data = await apiRequest(`/api/ets/getBusLayout?${params}`);
 

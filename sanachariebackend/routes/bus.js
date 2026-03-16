@@ -445,8 +445,8 @@ router.get('/ets/getAvailableBuses', async (req, res) => {
       method: 'GET',
       url: `${ETS_API_CONFIG.baseUrl}/getAvailableBuses`,
       params: {
-        sourceCity: encodeURIComponent(sanitizedSource),
-        destinationCity: encodeURIComponent(sanitizedDest),
+        sourceCity: sanitizedSource,
+        destinationCity: sanitizedDest,
         doj,
       },
     });
@@ -528,8 +528,8 @@ router.get('/ets/getBusLayout', async (req, res) => {
       method: 'GET',
       url: `${ETS_API_CONFIG.baseUrl}/getBusLayout`,
       params: {
-        sourceCity: encodeURIComponent(sanitizedSource),
-        destinationCity: encodeURIComponent(sanitizedDest),
+        sourceCity: sanitizedSource,
+        destinationCity: sanitizedDest,
         doj,
         inventoryType,
         routeScheduleId,

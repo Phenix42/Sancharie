@@ -2,7 +2,7 @@
 .sr-page {
   background: #f4f6f8;
   padding: 20px;
-  font-family: Arial, sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 /* ================= LOADING STATE ================= */
@@ -66,7 +66,7 @@
 }
 
 .loader-text {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #333;
   margin: 0 0 8px;
@@ -110,14 +110,14 @@
 }
 
 .sr-error-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: #1a1a2e;
   margin: 0 0 10px;
 }
 
 .sr-error-message {
-  font-size: 15px;
+  font-size: 14px;
   color: #666;
   margin: 0 0 20px;
   line-height: 1.5;
@@ -262,14 +262,14 @@
 }
 
 .no-buses-title {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   color: #333;
   margin: 0 0 12px;
 }
 
 .no-buses-message {
-  font-size: 15px;
+  font-size: 14px;
   color: #666;
   margin: 0 0 20px;
   line-height: 1.5;
@@ -341,7 +341,7 @@
   color: #fff;
   border: none;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -730,7 +730,7 @@
 }
 
 .date-item .date {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 16px;
   font-weight: 600;
   color: #ffffff;
@@ -1167,7 +1167,7 @@
   color: #ffffff;
   border: none;
   padding: 8px 20px;
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 14px;
   font-weight: 600;
   border-radius: 6px;
@@ -1421,10 +1421,11 @@
   
   .sr-info {
     padding-right: 0;
+    order: 1;
   }
 
   .seat-preview {
-    order: 2;
+    order: 3;
     padding: 16px 0;
     border-top: 1px solid #e4e4e4;
     border-bottom: 1px solid #e4e4e4;
@@ -1439,12 +1440,23 @@
   }
 
   .price-section {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding-left: 0;
-    gap: 16px;
-    width: 100%;
+    display: contents;
+  }
+
+  .starts-from-label {
+    order: 2;
+  }
+
+  .price-row {
+    order: 2;
+  }
+
+  .select-seat-btn {
+    order: 4;
+  }
+
+  .seats-left-indicator {
+    order: 5;
   }
   
   .discount-ribbon {
@@ -1536,11 +1548,15 @@
     max-width: 150px;
   }
 
-  /* Seat Preview */
+  /* Seat Preview - appears between price and button */
   .seat-preview {
+    order: 3;
     width: 100%;
     flex-direction: column;
     align-items: center;
+    border-top: none;
+    border-bottom: none;
+    padding: 8px 0;
   }
 
   .seat-layout-container {
@@ -1553,18 +1569,33 @@
     width: 24px;
     height: 10px;
   }
-  
+
+  /* Price Section - use display:contents so children join parent grid */
+  .price-section {
+    display: contents;
+  }
+
+  .starts-from-label {
+    order: 2;
+    text-align: center;
+  }
+
+  .price-row {
+    order: 2;
+    justify-content: center;
+  }
+
   .select-seat-btn {
+    order: 4;
     width: 100%;
     padding: 12px 24px;
     font-size: 16px;
   }
 
-  /* Price Section */
-  .price-section {
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
+  .seats-left-indicator {
+    order: 5;
+    justify-content: center;
+    width: 100%;
   }
 
   .ribbon-content {
@@ -1645,10 +1676,6 @@
   .select-seat-btn {
     width: 100%;
     padding: 12px;
-  }
-
-  .price-section {
-    width: 100%;
   }
 
   .load-more-btn {

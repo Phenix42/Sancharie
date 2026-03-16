@@ -17,7 +17,7 @@
   min-height: 100vh;
   background: var(--light-color);
   padding: 24px 20px 40px;
-  font-family: 'Montserrat', 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 /* ---------- PROGRESS STEPS ---------- */
@@ -362,7 +362,7 @@
 }
 
 .section-title-group h3 {
-  font-size: 17px;
+  font-size: 18px;
   color: #333;
   margin: 0 0 4px;
 }
@@ -790,7 +790,7 @@
 }
 
 .assurance-title h3 {
-  font-size: 17px;
+  font-size: 18px;
   color: #333;
   margin: 0 0 4px;
 }
@@ -1054,7 +1054,7 @@
 
 .fare-row.total {
   font-weight: 700;
-  font-size: 17px;
+  font-size: 18px;
   color: #333;
   background: var(--light-color);
   margin: 12px -20px 0;

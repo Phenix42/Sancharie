@@ -15,7 +15,7 @@
 
 .section-title {
   font-family: 'Montserrat', sans-serif;
-  font-size: 40px;
+  font-size: 36px;
   font-weight: 700;
   color: #002c3f;
   margin-bottom: 40px;
@@ -137,7 +137,7 @@
 
 .section-title-underline {
   font-family: 'Montserrat', sans-serif;
-  font-size: 48px;
+  font-size: 28px;
   font-weight: 700;
   color: #002c3f;
   margin-bottom: 24px;
@@ -157,7 +157,7 @@
 
 .why-choose-intro {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 28px;
+  font-size: 15px;
   font-weight: 400;
   color: #333;
   line-height: 1.6;
@@ -166,7 +166,7 @@
 
 .key-benefits-title {
   font-family: 'Montserrat', sans-serif;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: #002c3f;
   margin-bottom: 16px;
@@ -174,7 +174,7 @@
 
 .benefits-list {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 20px;
+  font-size: 15px;
   color: #333;
   line-height: 2;
   padding-left: 24px;
@@ -187,7 +187,7 @@
 
 .why-choose-conclusion {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 24px;
+  font-size: 15px;
   font-weight: 400;
   color: #333;
   line-height: 1.6;
@@ -249,7 +249,7 @@
 
 .online-booking-text p {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 28px;
+  font-size: 15px;
   font-weight: 400;
   color: #333;
   line-height: 1.6;
@@ -258,7 +258,7 @@
 
 .subsection-title {
   font-family: 'Montserrat', sans-serif;
-  font-size: 32px;
+  font-size: 20px;
   font-weight: 700;
   color: #002c3f;
   margin-top: 32px;
@@ -331,7 +331,7 @@
 
 .how-to-book-intro {
   font-family: 'Montserrat', sans-serif;
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 600;
   color: #002c3f;
   margin-bottom: 24px;
@@ -339,7 +339,7 @@
 
 .steps-list {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 24px;
+  font-size: 15px;
   color: #333;
   line-height: 2;
   padding-left: 28px;
@@ -357,7 +357,7 @@
 
 .how-to-book-text p {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 22px;
+  font-size: 15px;
   color: #333;
   line-height: 1.6;
   margin-bottom: 20px;
@@ -365,7 +365,7 @@
 
 .feature-list {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 22px;
+  font-size: 15px;
   color: #333;
   line-height: 2;
   padding-left: 24px;
@@ -530,12 +530,12 @@
   }
   
   .section-title-underline {
-    font-size: 36px;
+    font-size: 26px;
   }
   
   .why-choose-intro,
   .online-booking-text p {
-    font-size: 22px;
+    font-size: 15px;
   }
 }
 
@@ -575,7 +575,7 @@
   }
   
   .section-title-underline {
-    font-size: 28px;
+    font-size: 22px;
   }
   
   .discount-offers-track {
@@ -589,21 +589,21 @@
   
   .why-choose-intro,
   .online-booking-text p {
-    font-size: 18px;
+    font-size: 14px;
   }
   
   .benefits-list,
   .steps-list {
-    font-size: 16px;
+    font-size: 14px;
   }
   
   .subsection-title {
-    font-size: 24px;
+    font-size: 18px;
   }
   
   .how-to-book-text p,
   .feature-list {
-    font-size: 18px;
+    font-size: 14px;
   }
   
   .faq-tabs {
@@ -633,7 +633,7 @@
   }
   
   .section-title-underline {
-    font-size: 22px;
+    font-size: 18px;
   }
   
   .discount-offer-placeholder {
@@ -650,22 +650,22 @@
   
   .why-choose-intro,
   .online-booking-text p {
-    font-size: 16px;
+    font-size: 13px;
   }
   
   .benefits-list,
   .steps-list {
-    font-size: 14px;
+    font-size: 13px;
     padding-left: 16px;
   }
   
   .how-to-book-intro {
-    font-size: 20px;
+    font-size: 16px;
   }
   
   .key-benefits-title,
   .subsection-title {
-    font-size: 18px;
+    font-size: 16px;
   }
   
   .faq-tabs {
@@ -731,7 +731,7 @@
   }
   
   .section-title-underline {
-    font-size: 18px;
+    font-size: 16px;
   }
   
   .faq-question {

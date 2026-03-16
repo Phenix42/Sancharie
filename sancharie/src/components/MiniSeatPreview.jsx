@@ -292,7 +292,7 @@ export default function MiniSeatPreview({ bus, searchTokenId }) {
     
     if (!seat) {
       // Empty cell - maintains grid alignment
-      return <div key={`${deckType}-empty-${rowIdx}-${colIdx}`} className="mini-seat-cell empty" style={{ width: '13px', height: '11px' }} />;
+      return <div key={`${deckType}-empty-${rowIdx}-${colIdx}`} className="mini-seat-cell empty" />;
     }
 
     const isSleeper = seat.seatType === 2 || seat.sleeper || seat.length > 1 || seat.width > 1;
@@ -309,21 +309,19 @@ export default function MiniSeatPreview({ bus, searchTokenId }) {
       seat.isMalesSeat ? 'males' : '',
     ].filter(Boolean).join(' ');
 
-    const style = { width: '13px' };
+    const style = {};
     if (isHorizontal) {
       style.gridColumn = `span ${seat.length}`;
-      style.width = `${seat.length * 13 + (seat.length - 1) * 3}px`;
     }
     if (isVertical) {
-      style.gridRow = `span ${seat.width}`;
-      style.height = `${seat.width * 11 + (seat.width - 1) * 3}px`;
+      style.height = `calc(${seat.width} * var(--cell-h) + ${seat.width - 1} * var(--cell-gap))`;
     }
 
     return (
       <div 
         key={seat.id} 
         className={seatClass}
-        style={style}
+        style={Object.keys(style).length > 0 ? style : undefined}
         title={`${seat.seatName} - ${seat.status}`}
       />
     );

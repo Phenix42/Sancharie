@@ -82,11 +82,7 @@ export const getStations = async () => {
  */
 export const searchBuses = async (sourceCity, destinationCity, dateOfJourney) => {
   try {
-    const params = new URLSearchParams({
-      sourceCity,
-      destinationCity,
-      doj: dateOfJourney,
-    });
+    const params = `sourceCity=${sourceCity}&destinationCity=${destinationCity}&doj=${dateOfJourney}`;
 
     const response = await fetch(`${BASE_URL}/api/ets/getAvailableBuses?${params}`, {
       method: "GET",
@@ -123,13 +119,7 @@ export const searchBuses = async (sourceCity, destinationCity, dateOfJourney) =>
  */
 export const getSeatLayout = async (sourceCity, destinationCity, dateOfJourney, inventoryType, routeScheduleId) => {
   try {
-    const params = new URLSearchParams({
-      sourceCity,
-      destinationCity,
-      doj: dateOfJourney,
-      inventoryType: String(inventoryType),
-      routeScheduleId,
-    });
+    const params = `sourceCity=${sourceCity}&destinationCity=${destinationCity}&doj=${dateOfJourney}&inventoryType=${inventoryType}&routeScheduleId=${routeScheduleId}`;
 
     const response = await fetch(`${BASE_URL}/api/ets/getBusLayout?${params}`, {
       method: "GET",

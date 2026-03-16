@@ -1,5 +1,8 @@
 /* ========== MINI SEAT PREVIEW - VISUAL LAYOUT STYLE ========== */
 .mini-seat-preview-container {
+  --cell-w: 13px;
+  --cell-h: 11px;
+  --cell-gap: 3px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -68,30 +71,30 @@
 .mini-seat-grid {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--cell-gap);
 }
 
 .mini-seat-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 13px);
-  grid-auto-columns: 13px;
+  grid-template-columns: repeat(auto-fill, var(--cell-w));
+  grid-auto-columns: var(--cell-w);
   grid-auto-flow: column;
-  gap: 3px;
+  gap: var(--cell-gap);
   align-items: center;
 }
 
 /* ========== MINI SEAT CELL ========== */
 .mini-seat-cell {
-  width: 13px;
-  height: 11px;
+  width: var(--cell-w);
+  height: var(--cell-h);
   border-radius: 2px;
   transition: all 0.15s ease;
   box-sizing: border-box;
 }
 
 .mini-seat-cell.empty {
-  width: 13px;
-  height: 11px;
+  width: var(--cell-w);
+  height: var(--cell-h);
   visibility: hidden;
 }
 
@@ -102,8 +105,8 @@
 
 /* Seater seat - clean rounded square design */
 .mini-seat-cell.seater {
-  width: 13px;
-  height: 11px;
+  width: var(--cell-w);
+  height: var(--cell-h);
   position: relative;
   background: #4caf50;
   border-radius: 3px;
@@ -131,21 +134,21 @@
 
 /* Sleeper berth - filled rectangle like reference image */
 .mini-seat-cell.sleeper {
-  width: 13px;
-  height: 11px;
+  width: var(--cell-w);
+  height: var(--cell-h);
   border-radius: 2px;
 }
 
 /* Horizontal sleeper (length > 1) - spans multiple columns */
 .mini-seat-cell.sleeper.horizontal {
   width: auto;
-  min-width: 26px;
+  min-width: calc(2 * var(--cell-w) + var(--cell-gap));
 }
 
 /* Vertical sleeper (width > 1) - taller rectangle */
 .mini-seat-cell.sleeper.vertical {
-  width: 13px;
-  height: 24px;
+  width: var(--cell-w);
+  /* height set via inline style using CSS variables */
 }
 
 /* Available sleeper - solid green fill */
@@ -257,46 +260,15 @@
 /* ========== RESPONSIVE ========== */
 @media (max-width: 900px) {
   .mini-seat-preview-container {
+    --cell-w: 11px;
+    --cell-h: 9px;
+    --cell-gap: 2px;
     min-width: 140px;
     padding: 4px;
   }
   
   .mini-seat-layout {
     padding: 6px 8px;
-  }
-  
-  .mini-seat-cell {
-    width: 11px;
-    height: 9px;
-  }
-  
-  .mini-seat-cell.empty {
-    width: 11px;
-    height: 9px;
-  }
-  
-  .mini-seat-cell.seater {
-    width: 11px;
-    height: 9px;
-    border-radius: 2px;
-  }
-  
-  .mini-seat-cell.sleeper {
-    width: 11px;
-    height: 9px;
-  }
-  
-  .mini-seat-cell.sleeper.horizontal {
-    min-width: 22px;
-  }
-  
-  .mini-seat-cell.sleeper.vertical {
-    height: 20px;
-  }
-  
-  .mini-seat-row {
-    grid-auto-columns: 11px;
-    gap: 2px;
   }
   
   .mini-deck .deck-label {
@@ -307,46 +279,15 @@
 
 @media (max-width: 768px) {
   .mini-seat-preview-container {
+    --cell-w: 9px;
+    --cell-h: 7px;
+    --cell-gap: 2px;
     min-width: 100px;
     padding: 2px;
   }
 
   .mini-seat-layout {
     padding: 4px 6px;
-  }
-
-  .mini-seat-cell {
-    width: 9px;
-    height: 7px;
-  }
-
-  .mini-seat-cell.empty {
-    width: 9px;
-    height: 7px;
-  }
-
-  .mini-seat-cell.seater {
-    width: 9px;
-    height: 7px;
-  }
-
-  .mini-seat-cell.sleeper {
-    width: 9px;
-    height: 7px;
-  }
-
-  .mini-seat-cell.sleeper.horizontal {
-    min-width: 18px;
-  }
-
-  .mini-seat-cell.sleeper.vertical {
-    height: 16px;
-  }
-
-  .mini-seat-row {
-    grid-auto-columns: 9px;
-    grid-template-columns: repeat(auto-fill, 9px);
-    gap: 2px;
   }
 
   .mini-deck .deck-label {

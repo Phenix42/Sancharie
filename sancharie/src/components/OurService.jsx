@@ -1,118 +1,123 @@
 import React from 'react'
 import './OurService.css'
-import { ShieldCheck } from 'lucide-react'
+import { Shield, Gift, Users, Zap, Clock, Headphones } from 'lucide-react'
 
-// Import service icons
-import FastIcon from '../assets/servicesicons/fast.svg'
-import SmartDealsIcon from '../assets/servicesicons/smartdeals.svg'
-import ProfessionalIcon from '../assets/servicesicons/Professional.svg'
-import ScheduleIcon from '../assets/servicesicons/intimeshedule.svg'
-import SupportIcon from '../assets/servicesicons/customersupport.svg'
+const leftServices = [
+  { id: '1A', title: 'Safety Guarantee', description: 'Verified Operators & Secure Payments.', Icon: Shield },
+  { id: '2A', title: 'Smart Deals', description: 'Exclusive Offers And Rewards.', Icon: Gift },
+  { id: '3A', title: 'Professional Staff', description: 'Trained Staff For Your Comfort.', Icon: Users },
+]
+
+const rightServices = [
+  { id: '1B', title: 'Faster Booking', description: 'Quick Decisions With Less Clicks.', Icon: Zap },
+  { id: '2B', title: 'On-Time Scheduling', description: 'Punctual Departures Always.', Icon: Clock },
+  { id: '3B', title: '24/7 Support', description: 'Round-The-Clock Assistance.', Icon: Headphones },
+]
+
+function ServiceCard({ service }) {
+  const { id, title, description, Icon } = service
+  return (
+    <div className="svc-card">
+      <div className="svc-card-inner">
+        <div className="svc-card-accent" />
+        <span className="svc-card-id">{id}</span>
+        <div className="svc-card-icon">
+          <Icon size={16} strokeWidth={1.5} />
+        </div>
+        <h3 className="svc-card-title">{title}</h3>
+        <p className="svc-card-desc">{description}</p>
+        <div className="svc-card-bottom-line" />
+      </div>
+    </div>
+  )
+}
 
 function OurService() {
-  // Audit Fix: Shorter card descriptions (1-2 lines only)
-  const topRowServices = [
-    {
-      id: 1,
-      title: 'Safety Guarantee',
-      description: 'Verified operators and secure payments.',
-      icon: 'shield-check',
-      featured: false,
-      position: 'top'
-    },
-    {
-      id: 2,
-      title: 'Faster Booking',
-      description: 'Quick decisions with less clicks.',
-      icon: FastIcon,
-      featured: true,
-      position: 'top'
-    },
-    {
-      id: 3,
-      title: 'Smart Deals',
-      description: 'Exclusive offers and rewards.',
-      icon: SmartDealsIcon,
-      featured: false,
-      position: 'top'
-    }
-  ]
-
-  const bottomRowServices = [
-    {
-      id: 4,
-      title: 'Professional Staff',
-      description: 'Trained staff for your comfort.',
-      icon: ProfessionalIcon,
-      featured: false,
-      position: 'bottom'
-    },
-    {
-      id: 5,
-      title: 'On-Time Scheduling',
-      description: 'Punctual departures always.',
-      icon: ScheduleIcon,
-      featured: false,
-      position: 'bottom'
-    },
-    {
-      id: 6,
-      title: '24/7 Support',
-      description: 'Round-the-clock assistance.',
-      icon: SupportIcon,
-      featured: false,
-      position: 'bottom'
-    }
-  ]
-
   return (
     <section className="our-service">
       <div className="service-container">
+        {/* Header */}
         <div className="service-header">
-          <span className="service-label">Our Service</span>
+          <div className="service-badge">
+            <span className="service-badge-dot" />
+            <span className="service-badge-text">Our Services</span>
+          </div>
           <h2 className="service-title">
-            Everything You Need for a Better Travel Booking
+            Everything You Need For A{' '}
+            <span className="service-title-accent">Better Travel</span>
           </h2>
         </div>
 
-        {/* Top Row - First card lower, middle card higher */}
-        <div className="service-grid top-row">
-          {topRowServices.map((service, index) => (
-            <div 
-              key={service.id} 
-              className={`service-card ${service.featured ? 'featured' : ''} ${index === 0 ? 'offset-down' : ''} ${index === 1 ? 'offset-up' : ''} ${index === 2 ? 'offset-down' : ''}`}
-            >
-              <div className="service-icon-wrapper">
-                {service.icon === 'shield-check' ? (
-                  <ShieldCheck className="service-icon-lucide" size={28} />
-                ) : (
-                  <img src={service.icon} alt={service.title} className="service-icon-img" />
-                )}
-              </div>
-              <h3 className="service-card-title">{service.title}</h3>
-              <p className="service-card-description">{service.description}</p>
+        {/* Phone Frame */}
+        <div className="svc-frame">
+          {/* Frame Top Bar */}
+          <div className="svc-frame-top">
+            <div className="svc-frame-dots left">
+              <span className="svc-dot pulse" />
+              <span className="svc-dot" />
             </div>
-          ))}
+            <span className="svc-frame-label">Premium Travel Services</span>
+            <div className="svc-frame-dots right">
+              <span className="svc-dot" />
+              <span className="svc-dot pulse" />
+            </div>
+          </div>
+
+          {/* Toolbar Bars */}
+          <div className="svc-toolbar">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="svc-toolbar-bar" />
+            ))}
+          </div>
+
+          {/* Cards Content */}
+          <div className="svc-content">
+            <div className="svc-column">
+              {leftServices.map(s => <ServiceCard key={s.id} service={s} />)}
+            </div>
+
+            {/* Center Aisle */}
+            <div className="svc-aisle">
+              <div className="svc-aisle-line" />
+              <div className="svc-aisle-badge">
+                <span>EXIT</span>
+              </div>
+              <div className="svc-aisle-line" />
+            </div>
+
+            <div className="svc-column">
+              {rightServices.map(s => <ServiceCard key={s.id} service={s} />)}
+            </div>
+          </div>
+
+          {/* Frame Bottom Bar */}
+          <div className="svc-frame-bottom">
+            <div className="svc-bottom-line" />
+            <div className="svc-bottom-dots">
+              <span className="svc-indicator amber" />
+              <span className="svc-indicator red" />
+              <span className="svc-indicator amber" />
+            </div>
+            <div className="svc-bottom-line" />
+          </div>
+
+          {/* Side Buttons */}
+          <div className="svc-side-btn left top" />
+          <div className="svc-side-btn left bottom" />
+          <div className="svc-side-btn right top" />
+          <div className="svc-side-btn right bottom" />
         </div>
 
-        {/* Bottom Row - Middle card higher */}
-        <div className="service-grid bottom-row">
-          {bottomRowServices.map((service, index) => (
-            <div 
-              key={service.id} 
-              className={`service-card ${index === 1 ? 'offset-up-bottom' : ''}`}
-            >
-              <div className="service-icon-wrapper">
-                {service.icon === 'shield-check' ? (
-                  <ShieldCheck className="service-icon-lucide" size={28} />
-                ) : (
-                  <img src={service.icon} alt={service.title} className="service-icon-img" />
-                )}
-              </div>
-              <h3 className="service-card-title">{service.title}</h3>
-              <p className="service-card-description">{service.description}</p>
-            </div>
-          ))}
+        {/* Phone Feet */}
+        <div className="svc-feet">
+          <div className="svc-feet-group">
+            <div className="svc-foot"><div className="svc-foot-line" /></div>
+            <div className="svc-foot"><div className="svc-foot-line" /></div>
+          </div>
+          <div className="svc-feet-group">
+            <div className="svc-foot"><div className="svc-foot-line" /></div>
+            <div className="svc-foot"><div className="svc-foot-line" /></div>
+          </div>
         </div>
       </div>
     </section>

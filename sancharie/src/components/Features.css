@@ -73,7 +73,7 @@
 }
 
 .stat-number {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 42px;
   font-weight: 700;
   color: #012432;
@@ -90,7 +90,7 @@
 }
 
 .stat-description {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   color: #666;
   margin: 0;

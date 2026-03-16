@@ -36,7 +36,7 @@
 }
 
 .company-tagline {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.7);
   line-height: 1.6;
@@ -58,7 +58,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   color: #FFFFFF;
   line-height: 1.5;
@@ -90,7 +90,7 @@
 }
 
 .footer-nav-vertical a {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   font-weight: 400;
   color: rgba(255, 255, 255, 0.8);
@@ -141,7 +141,7 @@
   border: 1px solid rgba(206, 180, 95, 0.5);
   border-radius: 8px;
   color: #CEB45F;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -172,7 +172,7 @@
 }
 
 .footer-bottom p {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.6);
   margin: 0;

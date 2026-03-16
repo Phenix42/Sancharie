@@ -1,5 +1,5 @@
 /* Figma Design Search Bar - Exact Match */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Montserrat:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500&family=Montserrat:wght@600;700&display=swap');
 
 /* Main Wrapper */
 .search-bus-wrapper {
@@ -75,7 +75,7 @@
 
 /* Field Label - Figma: Inter Regular, 20px */
 .field-label-figma {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   font-weight: 400;
   color: #000000;
@@ -224,7 +224,7 @@
 /* Audit Fix: More prominent search button */
 .search-btn-figma.search-btn-prominent {
   padding: 17px 30px;
-  font-size: 17px;
+  font-size: 16px;
   background: linear-gradient(135deg, #002C3F 0%, #004d6d 100%);
   box-shadow: 0 4px 20px rgba(0, 44, 63, 0.4);
 }
@@ -260,7 +260,7 @@
 .city-dropdown li {
   padding: 12px 16px;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   color: #333;
   transition: background 0.2s ease;
@@ -299,7 +299,7 @@
 
 .dropdown-section-header {
   padding: 8px 16px 6px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 12px;
   font-weight: 600;
   color: #A37226;
@@ -325,7 +325,7 @@
 .suggestions-list li {
   padding: 12px 16px;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   color: #333;
   transition: background 0.2s ease;
@@ -390,7 +390,7 @@
 }
 
 .popup-message {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 16px;
   color: #333;
   margin-bottom: 24px;

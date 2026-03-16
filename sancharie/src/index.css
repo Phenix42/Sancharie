@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
 /* Koguli Font - Add your font file if available */
 @font-face {
@@ -48,7 +48,7 @@ html, body, #root {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 600;
 }
 
