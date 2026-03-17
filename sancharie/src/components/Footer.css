@@ -211,6 +211,15 @@
 }
 
 @media (max-width: 768px) {
+  /* Hide footer on mobile for all pages except home */
+  .footer {
+    display: none;
+  }
+
+  .footer.footer-home {
+    display: block;
+  }
+
   .footer-main {
     padding: 2.5rem 1.5rem;
   }

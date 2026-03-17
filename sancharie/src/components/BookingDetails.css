@@ -698,98 +698,498 @@
   cursor: not-allowed;
 }
 
-/* Responsive */
-@media (max-width: 640px) {
+/* =============================================
+   MOBILE RESPONSIVE — App-like BookingDetails
+   ============================================= */
+
+@media (max-width: 768px) {
+
+  /* Page — edge-to-edge, light background */
   .booking-details-page {
-    padding: 12px;
+    padding: 0;
     padding-bottom: 90px;
+    background: #f4f5f7;
+    min-height: 100vh;
   }
 
+  .booking-details-container {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  /* ---- Header — compact app-bar feel ---- */
   .details-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    margin-bottom: 0;
+    background: #fff;
+    border-bottom: 1px solid #eef0f2;
+  }
+
+  .details-header .back-button {
+    padding: 6px;
+    border: none;
+    background: none;
+    color: #1a202c;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .details-header .back-button:hover {
+    background: #f0f0f0;
+    border-color: transparent;
+  }
+
+  .details-header .back-button .back-text {
+    display: none;
+  }
+
+  .details-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  /* ---- Status Banner — slim pill ---- */
+  .status-banner {
+    margin: 12px 14px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    gap: 8px;
+  }
+
+  .status-banner .status-icon {
+    font-size: 16px;
+  }
+
+  .status-banner .status-text {
+    font-size: 13px;
+    letter-spacing: 0.8px;
+  }
+
+  /* ---- Main Ticket Card ---- */
+  .ticket-detail-card {
+    margin: 0 14px 14px;
+    border-radius: 16px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Ticket Numbers — compact row */
+  .ticket-numbers {
+    padding: 16px;
+    gap: 8px;
+    border-radius: 16px 16px 0 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .ticket-number-item {
+    flex: 1 1 auto;
+    min-width: unset;
+    text-align: left;
+  }
+
+  .ticket-number-item .label {
+    font-size: 10px;
+    letter-spacing: 0.6px;
+  }
+
+  .ticket-number-item .value {
+    font-size: 13px;
+    word-break: break-all;
+  }
+
+  /* ---- Journey Section — vertical timeline ---- */
+  .journey-section {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    padding: 20px 16px;
+    gap: 0;
+    position: relative;
+  }
+
+  .journey-point {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    padding-left: 28px;
+    position: relative;
+  }
+
+  /* Timeline dot */
+  .journey-point::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #1a365d;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #1a365d;
+    z-index: 2;
+  }
+
+  .journey-point .point-time {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .journey-point .point-city {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 2px 0;
+  }
+
+  .journey-point .point-location {
+    font-size: 12px;
+    color: #718096;
+  }
+
+  /* Timeline connector line */
+  .journey-line {
+    flex: 0 0 auto;
+    transform: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0 10px 28px;
+    position: relative;
+  }
+
+  .journey-line::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: -4px;
+    bottom: -4px;
+    width: 2px;
+    background: linear-gradient(180deg, #1a365d 0%, #3182ce 100%);
+    z-index: 1;
+  }
+
+  .journey-line .line {
+    display: none;
+  }
+
+  .journey-line .journey-duration {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #ebf4ff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #1a365d;
+    font-weight: 500;
+  }
+
+  .journey-line .journey-duration svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* ---- Journey Date ---- */
+  .journey-date {
+    padding: 12px 16px;
+    font-size: 13px;
+    background: #f8fafc;
+    border-top: 1px solid #eef0f2;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .journey-date svg {
+    width: 16px;
+    height: 16px;
+    color: #A37226;
+  }
+
+  /* ---- All Sections — tighter spacing ---- */
+  .bus-details-section,
+  .traveler-details-section,
+  .booking-info-section,
+  .cancellation-policy-section {
+    padding: 16px;
+  }
+
+  .bus-details-section h3,
+  .traveler-details-section h3,
+  .booking-info-section h3,
+  .cancellation-policy-section h3 {
+    font-size: 12px;
+    margin-bottom: 12px;
+    color: #8895a7;
+    letter-spacing: 0.8px;
+  }
+
+  /* ---- Info Grid — 2 cols on mobile ---- */
+  .bus-info-grid,
+  .booking-info-grid {
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
   }
 
-  .journey-section {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
+  .info-item .label {
+    font-size: 11px;
+    color: #8895a7;
   }
 
-  .journey-line {
-    transform: rotate(90deg);
-    flex: 0 0 60px;
+  .info-item .value {
+    font-size: 13px;
+  }
+
+  /* ---- Traveler Items — horizontal card ---- */
+  .travelers-list {
+    gap: 10px;
   }
 
   .traveler-item {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-radius: 12px;
+    gap: 0;
+    text-align: left;
   }
 
-  /* Sticky action buttons on mobile */
+  .traveler-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .traveler-name {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .traveler-meta {
+    font-size: 12px;
+  }
+
+  .traveler-seat,
+  .traveler-fare {
+    align-items: center;
+    padding-left: 12px;
+  }
+
+  .seat-label,
+  .fare-label {
+    font-size: 10px;
+  }
+
+  .seat-number {
+    font-size: 13px;
+    padding: 3px 10px;
+    border-radius: 6px;
+  }
+
+  .fare-amount {
+    font-size: 13px;
+  }
+
+  /* ---- Policy List — compact ---- */
+  .policy-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+  }
+
+  .policy-time {
+    font-size: 12px;
+  }
+
+  .policy-refund {
+    font-size: 12px;
+  }
+
+  /* ---- Sticky Action Buttons — app-style bottom bar ---- */
   .action-buttons {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     z-index: 99;
+    display: flex;
     flex-direction: row;
-    gap: 8px;
-    background: #fff;
+    gap: 10px;
+    background: #ffffff;
     padding: 12px 16px;
     padding-bottom: max(12px, env(safe-area-inset-bottom));
-    border-top: 1px solid #e2e8f0;
-    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    border-top: 1px solid #eef0f2;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
     margin: 0;
     border-radius: 0;
+    justify-content: stretch;
   }
 
   .action-buttons .download-btn,
   .action-buttons .cancel-btn {
     flex: 1;
     justify-content: center;
-    padding: 14px 16px;
-  }
-
-  .ticket-numbers {
-    flex-direction: column;
-    gap: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .booking-details-page {
-    padding: 8px;
-    padding-bottom: 84px;
-  }
-
-  .booking-details-container {
+    padding: 13px 12px;
+    font-size: 13px;
     border-radius: 12px;
   }
 
-  .ticket-detail-card {
-    padding: 14px;
+  .action-buttons .download-btn {
+    background: #1a365d;
   }
 
-  .status-banner {
-    border-radius: 10px;
-    padding: 12px 14px;
-    font-size: 13px;
+  .action-buttons .cancel-btn {
+    border-width: 1.5px;
   }
 
-  .section-title {
-    font-size: 14px;
+  .action-buttons button svg {
+    width: 16px;
+    height: 16px;
   }
 
-  .info-grid {
-    grid-template-columns: 1fr;
+  /* ---- Loading & Error — mobile-friendly ---- */
+  .loading-container,
+  .error-container {
+    min-height: 60vh;
+    padding: 32px 20px;
+  }
+
+  .error-container .error-icon {
+    font-size: 40px;
+  }
+
+  .error-container h2 {
+    font-size: 18px;
+  }
+
+  .error-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .error-actions .retry-btn,
+  .error-actions .back-btn {
+    width: 100%;
+    text-align: center;
+    padding: 14px 20px;
+    border-radius: 12px;
+  }
+
+  /* ---- Cancel Modal — bottom sheet on mobile ---- */
+  .cancel-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
   }
 
   .cancel-modal {
-    width: calc(100% - 16px);
-    margin: 8px;
-    border-radius: 16px;
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUpModal 0.3s ease-out;
+  }
+
+  @keyframes slideUpModal {
+    from {
+      transform: translateY(100%);
+      opacity: 0.5;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .cancel-modal-header {
+    padding: 16px 20px;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 2;
+  }
+
+  .cancel-modal-header::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: #d1d5db;
+    border-radius: 2px;
+    margin: 0 auto 12px;
+  }
+
+  .cancel-modal-body {
+    padding: 16px 20px 24px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .cancel-info .warning-text {
+    font-size: 15px;
+  }
+
+  .ticket-summary {
+    padding: 12px 14px;
+  }
+
+  .ticket-summary p {
+    font-size: 13px;
+  }
+
+  .cancellation-breakdown {
+    padding: 14px;
+  }
+
+  .breakdown-item {
+    font-size: 13px;
+    padding: 6px 0;
+  }
+
+  .breakdown-item.refund span:last-child {
+    font-size: 15px;
+  }
+
+  .modal-actions {
+    gap: 10px;
+  }
+
+  .modal-actions .keep-btn,
+  .modal-actions .confirm-cancel-btn {
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+}
+
+/* Extra small — 380px and below */
+@media (max-width: 380px) {
+
+  .ticket-numbers {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ticket-number-item {
+    text-align: left;
+  }
+
+  .bus-info-grid,
+  .booking-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons .download-btn,
+  .action-buttons .cancel-btn {
+    padding: 12px 8px;
+    font-size: 12px;
   }
 }

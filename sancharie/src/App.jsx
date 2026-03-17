@@ -81,7 +81,7 @@ function App() {
                 <BusResults />
               </>
             )}
-            <Footer />
+            <Footer className={!showSearchResult ? 'footer-home' : ''} />
             <MobileBottomNav 
               onHomeClick={handleBackToHome}
               onSearchClick={showSearchResult ? undefined : null}

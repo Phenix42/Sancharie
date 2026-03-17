@@ -528,9 +528,9 @@
     gap: 14px;
   }
 
-  /* Thin divider between From and the swap/To area */
+  /* No divider between From and the swap/To area */
   .search-card-figma > .search-field-figma:first-child {
-    border-bottom: 1px solid #f0ebe3;
+    border-bottom: none;
   }
 
   .field-icon-img {
@@ -582,12 +582,12 @@
     height: 22px;
   }
 
-  /* Date section — separated by top border */
+  /* Date section */
   .date-section-wrapper {
     flex-direction: column;
     width: 100%;
     gap: 0;
-    border-top: 1px solid #f0ebe3;
+    border-top: none;
   }
 
   .date-section-wrapper .search-field-figma.date-field {

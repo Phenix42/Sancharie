@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./SearchResult.css";
 import { MdKeyboardArrowRight } from "react-icons/md";
@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import SelectSeat from "./selectseat";
 import NoResult from "./noresult";
-import MiniSeatPreview, { clearSeatLayoutCache, prefetchAllSeatLayouts } from "./MiniSeatPreview";
+import MiniSeatPreview, { clearSeatLayoutCache, prefetchAllSeatLayouts, subscribeSeatLayout, getMinFareFromCache } from "./MiniSeatPreview";
 import Logo from "../assets/logosan.svg";
 import SearchBus from "./SearchBus";
 import { useBooking } from "../context/BookingContext";
@@ -138,6 +138,36 @@ const calculateDepartureHours = (departureTime) => {
   return `${hours} Hrs`;
 };
 
+/* Small component that subscribes to seat layout cache and shows min fare */
+function BusPriceDisplay({ bus }) {
+  const [minFare, setMinFare] = useState(() => getMinFareFromCache(bus.ResultIndex));
+
+  useEffect(() => {
+    if (minFare != null) return; // Already have it
+    const unsubscribe = subscribeSeatLayout(bus.ResultIndex, (seats) => {
+      if (!seats || !Array.isArray(seats)) return;
+      let min = Infinity;
+      for (const seat of seats) {
+        if (seat.available !== true) continue;
+        const fare = parseFloat(seat.totalFareWithTaxes) || parseFloat(seat.fare) || 0;
+        if (fare > 0 && fare < min) min = fare;
+      }
+      if (min !== Infinity) setMinFare(Math.round(min));
+    });
+    return unsubscribe;
+  }, [bus.ResultIndex, minFare]);
+
+  const displayPrice = minFare || bus.BusPrice?.PublishedPrice;
+  const oldPrice = bus.BusPrice?.BasePrice || (bus.BusPrice?.PublishedPrice + 100);
+
+  return (
+    <div className="price-row">
+      <span className="old-price">₹{oldPrice}</span>
+      <span className="current-price">₹{displayPrice}</span>
+    </div>
+  );
+}
+
 export default function SearchResult({ searchParams, onSearch }) {
   const { state, actions } = useBooking();
   const navigate = useNavigate();
@@ -164,6 +194,7 @@ export default function SearchResult({ searchParams, onSearch }) {
   
   /* ----------- SELECTSEAT INLINE STATE ----------- */
   const [selectedBus, setSelectedBus] = useState(null);
+  const seatLayoutRef = useRef(null);
   
   /* ----------- BUS DETAILS MODAL STATE ----------- */
   const [modalOpen, setModalOpen] = useState(false);
@@ -417,8 +448,15 @@ export default function SearchResult({ searchParams, onSearch }) {
   };
 
   const handleBusSelect = (bus) => {
-    setSelectedBus(selectedBus === bus.ResultIndex ? null : bus.ResultIndex);
+    const isClosing = selectedBus === bus.ResultIndex;
+    setSelectedBus(isClosing ? null : bus.ResultIndex);
     actions.setSelectedBus(bus);
+    if (!isClosing) {
+      // Scroll to seat layout after it renders
+      setTimeout(() => {
+        seatLayoutRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
   };
 
   /* ----------- MODAL HANDLERS ----------- */
@@ -754,12 +792,14 @@ export default function SearchResult({ searchParams, onSearch }) {
 
         {/* RESULTS */}
         <section className="sr-results">
-          {/* SEARCH BAR */}
-          <SearchBus 
-            onSearch={onSearch} 
-            initialValues={searchParams}
-            compact={true}
-          />
+          {/* SEARCH BAR — hidden on mobile */}
+          <div className="sr-search-bar-desktop">
+            <SearchBus 
+              onSearch={onSearch} 
+              initialValues={searchParams}
+              compact={true}
+            />
+          </div>
 
           {/* DATE SELECTOR */}
           <div className="date-selector">
@@ -871,10 +911,7 @@ export default function SearchResult({ searchParams, onSearch }) {
                   {/* Right Section - Price */}
                   <div className="price-section">
                     <p className="starts-from-label">Starts From</p>
-                    <div className="price-row">
-                      <span className="old-price">₹{bus.BusPrice?.BasePrice || (bus.BusPrice?.PublishedPrice + 100)}</span>
-                      <span className="current-price">₹{bus.BusPrice?.PublishedPrice}</span>
-                    </div>
+                    <BusPriceDisplay bus={bus} />
                     <button 
                       className="select-seat-btn" 
                       onClick={() => handleBusSelect(bus)}
@@ -923,11 +960,13 @@ export default function SearchResult({ searchParams, onSearch }) {
 
               {/* INLINE SELECTSEAT COMPONENT */}
               {selectedBus === bus.ResultIndex && (
-                <SelectSeat 
-                  bus={bus} 
-                  searchTokenId={searchTokenId}
-                  onClose={() => setSelectedBus(null)} 
-                />
+                <div ref={seatLayoutRef}>
+                  <SelectSeat 
+                    bus={bus} 
+                    searchTokenId={searchTokenId}
+                    onClose={() => setSelectedBus(null)} 
+                  />
+                </div>
               )}
             </React.Fragment>
           )})}
@@ -1020,6 +1059,38 @@ export default function SearchResult({ searchParams, onSearch }) {
                   {op}
                 </label>
               ))}
+            </div>
+            {/* BOARDING POINT */}
+            <div className="filter-block">
+              <div className="filter-title"><SiGooglemaps className="filter-icon" /> Boarding Point</div>
+              <input type="text" className="filter-search-input" placeholder="Search boarding point..." value={boardingSearch} onChange={(e) => setBoardingSearch(e.target.value)} />
+              <div className="filter-scroll-list">
+                {uniqueBoardingPoints
+                  .filter((point) => point.toLowerCase().includes(boardingSearch.toLowerCase()))
+                  .map((point) => (
+                  <label key={point} className="check-row">
+                    <input type="checkbox" checked={selectedBoarding.includes(point)}
+                      onChange={() => setSelectedBoarding((prev) => prev.includes(point) ? prev.filter((x) => x !== point) : [...prev, point])} />
+                    {point}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {/* DROPPING POINT */}
+            <div className="filter-block">
+              <div className="filter-title"><SiGooglemaps className="filter-icon" /> Dropping Point</div>
+              <input type="text" className="filter-search-input" placeholder="Search dropping point..." value={droppingSearch} onChange={(e) => setDroppingSearch(e.target.value)} />
+              <div className="filter-scroll-list">
+                {uniqueDroppingPoints
+                  .filter((point) => point.toLowerCase().includes(droppingSearch.toLowerCase()))
+                  .map((point) => (
+                  <label key={point} className="check-row">
+                    <input type="checkbox" checked={selectedDropping.includes(point)}
+                      onChange={() => setSelectedDropping((prev) => prev.includes(point) ? prev.filter((x) => x !== point) : [...prev, point])} />
+                    {point}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <div className="mobile-filter-sheet-footer">

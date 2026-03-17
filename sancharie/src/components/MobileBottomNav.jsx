@@ -1,13 +1,17 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Home, Search, Ticket, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import AuthModal from './Authantication/Login'
+import ProfileCompletion from './ProfileCompletion'
 import './MobileBottomNav.css'
 
 function MobileBottomNav({ onHomeClick, onSearchClick }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, completeLogin } = useAuth()
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showProfileCompletion, setShowProfileCompletion] = useState(false)
 
   const path = location.pathname
 
@@ -19,16 +23,29 @@ function MobileBottomNav({ onHomeClick, onSearchClick }) {
   const handleBookings = () => {
     if (isAuthenticated) {
       navigate('/my-bookings')
+    } else {
+      setShowAuthModal(true)
     }
   }
 
   const handleProfile = () => {
     if (isAuthenticated) {
       navigate('/profile')
+    } else {
+      setShowAuthModal(true)
+    }
+  }
+
+  const handleLoginSuccess = async (phone) => {
+    const result = await completeLogin(phone)
+    setShowAuthModal(false)
+    if (result.success && (result.isNewUser || !result.isProfileComplete)) {
+      setShowProfileCompletion(true)
     }
   }
 
   return (
+    <>
     <nav className="mobile-bottom-nav">
       <button
         className={`bottom-nav-item ${isHome ? 'active' : ''}`}
@@ -59,6 +76,18 @@ function MobileBottomNav({ onHomeClick, onSearchClick }) {
         <span className="bottom-nav-label">Account</span>
       </button>
     </nav>
+
+    <AuthModal
+      isOpen={showAuthModal}
+      onClose={() => setShowAuthModal(false)}
+      onLoginSuccess={handleLoginSuccess}
+    />
+
+    <ProfileCompletion
+      isOpen={showProfileCompletion}
+      onClose={() => setShowProfileCompletion(false)}
+    />
+    </>
   )
 }
 

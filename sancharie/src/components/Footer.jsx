@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom'
 import './Footer.css'
 import { MapPin, Phone, Mail, Clock } from 'lucide-react'
 
-function Footer() {
+function Footer({ className = '' }) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   return (
-    <footer className="footer">
+    <footer className={`footer ${className}`.trim()}>
       {/* Main Footer Content */}
       <div className="footer-main">
         <div className="footer-content">
