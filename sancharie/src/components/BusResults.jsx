@@ -2,23 +2,12 @@ import React, { useState } from 'react';
 import './BusResults.css';
 
 // Import images from assets
-import discountOffer1 from '../assets/dis1.png';
-import discountOffer2 from '../assets/dis2.png';
-import discountOffer3 from '../assets/dis3.png';
-import discountOffer4 from '../assets/dis4.png';
 import whyChooseImage from '../assets/whychooseimage.png';
 import onlineBookingImage from '../assets/onlinebookingimage.png';
 import howToBookImage from '../assets/busimage.png';
 
 const BusResults = () => {
   const [activeTab, setActiveTab] = useState('general');
-
-  const discountOffers = [
-    { id: 1, image: discountOffer1, alt: 'Grand Winter Bus Sale - 50% OFF' },
-    { id: 2, image: discountOffer2, alt: 'Win Scorpio, iPhone 17 Pro, PS5' },
-    { id: 3, image: discountOffer3, alt: 'Get Free Memberships on Every Bus Booking' },
-    { id: 4, image: discountOffer4, alt: 'RBL Bank - Flat ₹300 off on Bus Booking' },
-  ];
 
   const faqData = {
     general: [
@@ -109,7 +98,7 @@ const BusResults = () => {
             </p>
           </div>
           <div className="why-choose-image">
-            <img src={whyChooseImage} alt="Why Choose Sancharie" className="section-image" />
+            <img src={whyChooseImage} alt="Why Choose Sancharie" className="section-image" loading="lazy" />
           </div>
         </div>
       </section>
@@ -134,7 +123,7 @@ const BusResults = () => {
             </p>
           </div>
           <div className="online-booking-image">
-            <img src={onlineBookingImage} alt="Online Bus Booking" className="section-image" />
+            <img src={onlineBookingImage} alt="Online Bus Booking" className="section-image" loading="lazy" />
           </div>
         </div>
       </section>
@@ -183,7 +172,7 @@ const BusResults = () => {
             </p>
           </div>
           <div className="how-to-book-image">
-            <img src={howToBookImage} alt="How to Book Bus Tickets" className="section-image" />
+            <img src={howToBookImage} alt="How to Book Bus Tickets" className="section-image" loading="lazy" />
           </div>
         </div>
       </section>

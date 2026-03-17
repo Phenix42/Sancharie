@@ -28,13 +28,6 @@
 }
 
 /* Desktop bg visible by default, mobile bg hidden */
-.hero-bg-desktop {
-  display: block;
-}
-
-.hero-bg-mobile {
-  display: none;
-}
 
 /* Overlay to reduce image dominance - Audit Fix */
 .hero-overlay {
@@ -103,14 +96,7 @@
     min-height: 500px;
   }
   
-  /* Switch to mobile background */
-  .hero-bg-desktop {
-    display: none;
-  }
-  
-  .hero-bg-mobile {
-    display: block;
-  }
+  /* Switch to mobile background handled by <picture> */
   
   .hero-content {
     top: 15%;

@@ -495,149 +495,276 @@
   }
 }
 
+/* =============================================
+   Mobile App-Style Search Box (≤600px)
+   ============================================= */
 @media (max-width: 600px) {
   .search-bus-wrapper {
     margin-top: -200px;
-    padding: 0 12px;
+    padding: 0 16px;
   }
-  
+
+  /* Clean white card — mobile app style */
   .search-card-figma {
     flex-direction: column;
-    border-radius: 16px;
-    padding: 20px;
-    gap: 16px;
-    border-width: 10px;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 0;
+    gap: 0;
+    border: none;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.12);
   }
-  
-  .search-field-figma {
-    width: 100%;
-    flex: 1 1 100%;
-    padding: 8px 0;
-  }
-  
-  .swap-btn-figma {
-    transform: rotate(90deg);
-    margin: -8px 0;
-  }
-  
-  .field-icon-img {
-    width: 44px;
-    height: 44px;
-  }
-  
-  .field-icon-img.cal-icon {
-    width: 36px;
-    height: 36px;
-  }
-  
-  .swap-icon-img {
-    width: 44px;
-    height: 44px;
-  }
-  
-  .quick-dates-figma {
-    width: 100%;
-    gap: 12px;
-  }
-  
-  .quick-date-btn-figma {
-    flex: 1;
-    text-align: center;
-    padding: 12px 16px;
-  }
-  
-  .search-btn-figma {
-    width: 100%;
-    padding: 16px;
-    font-size: 16px;
-    justify-content: center;
-  }
-}
 
-@media (max-width: 480px) {
-  .search-bus-wrapper {
-    margin-top: -200px;
-    padding: 0 8px;
+  .search-card-figma:hover {
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.12);
+    transform: none;
   }
-  
-  .search-card-figma {
-    padding: 16px;
-    gap: 12px;
-    border-width: 8px;
-    border-radius: 12px;
-  }
-  
+
+  /* From & To fields — stacked with divider */
   .search-field-figma {
-    padding: 6px 0;
-    gap: 10px;
+    width: 100%;
+    flex: unset;
+    padding: 18px 20px;
+    gap: 14px;
   }
-  
+
+  /* Thin divider between From and the swap/To area */
+  .search-card-figma > .search-field-figma:first-child {
+    border-bottom: 1px solid #f0ebe3;
+  }
+
   .field-icon-img {
     width: 36px;
     height: 36px;
   }
-  
+
   .field-icon-img.cal-icon {
     width: 30px;
     height: 30px;
   }
-  
-  .swap-btn-figma,
-  .swap-icon-img {
-    width: 36px;
-    height: 36px;
+
+  .field-content-figma {
+    gap: 4px;
   }
-  
+
   .field-label-figma {
     font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
-  
+
   .field-input-figma,
   .field-value-figma {
-    font-size: 13px;
+    font-size: 15px;
   }
-  
+
+  /* Swap button — floating circle centered between From & To */
+  .swap-btn-figma {
+    align-self: center;
+    margin: -20px 0;
+    width: 40px;
+    height: 40px;
+    background: #FFF8ED;
+    border-radius: 50%;
+    border: 2px solid #f0e8d9;
+    z-index: 5;
+    transform: rotate(90deg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .swap-btn-figma:hover {
+    transform: rotate(90deg) scale(1.1);
+  }
+
+  .swap-icon-img {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Date section — separated by top border */
+  .date-section-wrapper {
+    flex-direction: column;
+    width: 100%;
+    gap: 0;
+    border-top: 1px solid #f0ebe3;
+  }
+
+  .date-section-wrapper .search-field-figma.date-field {
+    width: 100%;
+    padding: 18px 20px 12px;
+  }
+
+  /* Quick-date pills */
+  .quick-dates-figma {
+    width: 100%;
+    padding: 0 20px 16px;
+    gap: 10px;
+  }
+
   .quick-date-btn-figma {
-    padding: 10px 12px;
-    font-size: 12px;
-    border-radius: 30px;
+    flex: 1;
+    text-align: center;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    background: #f5f5f5;
+    color: #999;
   }
-  
-  .search-btn-figma {
+
+  .quick-date-btn-figma.active {
+    background: #FFF8ED;
+    color: #A37226;
+  }
+
+  /* Search CTA — full width, prominent */
+  .search-btn-figma,
+  .search-btn-figma.search-btn-prominent {
+    width: calc(100% - 40px);
+    margin: 4px 20px 20px;
+    padding: 16px;
+    font-size: 15px;
+    justify-content: center;
+    border-radius: 14px;
+    background: #A37226;
+    box-shadow: 0 4px 16px rgba(163, 114, 38, 0.3);
+  }
+
+  .search-btn-figma:hover,
+  .search-btn-figma.search-btn-prominent:hover {
+    transform: none;
+    background: #8B6220;
+    box-shadow: 0 4px 16px rgba(163, 114, 38, 0.3);
+  }
+
+  /* Dropdown */
+  .city-dropdown {
+    border-radius: 12px;
+    max-height: 220px;
+  }
+}
+
+/* Smaller phones */
+@media (max-width: 480px) {
+  .search-bus-wrapper {
+    margin-top: -200px;
+    padding: 0 12px;
+  }
+
+  .search-card-figma {
+    border-radius: 16px;
+  }
+
+  .search-field-figma {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .field-icon-img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .field-icon-img.cal-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .swap-btn-figma {
+    width: 36px;
+    height: 36px;
+    margin: -18px 0;
+  }
+
+  .swap-icon-img {
+    width: 20px;
+    height: 20px;
+  }
+
+  .field-input-figma,
+  .field-value-figma {
+    font-size: 14px;
+  }
+
+  .field-label-figma {
+    font-size: 10px;
+  }
+
+  .quick-dates-figma {
+    padding: 0 16px 14px;
+    gap: 8px;
+  }
+
+  .quick-date-btn-figma {
+    padding: 9px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  .date-section-wrapper .search-field-figma.date-field {
+    padding: 14px 16px 10px;
+  }
+
+  .search-btn-figma,
+  .search-btn-figma.search-btn-prominent {
+    width: calc(100% - 32px);
+    margin: 4px 16px 16px;
     padding: 14px;
     font-size: 14px;
-    border-radius: 30px;
+    border-radius: 12px;
   }
-  
+
   .city-dropdown {
     border-radius: 10px;
     max-height: 200px;
   }
-  
+
   .city-dropdown li {
     padding: 10px 14px;
     font-size: 13px;
   }
 }
 
+/* Tiny phones */
 @media (max-width: 360px) {
   .search-card-figma {
-    padding: 12px;
-    border-width: 6px;
+    border-radius: 14px;
   }
-  
+
+  .search-field-figma {
+    padding: 12px 14px;
+  }
+
+  .field-icon-img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .swap-btn-figma {
+    width: 32px;
+    height: 32px;
+    margin: -16px 0;
+  }
+
+  .swap-icon-img {
+    width: 18px;
+    height: 18px;
+  }
+
   .quick-dates-figma {
-    gap: 8px;
+    padding: 0 14px 12px;
+    gap: 6px;
   }
-  
+
   .quick-date-btn-figma {
     padding: 8px 10px;
     font-size: 11px;
   }
-  
-  .field-icon-img {
-    width: 32px;
-    height: 32px;
+
+  .search-btn-figma,
+  .search-btn-figma.search-btn-prominent {
+    width: calc(100% - 28px);
+    margin: 4px 14px 14px;
   }
 }
 

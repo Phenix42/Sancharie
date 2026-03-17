@@ -1,22 +1,22 @@
 import React from 'react'
 import './Hero.css'
-import bgImage from '../assets/bgimage2.svg'
-import mobileBgImage from '../assets/mobilebg.svg'
+import bgImage from '../assets/bgimage2.webp'
+import mobileBgImage from '../assets/mobilebg.webp'
 
 function Hero() {
   return (
     <section className="hero">
       <div className="hero-background">
-        <img 
-          src={bgImage}
-          alt="Mountain landscape" 
-          className="hero-bg-image hero-bg-desktop" 
-        />
-        <img 
-          src={mobileBgImage}
-          alt="Mountain landscape" 
-          className="hero-bg-image hero-bg-mobile" 
-        />
+        <picture>
+          <source media="(max-width: 768px)" srcSet={mobileBgImage} type="image/webp" />
+          <img 
+            src={bgImage}
+            alt="Mountain landscape" 
+            className="hero-bg-image"
+            fetchpriority="high"
+            decoding="async"
+          />
+        </picture>
         {/* Overlay to reduce image dominance and improve focus on search bar */}
         <div className="hero-overlay"></div>
       </div>
