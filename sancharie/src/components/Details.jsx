@@ -254,6 +254,7 @@ export default function Details() {
         bus,
         boardingPoint,
         droppingPoint,
+        selectedSeats,
         passengers: passengersWithContact,
         contactDetails,
         fareData,

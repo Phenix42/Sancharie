@@ -447,11 +447,42 @@ export const bus = {
     bus,
     boardingPoint,
     droppingPoint,
+    selectedSeats,
     passengers,
     contactDetails,
     fareData,
   }) => {
-    // Format the request for ETS API
+    const seatMap = (selectedSeats || []).reduce((map, seat) => {
+      const key = (seat.seatName || seat.seatNbr || seat.id || '').toString();
+      if (key) map[key] = seat;
+      return map;
+    }, {});
+
+    const totalPassengers = passengers.length || 1;
+    const averageBaseFare = fareData?.baseFare ? parseFloat(fareData.baseFare) / totalPassengers : 0;
+    const averageServiceTax = fareData?.serviceTax ? parseFloat(fareData.serviceTax) / totalPassengers : 0;
+    const averageTotalFare = fareData?.totalFare ? parseFloat(fareData.totalFare) / totalPassengers : 0;
+
+    const getSeatFareDetails = (passenger, index) => {
+      const seatKey = passenger.seatNumber || passenger.seatName || passenger.seatNbr || '';
+      const seat = seatMap[seatKey] || selectedSeats?.[index] || {};
+      const fare = parseFloat(seat.price ?? seat.fare ?? averageBaseFare) || averageBaseFare || 0;
+      const serviceTaxAmount = parseFloat(seat.serviceTaxAmount ?? 0) || averageServiceTax;
+      const operatorServiceChargeAbsolute = parseFloat(
+        seat.operatorServiceChargeAbsolute ?? seat.operatorServiceCharge ?? 0
+      ) || 0;
+      const totalFareWithTaxes = parseFloat(
+        seat.totalFareWithTaxes ?? seat.price ?? seat.fare ?? averageTotalFare
+      ) || averageTotalFare || fare;
+
+      return {
+        fare,
+        serviceTaxAmount,
+        operatorServiceChargeAbsolute,
+        totalFareWithTaxes,
+      };
+    };
+
     const blockData = {
       sourceCity: bus?.sourceCity || bus?.source,
       destinationCity: bus?.destinationCity || bus?.destination,
@@ -474,27 +505,30 @@ export const bus = {
       customerPhone: contactDetails?.phone || passengers[0]?.phone || '',
       emergencyPhNumber: contactDetails?.phone || passengers[0]?.phone || '',
       customerAddress: contactDetails?.state || passengers[0]?.address || '',
-      blockSeatPaxDetails: passengers.map((p, index) => ({
-        age: String(p.age || '25'),
-        name: p.name,
-        seatNbr: p.seatNumber || p.seatName || p.seatNbr,
-        sex: p.gender === 'male' ? 'M' : 'F',
-        fare: fareData?.baseFare || fareData?.fare || 0,
-        serviceTaxAmount: fareData?.serviceTax || 0,
-        operatorServiceChargeAbsolute: fareData?.operatorServiceCharge || 0,
-        totalFareWithTaxes: fareData?.totalFare || fareData?.fare || 0,
-        ladiesSeat: p.ladiesSeat || false,
-        lastName: p.name?.split(' ').slice(1).join(' ') || '',
-        mobile: p.phone || contactDetails?.phone || '',
-        title: p.gender === 'male' ? 'Mr' : 'Ms',
-        email: p.email || contactDetails?.email || '',
-        idType: p.idType || '',
-        idNumber: p.idNumber || '',
-        nameOnId: p.nameOnId || p.name,
-        primary: index === 0,
-        ac: bus?.BusType?.toLowerCase().includes('ac') || false,
-        sleeper: bus?.BusType?.toLowerCase().includes('sleeper') || false,
-      })),
+      blockSeatPaxDetails: passengers.map((p, index) => {
+        const seatFareDetails = getSeatFareDetails(p, index);
+        return {
+          age: String(p.age || '25'),
+          name: p.name,
+          seatNbr: p.seatNumber || p.seatName || p.seatNbr,
+          sex: p.gender === 'male' ? 'M' : 'F',
+          fare: seatFareDetails.fare,
+          serviceTaxAmount: seatFareDetails.serviceTaxAmount,
+          operatorServiceChargeAbsolute: seatFareDetails.operatorServiceChargeAbsolute,
+          totalFareWithTaxes: seatFareDetails.totalFareWithTaxes,
+          ladiesSeat: p.ladiesSeat || false,
+          lastName: p.name?.split(' ').slice(1).join(' ') || '',
+          mobile: p.phone || contactDetails?.phone || '',
+          title: p.gender === 'male' ? 'Mr' : 'Ms',
+          email: p.email || contactDetails?.email || '',
+          idType: p.idType || '',
+          idNumber: p.idNumber || '',
+          nameOnId: p.nameOnId || p.name,
+          primary: index === 0,
+          ac: bus?.BusType?.toLowerCase().includes('ac') || false,
+          sleeper: bus?.BusType?.toLowerCase().includes('sleeper') || false,
+        };
+      }),
     };
 
     const data = await apiRequest('/api/ets/blockTicket', {
