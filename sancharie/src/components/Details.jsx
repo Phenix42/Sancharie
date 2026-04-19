@@ -281,7 +281,17 @@ export default function Details() {
       });
     } catch (error) {
       console.error("Block seat error:", error);
-      toast.error(error.message || 'Unable to reserve seats. Please try again.');
+      
+      // Show generic message for all errors
+      const isNetworkError = error.message?.includes('Failed to fetch') || error.message?.includes('Network');
+      const isSequenceError = error.message?.includes('API Sequence') || error.message?.includes('API methods');
+      const isTechnicalError = error.message?.includes('U9') || error.message?.includes('timeout');
+      
+      if (isNetworkError || isSequenceError || isTechnicalError) {
+        toast.error('Something went wrong. Please try again later.');
+      } else {
+        toast.error('Unable to reserve seats. Please try again.');
+      }
     } finally {
       setIsBlocking(false);
     }

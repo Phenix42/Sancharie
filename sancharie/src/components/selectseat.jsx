@@ -39,6 +39,7 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const hasFetchedRef = useRef(false);
+  const pointsPanelRef = useRef(null);
 
   // Determine boarding/dropping points based on ETS inventory type rules:
   // - inventoryType 0, 1: Use points from search results (bus object)
@@ -288,11 +289,21 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
   const toggleSeat = (seat) => {
     if (seat.status === "booked") return;
 
-    setSelectedSeats((prev) =>
-      prev.some(s => s.id === seat.id)
+    setSelectedSeats((prev) => {
+      const isDeselecting = prev.some(s => s.id === seat.id);
+      const newSeats = isDeselecting
         ? prev.filter((s) => s.id !== seat.id)
-        : [...prev, seat]
-    );
+        : [...prev, seat];
+
+      // Auto-scroll to boarding/dropping points on first seat selection (mobile)
+      if (!isDeselecting && prev.length === 0 && window.innerWidth <= 768) {
+        setTimeout(() => {
+          pointsPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      }
+
+      return newSeats;
+    });
   };
 
   // Calculate fare details using ETS seat fare breakdown
@@ -664,7 +675,7 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
         </div>
 
         {/* ================= RIGHT – POINTS ================= */}
-        <div className="points-panel">
+        <div className="points-panel" ref={pointsPanelRef}>
           <div className="tabs">
             <button
               className={activeTab === "boarding" ? "active" : ""}

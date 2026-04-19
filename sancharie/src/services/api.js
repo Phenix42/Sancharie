@@ -537,6 +537,8 @@ export const bus = {
     });
 
     if (data.apiStatus && !data.apiStatus.success) {
+      // Log detailed error but throw a generic message to avoid API sequence error details
+      console.error('Block seat API error:', data.apiStatus.message);
       throw new Error(data.apiStatus.message || 'Failed to block seats');
     }
 
@@ -580,6 +582,7 @@ export const bus = {
     const data = await apiRequest(`/api/ets/getRtcUpdatedFare?${params}`);
 
     if (data.apiStatus && !data.apiStatus.success) {
+      console.error('RTC updated fare API error:', data.apiStatus.message);
       throw new Error(data.apiStatus.message || 'Failed to get updated fare');
     }
 
@@ -604,6 +607,7 @@ export const bus = {
     const data = await apiRequest(`/api/ets/seatBooking?${params}`);
 
     if (data.apiStatus && !data.apiStatus.success) {
+      console.error('Book ticket API error:', data.apiStatus.message);
       throw new Error(data.apiStatus.message || 'Booking failed');
     }
 

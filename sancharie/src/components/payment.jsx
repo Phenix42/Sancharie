@@ -168,7 +168,7 @@ export default function Payment() {
   };
 
   // TEST MODE - Set to true to bypass Razorpay payment
-  const TEST_MODE = false;
+  const TEST_MODE = true;
 
   const handlePayNow = async () => {
     if (!validatePayment()) return;
@@ -405,8 +405,20 @@ export default function Payment() {
       if (error.message === 'Payment cancelled by user') {
         setBookingError(null);
       } else {
-        setBookingError(error.message || "Payment failed. Please try again.");
-        toast.error(error.message || 'Payment failed. Please try again.');
+        // Show generic message for technical/API errors
+        const isNetworkError = error.message?.includes('Failed to fetch') || error.message?.includes('Network');
+        const isSequenceError = error.message?.includes('API Sequence') || error.message?.includes('API methods');
+        const isTechnicalError = error.message?.includes('U9') || error.message?.includes('timeout');
+        const isBlockTicketError = error.message?.includes('Block ticket') || error.message?.includes('blockTicket');
+        
+        if (isNetworkError || isSequenceError || isTechnicalError || isBlockTicketError) {
+          const errorMsg = 'Something went wrong. Please try again later.';
+          setBookingError(errorMsg);
+          toast.error(errorMsg);
+        } else {
+          setBookingError(error.message || "Payment failed. Please try again.");
+          toast.error(error.message || 'Payment failed. Please try again.');
+        }
       }
     } finally {
       setIsProcessing(false);
