@@ -19,10 +19,15 @@ import Profile from "./components/Profile";
 import Travellers from "./components/Travellers";
 import { ToastProvider } from "./components/Toast";
 import MobileBottomNav from "./components/MobileBottomNav";
+import FlightBooking from "./components/FlightBooking";
+import FlightHome from "./components/FlightHome";
 
 function App() {
   const [showSearchResult, setShowSearchResult] = useState(false);
   const [searchParams, setSearchParams] = useState(null);
+  const [travelMode, setTravelMode] = useState(() =>
+    new URLSearchParams(window.location.search).get('mode') === 'flight' ? 'flight' : 'bus'
+  );
   const navigate = useNavigate();
 
   const handleSearch = (params) => {
@@ -34,7 +39,15 @@ function App() {
   const handleBackToHome = () => {
     setShowSearchResult(false);
     setSearchParams(null);
-    navigate('/');
+    navigate(travelMode === 'flight' ? '/?mode=flight' : '/');
+  };
+
+  const handleModeChange = (mode) => {
+    if (mode === travelMode) return;
+    setTravelMode(mode);
+    setShowSearchResult(false);
+    setSearchParams(null);
+    navigate(mode === 'flight' ? '/?mode=flight' : '/');
   };
 
   return (
@@ -43,7 +56,11 @@ function App() {
         <Routes>
         <Route path="/privacy-policy" element={
           <>
-            <Header onBackToHome={handleBackToHome} />
+            <Header
+              travelMode={travelMode}
+              onTravelModeChange={handleModeChange}
+              onBackToHome={handleBackToHome}
+            />
             <PrivacyPolicies />
             <Footer />
             <MobileBottomNav onHomeClick={handleBackToHome} />
@@ -51,14 +68,22 @@ function App() {
         } />
         <Route path="/booking-details" element={
           <>
-            <Header onBackToHome={handleBackToHome} />
+            <Header
+              travelMode={travelMode}
+              onTravelModeChange={handleModeChange}
+              onBackToHome={handleBackToHome}
+            />
             <Details />
             <Footer />
           </>
         } />
         <Route path="/payment" element={
           <>
-            <Header onBackToHome={handleBackToHome} />
+            <Header
+              travelMode={travelMode}
+              onTravelModeChange={handleModeChange}
+              onBackToHome={handleBackToHome}
+            />
             <Payment />
             <Footer />
           </>
@@ -67,15 +92,32 @@ function App() {
         <Route path="/ticket/:ticketNumber" element={<><BookingDetails /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
         <Route path="/profile" element={<><Profile /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
         <Route path="/travellers" element={<><Travellers /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
+        <Route path="/flight-booking" element={
+          <>
+            <Header
+              travelMode="flight"
+              onTravelModeChange={handleModeChange}
+              onBackToHome={handleBackToHome}
+            />
+            <FlightBooking />
+            <Footer />
+          </>
+        } />
         <Route path="/*" element={
           <>
-            <Header onBackToHome={handleBackToHome} />
+            <Header
+              travelMode={travelMode}
+              onTravelModeChange={handleModeChange}
+              onBackToHome={handleBackToHome}
+            />
             {showSearchResult ? (
-              <SearchResult searchParams={searchParams} onSearch={handleSearch} />
+              <SearchResult searchParams={searchParams} onSearch={handleSearch} mode={travelMode} />
+            ) : travelMode === 'flight' ? (
+              <FlightHome onSearch={handleSearch} />
             ) : (
               <>
                 <Hero />
-                <SearchBus onSearch={handleSearch} />
+                <SearchBus onSearch={handleSearch} mode="bus" />
                 <OurService />
                 <BookingSteps />
                 <BusResults />

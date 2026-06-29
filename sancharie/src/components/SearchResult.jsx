@@ -28,7 +28,14 @@ import {
   AlertTriangle,
   Home,
   RefreshCw,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Plane,
+  ArrowLeftRight,
+  CalendarDays,
+  ChevronDown,
+  Search,
+  Briefcase,
+  CircleCheck,
 } from "lucide-react";
 import SelectSeat from "./selectseat";
 import NoResult from "./noresult";
@@ -36,7 +43,7 @@ import MiniSeatPreview, { clearSeatLayoutCache, prefetchAllSeatLayouts, subscrib
 import Logo from "../assets/logosan.svg";
 import SearchBus from "./SearchBus";
 import { useBooking } from "../context/BookingContext";
-import { bus as busApi } from "../services/api";
+import { bus as busApi, flights as flightApi } from "../services/api";
 
 /* -------------- HELPERS ---------------- */
 const timeBucket = (timeString) => {
@@ -108,6 +115,39 @@ const formatDate = (dateString) => {
   });
 };
 
+const formatFlightDate = (dateString) => {
+  if (!dateString) return "";
+  const dateParts = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = dateParts
+    ? new Date(Number(dateParts[1]), Number(dateParts[2]) - 1, Number(dateParts[3]))
+    : new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+const formatFlightPrice = (value) => {
+  const amount = Number(value || 0);
+  return amount.toLocaleString("en-IN", {
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+  });
+};
+
+const getAirportCode = (value) => {
+  const text = String(value || "").trim();
+  return text.match(/\(([A-Z]{3})\)$/)?.[1] || text.match(/^([A-Z]{3})\b/)?.[1] || text.slice(0, 3).toUpperCase();
+};
+
+const cabinLabels = {
+  1: "Economy",
+  2: "Premium Economy",
+  3: "Business",
+  4: "First Class",
+};
+
 const calculateDuration = (departure, arrival, durationInMins) => {
   // If durationInMins is provided directly (from ETS API), use it
   if (durationInMins && typeof durationInMins === 'number') {
@@ -126,16 +166,6 @@ const calculateDuration = (departure, arrival, durationInMins) => {
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   return `${hours}:${minutes.toString().padStart(2, '0')} hrs`;
-};
-
-const calculateDepartureHours = (departureTime) => {
-  if (!departureTime) return "";
-  const now = new Date();
-  const departure = new Date(departureTime);
-  const diff = departure - now;
-  if (diff < 0) return "Departed";
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  return `${hours} Hrs`;
 };
 
 /* Small component that subscribes to seat layout cache and shows min fare */
@@ -168,19 +198,28 @@ function BusPriceDisplay({ bus }) {
   );
 }
 
-export default function SearchResult({ searchParams, onSearch }) {
+export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
   const { state, actions } = useBooking();
   const navigate = useNavigate();
+  const bookingActionsRef = useRef(actions);
   
   // Get session state from context
-  const { sessionExpired, sessionStartTime } = state;
+  const { sessionExpired } = state;
   
   /* ---------------- LOCAL STATES ---------------- */
   const [buses, setBuses] = useState([]);
+  const [flights, setFlights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTokenId, setSearchTokenId] = useState(null);
   const [visibleCount, setVisibleCount] = useState(6); // Show 6 buses initially
+  const [bookingFlightId, setBookingFlightId] = useState(null);
+  const [flightBookingError, setFlightBookingError] = useState('');
+  const [flightSort, setFlightSort] = useState('best');
+  const [flightStopsFilter, setFlightStopsFilter] = useState('any');
+  const [selectedFlightAirlines, setSelectedFlightAirlines] = useState([]);
+  const [expandedFlightId, setExpandedFlightId] = useState(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   /* ---------------- FILTER STATES ---------------- */
   const [maxPrice, setMaxPrice] = useState(5000);
@@ -189,6 +228,7 @@ export default function SearchResult({ searchParams, onSearch }) {
   const [selectedOperators, setSelectedOperators] = useState([]);
   const [selectedBoarding, setSelectedBoarding] = useState([]);
   const [selectedDropping, setSelectedDropping] = useState([]);
+  const [operatorSearch, setOperatorSearch] = useState("");
   const [boardingSearch, setBoardingSearch] = useState("");
   const [droppingSearch, setDroppingSearch] = useState("");
   
@@ -208,16 +248,63 @@ export default function SearchResult({ searchParams, onSearch }) {
   const [dateOffset, setDateOffset] = useState(0); // For navigation
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
+  useEffect(() => {
+    bookingActionsRef.current = actions;
+  }, [actions]);
+
   /* ---------------- FETCH BUSES ON MOUNT ---------------- */
   useEffect(() => {
     const fetchBuses = async () => {
-      // ETS API uses city names, not IDs
+      const bookingActions = bookingActionsRef.current;
       if (!searchParams?.from || !searchParams?.to || !searchParams?.date) {
         setError("Invalid search parameters");
         setLoading(false);
         return;
       }
 
+      if (mode === 'flight') {
+        setError(null);
+        setLoading(true);
+        setVisibleCount(6);
+        setBuses([]);
+        setSearchTokenId(null);
+        setFlights([]);
+        setFlightSort('best');
+        setFlightStopsFilter(searchParams.directFlight ? 'direct' : 'any');
+        setSelectedFlightAirlines([]);
+        setExpandedFlightId(null);
+
+        try {
+          const result = await flightApi.search({
+            origin: searchParams.fromId || searchParams.from,
+            destination: searchParams.toId || searchParams.to,
+            date: searchParams.date,
+            airSegments: searchParams.airSegments,
+            adult: searchParams.adult || 1,
+            child: searchParams.child || 0,
+            infant: searchParams.infant || 0,
+            cabinClass: searchParams.cabinClass || 1,
+            journeyType: searchParams.journeyType || 1,
+            preferredCarriers: searchParams.preferredCarriers || [],
+            directFlight: Boolean(searchParams.directFlight),
+          });
+          const flightResults = result.flights || [];
+          setFlights(flightResults);
+          setSearchTokenId(result.searchTokenId);
+          bookingActions.setSearchToken(result.searchTokenId);
+          bookingActions.setSearchParams(searchParams);
+          bookingActions.setSearchResults(flightResults);
+          bookingActions.startSession();
+        } catch (err) {
+          console.error('Flight search error:', err);
+          setError(err.message || 'Failed to search flights');
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      setFlights([]);
       try {
         setLoading(true);
         setError(null);
@@ -228,8 +315,8 @@ export default function SearchResult({ searchParams, onSearch }) {
         
         // ETS API expects city names (sourceCity, destinationCity)
         const result = await busApi.search(
-          searchParams.from,
-          searchParams.to,
+          searchParams.fromSearchCity || searchParams.fromCity || searchParams.from,
+          searchParams.toSearchCity || searchParams.toCity || searchParams.to,
           searchParams.date
         );
         
@@ -237,12 +324,12 @@ export default function SearchResult({ searchParams, onSearch }) {
         
         // Store search token locally and in context
         setSearchTokenId(result.searchTokenId);
-        actions.setSearchToken(result.searchTokenId);
-        actions.setSearchParams(searchParams);
-        actions.setSearchResults(result.results);
+        bookingActions.setSearchToken(result.searchTokenId);
+        bookingActions.setSearchParams(searchParams);
+        bookingActions.setSearchResults(result.results);
         
         // START SESSION TIMER when search API returns results
-        actions.startSession();
+        bookingActions.startSession();
         
         setBuses(result.results || []);
         
@@ -260,12 +347,12 @@ export default function SearchResult({ searchParams, onSearch }) {
     };
 
     fetchBuses();
-  }, [searchParams]);
+  }, [searchParams, mode]);
 
   // Handle session expiration - go to home
   const handleGoHome = () => {
     actions.resetSession();
-    navigate('/');
+    navigate(mode === 'flight' ? '/?mode=flight' : '/');
   };
 
   // Handle refresh search
@@ -275,10 +362,62 @@ export default function SearchResult({ searchParams, onSearch }) {
     window.location.reload();
   };
 
+  const handleBookFlight = async (flight) => {
+    if (!flight?.searchTokenId || !flight?.resultIndex) {
+      setFlightBookingError('This fare is missing booking information. Please search again.');
+      return;
+    }
+
+    setBookingFlightId(flight.id);
+    setFlightBookingError('');
+
+    try {
+      let fareRules = null;
+      let ssr = null;
+      const preparationWarnings = [];
+
+      try {
+        fareRules = await flightApi.getFareRules(flight.searchTokenId, flight.resultIndex);
+      } catch (fareRuleError) {
+        preparationWarnings.push(fareRuleError.message || 'Fare rules could not be loaded');
+      }
+
+      const confirmation = await flightApi.confirmFare(flight.searchTokenId, flight.resultIndex);
+
+      try {
+        ssr = await flightApi.getSSR(flight.searchTokenId, flight.resultIndex);
+      } catch (ssrError) {
+        preparationWarnings.push(ssrError.message || 'Seat and meal options could not be loaded');
+      }
+
+      navigate('/flight-booking', {
+        state: {
+          flight,
+          searchParams,
+          fareRules,
+          confirmation,
+          ssr,
+          preparationWarnings,
+        },
+      });
+    } catch (bookingError) {
+      setFlightBookingError(bookingError.message || 'This fare could not be confirmed. Please choose another flight.');
+    } finally {
+      setBookingFlightId(null);
+    }
+  };
+
   /* ---------------- EXTRACT UNIQUE VALUES FOR FILTERS ---------------- */
   const uniqueOperators = useMemo(() => {
-    return [...new Set(buses.map((bus) => bus.TravelName).filter(Boolean))];
+    return [...new Set(buses.map((bus) => bus.TravelName).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
   }, [buses]);
+
+  const filteredOperators = useMemo(() => {
+    const query = operatorSearch.trim().toLowerCase();
+    if (!query) return uniqueOperators;
+    return uniqueOperators.filter((operator) => operator.toLowerCase().includes(query));
+  }, [uniqueOperators, operatorSearch]);
 
   const uniqueBoardingPoints = useMemo(() => {
     const points = new Set();
@@ -351,6 +490,88 @@ export default function SearchResult({ searchParams, onSearch }) {
     });
   }, [buses, maxPrice, selectedBusTypes, selectedTimes, selectedOperators, selectedBoarding, selectedDropping]);
 
+  const flightPriceRange = useMemo(() => {
+    const prices = flights.map((flight) => Number(flight.price || 0)).filter((price) => price > 0);
+    return {
+      min: prices.length ? Math.min(...prices) : 0,
+      max: prices.length ? Math.max(...prices) : 0,
+    };
+  }, [flights]);
+
+  const flightDurationRange = useMemo(() => {
+    const durations = flights.map((flight) => Number(flight.durationMinutes || 0)).filter((duration) => duration > 0);
+    return {
+      min: durations.length ? Math.min(...durations) : 0,
+    };
+  }, [flights]);
+
+  const flightStopStats = useMemo(() => {
+    const getMinPrice = (list) => {
+      const prices = list.map((flight) => Number(flight.price || 0)).filter((price) => price > 0);
+      return prices.length ? Math.min(...prices) : 0;
+    };
+
+    const directFlights = flights.filter((flight) => Number(flight.stopsCount || 0) === 0);
+    const oneStopFlights = flights.filter((flight) => Number(flight.stopsCount || 0) <= 1);
+
+    return {
+      any: { count: flights.length, minPrice: getMinPrice(flights) },
+      direct: { count: directFlights.length, minPrice: getMinPrice(directFlights) },
+      oneStop: { count: oneStopFlights.length, minPrice: getMinPrice(oneStopFlights) },
+    };
+  }, [flights]);
+
+  const flightAirlineOptions = useMemo(() => {
+    const airlineMap = new Map();
+    flights.forEach((flight) => {
+      const name = flight.carrier || 'Airline';
+      const current = airlineMap.get(name) || { name, count: 0, minPrice: 0 };
+      const price = Number(flight.price || 0);
+      airlineMap.set(name, {
+        name,
+        count: current.count + 1,
+        minPrice: !current.minPrice || (price && price < current.minPrice) ? price : current.minPrice,
+      });
+    });
+    return [...airlineMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [flights]);
+
+  const filteredFlights = useMemo(() => {
+    const filtered = flights.filter((flight) => {
+      const stopsCount = Number(flight.stopsCount || 0);
+      if (flightStopsFilter === 'direct' && stopsCount !== 0) return false;
+      if (flightStopsFilter === 'oneStop' && stopsCount > 1) return false;
+      if (selectedFlightAirlines.length > 0 && !selectedFlightAirlines.includes(flight.carrier || 'Airline')) {
+        return false;
+      }
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      const priceA = Number(a.price || Number.MAX_SAFE_INTEGER);
+      const priceB = Number(b.price || Number.MAX_SAFE_INTEGER);
+      const durationA = Number(a.durationMinutes || Number.MAX_SAFE_INTEGER);
+      const durationB = Number(b.durationMinutes || Number.MAX_SAFE_INTEGER);
+      const stopsA = Number(a.stopsCount || 0);
+      const stopsB = Number(b.stopsCount || 0);
+
+      if (flightSort === 'cheapest') return priceA - priceB || durationA - durationB;
+      if (flightSort === 'fastest') return durationA - durationB || priceA - priceB;
+
+      return stopsA - stopsB || priceA - priceB || durationA - durationB;
+    });
+  }, [flights, flightStopsFilter, selectedFlightAirlines, flightSort]);
+
+  const visibleFlights = filteredFlights.slice(0, visibleCount);
+
+  const toggleFlightAirline = (airlineName) => {
+    setSelectedFlightAirlines((current) =>
+      current.includes(airlineName)
+        ? current.filter((name) => name !== airlineName)
+        : [...current, airlineName]
+    );
+  };
+
   /* ---------------- DATE NAVIGATION ---------------- */
   const generateDateRange = () => {
     const dates = [];
@@ -411,8 +632,8 @@ export default function SearchResult({ searchParams, onSearch }) {
           
           // ETS API expects city names (sourceCity, destinationCity)
           const result = await busApi.search(
-            searchParams.from,
-            searchParams.to,
+            searchParams.fromSearchCity || searchParams.fromCity || searchParams.from,
+            searchParams.toSearchCity || searchParams.toCity || searchParams.to,
             selectedDate.date
           );
           setSearchTokenId(result.searchTokenId);
@@ -546,7 +767,9 @@ export default function SearchResult({ searchParams, onSearch }) {
             <img src={Logo} alt="Sancharie" className="loader-logo" />
             <div className="loader-ring"></div>
           </div>
-          <p className="loader-text">Searching for buses...</p>
+          <p className="loader-text">
+            {mode === 'flight' ? 'Searching for flights...' : 'Searching for buses...'}
+          </p>
           <p className="loader-subtext">{searchParams?.from} → {searchParams?.to}</p>
         </div>
       </div>
@@ -600,6 +823,349 @@ export default function SearchResult({ searchParams, onSearch }) {
   }
 
   /* ---------------- NO BUSES FOUND ---------------- */
+  if (!loading && mode === 'flight') {
+    if (flights.length === 0) {
+      return (
+        <div className="sr-page flight-result-page">
+          <div className="flight-placeholder">
+            <img src={Logo} alt="Sancharie" className="flight-placeholder-logo" />
+            <h2>No flight results found</h2>
+            <p>
+              We could not find flights for this route right now. Please try another date or route.
+            </p>
+            <button className="flight-placeholder-button" onClick={handleGoHome}>
+              Back to Home
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const firstFlight = flights[0] || {};
+    const journeyType = Number(searchParams?.journeyType || 1);
+    const flightDateLabel = formatFlightDate(searchParams?.date || firstFlight.departureTime);
+    const fromCode = searchParams?.fromId || firstFlight.from || getAirportCode(searchParams?.from);
+    const toCode = searchParams?.toId || firstFlight.to || getAirportCode(searchParams?.to);
+    const travellerCount =
+      Number(searchParams?.adult || 1) + Number(searchParams?.child || 0) + Number(searchParams?.infant || 0);
+    const activeFilterCount =
+      (flightStopsFilter !== 'any' ? 1 : 0) + selectedFlightAirlines.length;
+
+    const stopFilterOptions = [
+      ['any', 'Any', flightStopStats.any],
+      ['direct', 'Direct only', flightStopStats.direct],
+      ['oneStop', '1 stop max', flightStopStats.oneStop],
+    ];
+
+    return (
+      <div className="sr-page flight-results-page">
+        <section className="flight-modify-panel">
+          <div className="flight-search-types" aria-label="Trip type">
+            {[
+              [2, 'Round-trip'],
+              [1, 'One-way'],
+              [3, 'Multi-city'],
+            ].map(([value, label]) => (
+              <span className={`flight-search-type ${journeyType === value ? 'active' : ''}`} key={value}>
+                <span className="flight-radio-dot" />
+                {label}
+              </span>
+            ))}
+            <span className="flight-cabin-chip">
+              {cabinLabels[searchParams?.cabinClass || 1] || 'Economy'} <ChevronDown size={17} />
+            </span>
+            <button
+              type="button"
+              className={`flight-direct-toggle ${flightStopsFilter === 'direct' ? 'active' : ''}`}
+              onClick={() => {
+                setVisibleCount(6);
+                setFlightStopsFilter((current) => current === 'direct' ? 'any' : 'direct');
+              }}
+            >
+              <span />
+              Direct flights only
+            </button>
+          </div>
+
+          <div className="flight-modify-bar">
+            <div className="flight-modify-field wide">
+              <Plane size={22} />
+              <span>
+                <small>Leaving from</small>
+                <b>{fromCode} {searchParams?.from || firstFlight.departureAirport || 'Origin'}</b>
+              </span>
+            </div>
+            <button className="flight-swap-button" type="button" onClick={handleGoHome} aria-label="Edit route">
+              <ArrowLeftRight size={23} />
+            </button>
+            <div className="flight-modify-field wide">
+              <Plane size={22} />
+              <span>
+                <small>Going to</small>
+                <b>{toCode} {searchParams?.to || firstFlight.arrivalAirport || 'Destination'}</b>
+              </span>
+            </div>
+            <div className="flight-modify-field">
+              <CalendarDays size={22} />
+              <span>
+                <small>Travel date</small>
+                <b>{flightDateLabel || 'Select date'}</b>
+              </span>
+            </div>
+            <div className="flight-modify-field">
+              <Users size={22} />
+              <span>
+                <small>Travelers</small>
+                <b>{travellerCount} traveller{travellerCount === 1 ? '' : 's'}</b>
+              </span>
+            </div>
+            <button
+              className="flight-modify-search"
+              type="button"
+              onClick={() => onSearch?.({ ...searchParams, directFlight: flightStopsFilter === 'direct' })}
+            >
+              <Search size={21} />
+              Search
+            </button>
+          </div>
+        </section>
+
+        {flightBookingError && (
+          <div className="flight-booking-error" role="alert">{flightBookingError}</div>
+        )}
+
+        <div className="flight-results-layout">
+          <aside className="flight-filters-panel">
+            <div className="flight-summary-card">
+              <h3>Search summary</h3>
+              <p>Get a quick overview of how stops and airlines affect fares for this search.</p>
+              <button type="button" onClick={() => setSummaryOpen((open) => !open)}>
+                <Star size={17} /> {summaryOpen ? 'Hide summary' : 'View summary'}
+              </button>
+              {summaryOpen && (
+                <div className="flight-summary-breakdown">
+                  <span><b>{flightStopStats.direct.count}</b> direct flights</span>
+                  <span><b>₹{formatFlightPrice(flightPriceRange.min)}</b> lowest fare</span>
+                  <span><b>{flightAirlineOptions.length}</b> airlines</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flight-filter-heading">
+              <h3>Filters</h3>
+              <p>Showing {filteredFlights.length} of {flights.length} results</p>
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFlightStopsFilter('any');
+                    setSelectedFlightAirlines([]);
+                    setVisibleCount(6);
+                  }}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            <div className="flight-filter-section">
+              <h4>Stops</h4>
+              {stopFilterOptions.map(([value, label, stats]) => (
+                <button
+                  className={`flight-filter-option ${flightStopsFilter === value ? 'active' : ''}`}
+                  type="button"
+                  key={value}
+                  onClick={() => {
+                    setFlightStopsFilter(value);
+                    setVisibleCount(6);
+                  }}
+                >
+                  <span className="flight-filter-radio" />
+                  <span className="flight-filter-copy">
+                    <b>{label}</b>
+                    <small>{stats.minPrice ? `From ₹${formatFlightPrice(stats.minPrice)}` : 'No fares'}</small>
+                  </span>
+                  <strong>{stats.count}</strong>
+                </button>
+              ))}
+            </div>
+
+            <div className="flight-filter-section">
+              <h4>Airlines</h4>
+              {flightAirlineOptions.map((airline) => (
+                <button
+                  className={`flight-filter-option checkbox ${selectedFlightAirlines.includes(airline.name) ? 'active' : ''}`}
+                  type="button"
+                  key={airline.name}
+                  onClick={() => {
+                    toggleFlightAirline(airline.name);
+                    setVisibleCount(6);
+                  }}
+                >
+                  <span className="flight-filter-check" />
+                  <span className="flight-filter-copy">
+                    <b>{airline.name}</b>
+                    <small>From ₹{formatFlightPrice(airline.minPrice)}</small>
+                  </span>
+                  <strong>{airline.count}</strong>
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          <main className="flight-list-panel">
+            <div className="flight-sort-tabs" role="tablist" aria-label="Sort flights">
+              {[
+                ['best', 'Best'],
+                ['cheapest', 'Cheapest'],
+                ['fastest', 'Fastest'],
+              ].map(([value, label]) => (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={flightSort === value}
+                  className={flightSort === value ? 'active' : ''}
+                  key={value}
+                  onClick={() => {
+                    setFlightSort(value);
+                    setVisibleCount(6);
+                  }}
+                >
+                  {label}
+                  {value === 'best' && <Info size={15} />}
+                </button>
+              ))}
+            </div>
+
+            {filteredFlights.length === 0 ? (
+              <div className="flight-no-filter-results">
+                <h3>No flights match these filters</h3>
+                <p>Try clearing stops or airline filters to see more Sancharie fares.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFlightStopsFilter('any');
+                    setSelectedFlightAirlines([]);
+                  }}
+                >
+                  Clear filters
+                </button>
+              </div>
+            ) : (
+              <div className="flight-results-list">
+                {visibleFlights.map((flight, index) => {
+                  const price = Number(flight.price || 0);
+                  const durationMinutes = Number(flight.durationMinutes || 0);
+                  const isDirect = Number(flight.stopsCount || 0) === 0;
+                  const isCheapest = price > 0 && price === flightPriceRange.min;
+                  const isFastest = durationMinutes > 0 && durationMinutes === flightDurationRange.min;
+                  const isExpanded = expandedFlightId === flight.id;
+                  const badges = [
+                    flightSort === 'best' && index === 0 ? 'Best' : '',
+                    isCheapest ? 'Cheapest' : '',
+                    isDirect ? 'Cheapest direct' : '',
+                    isFastest ? 'Fastest' : '',
+                  ].filter(Boolean).slice(0, 3);
+                  const hiddenAmenities = Math.max(0, (flight.amenities || []).length - 3);
+
+                  return (
+                    <article className="flight-result-card" key={`${flight.id || flight.flightNumber}-${index}`}>
+                      <div className="flight-itinerary-side">
+                        <div className="flight-badge-row">
+                          {badges.map((badge) => (
+                            <span className={badge === 'Best' ? 'best' : ''} key={badge}>{badge}</span>
+                          ))}
+                          <span className="upgrade-badge">
+                            {flight.refundable ? 'Refundable fare available' : 'Fare rules available'}
+                          </span>
+                        </div>
+
+                        <div className="flight-route-row">
+                          <div className="flight-airline-mark">
+                            {flight.airlineCode || (flight.carrier || 'FL').slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="flight-time-block">
+                            <strong>{formatTime(flight.departureTime)}</strong>
+                            <small>{formatFlightDate(searchParams?.date || flight.departureTime)} · {flight.from || fromCode}</small>
+                          </div>
+                          <div className="flight-duration-line">
+                            <span />
+                            <b>{isDirect ? 'Direct' : flight.stops}</b>
+                            <span />
+                            <small>{flight.duration || calculateDuration(flight.departureTime, flight.arrivalTime, flight.durationMinutes)}</small>
+                          </div>
+                          <div className="flight-time-block right">
+                            <strong>{formatTime(flight.arrivalTime)}</strong>
+                            <small>{formatFlightDate(searchParams?.date || flight.arrivalTime)} · {flight.to || toCode}</small>
+                          </div>
+                        </div>
+
+                        <p className="flight-operator-line">{flight.carrier}{flight.flightNumber ? ` · ${flight.flightNumber}` : ''}</p>
+                        {isExpanded && (
+                          <div className="flight-fare-details">
+                            <span><Briefcase size={15} /> {(flight.amenities || [])[0] || 'Baggage details available at checkout'}</span>
+                            <span><CircleCheck size={15} /> {flight.refundable ? 'Refundable fare' : 'Non-refundable fare'}</span>
+                            <span><Info size={15} /> Final fare is confirmed before payment</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flight-fare-side">
+                        <div className="flight-fare-family">{flight.fareType || cabinLabels[searchParams?.cabinClass || 1] || 'Eco Value'}</div>
+                        <div className="flight-inclusion-icons">
+                          {(flight.amenities || ['Baggage included', 'Fare confirmation', 'Secure booking']).slice(0, 3).map((amenity) => (
+                            <span title={amenity} key={amenity}>
+                              <Briefcase size={18} />
+                              <CircleCheck size={12} />
+                            </span>
+                          ))}
+                          {hiddenAmenities > 0 && <b>+{hiddenAmenities}</b>}
+                        </div>
+                        <div className="flight-price-block">
+                          <strong>₹{formatFlightPrice(price)}</strong>
+                          <Info size={18} />
+                        </div>
+                        <div className="flight-card-actions">
+                          <button
+                            className="flight-more-fares"
+                            type="button"
+                            onClick={() => setExpandedFlightId((current) => current === flight.id ? null : flight.id)}
+                          >
+                            More fares <ChevronDown size={17} />
+                          </button>
+                          <button
+                            className="flight-book-btn"
+                            type="button"
+                            disabled={bookingFlightId === flight.id}
+                            onClick={() => handleBookFlight(flight)}
+                          >
+                            {bookingFlightId === flight.id ? 'Checking fare…' : 'View details'}
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+
+            {filteredFlights.length > visibleCount && (
+              <div className="load-more-container">
+                <button
+                  className="load-more-btn"
+                  type="button"
+                  onClick={() => setVisibleCount((count) => count + 6)}
+                >
+                  Load More Flights ({filteredFlights.length - visibleCount} remaining)
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   if (!loading && buses.length === 0) {
     return <NoResult searchParams={searchParams} />;
   }
@@ -620,6 +1186,7 @@ export default function SearchResult({ searchParams, onSearch }) {
                 setSelectedOperators([]);
                 setSelectedBoarding([]);
                 setSelectedDropping([]);
+                setOperatorSearch("");
               }}
             >
               Clear all
@@ -703,22 +1270,34 @@ export default function SearchResult({ searchParams, onSearch }) {
           {/* BUS OPERATORS */}
           <div className="filter-block">
             <div className="filter-title">Bus Operators</div>
-            {uniqueOperators.slice(0, 10).map((op) => (
-              <label key={op} className="check-row">
-                <input
-                  type="checkbox"
-                  checked={selectedOperators.includes(op)}
-                  onChange={() =>
-                    setSelectedOperators((prev) =>
-                      prev.includes(op)
-                        ? prev.filter((x) => x !== op)
-                        : [...prev, op]
-                    )
-                  }
-                />
-                {op}
-              </label>
-            ))}
+            <input
+              type="text"
+              className="filter-search-input"
+              placeholder="Search bus operator..."
+              value={operatorSearch}
+              onChange={(e) => setOperatorSearch(e.target.value)}
+            />
+            <div className="filter-scroll-list">
+              {filteredOperators.map((op) => (
+                <label key={op} className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={selectedOperators.includes(op)}
+                    onChange={() =>
+                      setSelectedOperators((prev) =>
+                        prev.includes(op)
+                          ? prev.filter((x) => x !== op)
+                          : [...prev, op]
+                      )
+                    }
+                  />
+                  {op}
+                </label>
+              ))}
+              {filteredOperators.length === 0 && (
+                <p className="filter-empty-text">No operators found</p>
+              )}
+            </div>
           </div>
 
           {/* BOARDING POINT */}
@@ -838,9 +1417,6 @@ export default function SearchResult({ searchParams, onSearch }) {
             const midPoints = boardingPoints.slice(1, 3).map(bp => bp.CityPointName).filter(Boolean);
             const totalStops = boardingPoints.length + droppingPoints.length;
             const otherStopsCount = Math.max(0, totalStops - 4);
-            
-            // Generate bus number from bus data - use consistent value based on ResultIndex
-            const busNumber = bus.BusNumber || bus.ServiceNumber || `NL${String(bus.ResultIndex).padStart(2, '0')}b${String(bus.ResultIndex * 317 % 10000).padStart(4, '0')}`;
             
             return (
             <React.Fragment key={bus.ResultIndex}>
@@ -994,6 +1570,7 @@ export default function SearchResult({ searchParams, onSearch }) {
                 setSelectedOperators([]);
                 setSelectedBoarding([]);
                 setSelectedDropping([]);
+                setOperatorSearch("");
               }}>
                 Clear Filters
               </button>
@@ -1052,13 +1629,19 @@ export default function SearchResult({ searchParams, onSearch }) {
             {/* OPERATORS */}
             <div className="filter-block">
               <div className="filter-title">Bus Operators</div>
-              {uniqueOperators.slice(0, 10).map((op) => (
-                <label key={op} className="check-row">
-                  <input type="checkbox" checked={selectedOperators.includes(op)}
-                    onChange={() => setSelectedOperators((prev) => prev.includes(op) ? prev.filter((x) => x !== op) : [...prev, op])} />
-                  {op}
-                </label>
-              ))}
+              <input type="text" className="filter-search-input" placeholder="Search bus operator..." value={operatorSearch} onChange={(e) => setOperatorSearch(e.target.value)} />
+              <div className="filter-scroll-list">
+                {filteredOperators.map((op) => (
+                  <label key={op} className="check-row">
+                    <input type="checkbox" checked={selectedOperators.includes(op)}
+                      onChange={() => setSelectedOperators((prev) => prev.includes(op) ? prev.filter((x) => x !== op) : [...prev, op])} />
+                    {op}
+                  </label>
+                ))}
+                {filteredOperators.length === 0 && (
+                  <p className="filter-empty-text">No operators found</p>
+                )}
+              </div>
             </div>
             {/* BOARDING POINT */}
             <div className="filter-block">
@@ -1095,7 +1678,7 @@ export default function SearchResult({ searchParams, onSearch }) {
           </div>
           <div className="mobile-filter-sheet-footer">
             <button className="mobile-filter-clear-btn" onClick={() => {
-              setMaxPrice(5000); setSelectedBusTypes([]); setSelectedTimes([]); setSelectedOperators([]); setSelectedBoarding([]); setSelectedDropping([]);
+              setMaxPrice(5000); setSelectedBusTypes([]); setSelectedTimes([]); setSelectedOperators([]); setSelectedBoarding([]); setSelectedDropping([]); setOperatorSearch("");
             }}>Clear All</button>
             <button className="mobile-filter-apply-btn" onClick={() => setMobileFilterOpen(false)}>Apply Filters</button>
           </div>

@@ -47,6 +47,7 @@ sanachariebackend/
 ├── routes/
 │   ├── auth.js             # OTP authentication
 │   ├── bus.js              # Bus API proxy (hides third-party API)
+│   ├── flight.js           # Flight API proxy (hides provider credentials)
 │   ├── payment.js          # Razorpay integration
 │   └── user.js             # User profile & bookings
 │
@@ -118,6 +119,18 @@ npm run dev
 | POST | `/payment/verify-payment` | Verify payment signature |
 | GET | `/payment/order/:id` | Get order status |
 
+### Flights (BDSD/TTS Proxy)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/flights/search` | Search flights |
+| POST | `/api/flights/calendar-fares` | Get calendar fares |
+| POST | `/api/flights/fare-rule` | Get rules for a selected fare |
+| POST | `/api/flights/fare-confirmation` | Revalidate price and flight details |
+| POST | `/api/flights/ssr` | Get meals, baggage, and seat inventory |
+| POST | `/api/flights/book` | Book selected flight (auth + captured payment required) |
+| POST | `/api/flights/booking-detail` | Get provider booking details (auth required) |
+| POST | `/api/flights/cancel-request` | Request full cancellation (auth required) |
+
 ## 🔧 Environment Variables
 
 See `.env.example` for all required variables:
@@ -149,6 +162,12 @@ RAZORPAY_MERCHANT_NAME=Your Business
 BUS_API_URL=https://...
 BUS_API_USERNAME=xxx
 BUS_API_PASSWORD=xxx
+
+# Flight API (Third-party - HIDDEN FROM FRONTEND)
+FLIGHT_API_BASE_URL=https://www.api.bdsd.technology/api
+FLIGHT_API_USERNAME=xxx
+FLIGHT_API_PASSWORD=xxx
+FLIGHT_API_TIMEOUT=30000
 ```
 
 ## 🛡️ Security Notes

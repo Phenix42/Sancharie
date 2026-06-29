@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { useBooking } from '../context/BookingContext'
 import { Timer, Home, BookOpen, HelpCircle, X, LogIn, ChevronDown } from 'lucide-react'
 
-function Header({ onBackToHome }) {
+function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange = () => {} }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showAccountDropdown, setShowAccountDropdown] = useState(false)
@@ -106,6 +106,22 @@ function Header({ onBackToHome }) {
           <div className="logo" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
             <span className="logo-text">Sancharie</span>
           </div>
+          <div className="mode-tabs-header">
+            <button
+              type="button"
+              className={`mode-tab ${travelMode === 'bus' ? 'active' : ''}`}
+              onClick={() => onTravelModeChange('bus')}
+            >
+              Bus
+            </button>
+            <button
+              type="button"
+              className={`mode-tab ${travelMode === 'flight' ? 'active' : ''}`}
+              onClick={() => onTravelModeChange('flight')}
+            >
+              Flight
+            </button>
+          </div>
           
           <button 
             className="mobile-menu-btn" 
@@ -134,6 +150,28 @@ function Header({ onBackToHome }) {
                 <span className="nav-drawer-logo">Sancharie</span>
                 <button className="nav-close-btn" onClick={() => setMobileMenuOpen(false)}>
                   <X size={20} />
+                </button>
+              </div>
+              <div className="mobile-mode-tabs">
+                <button
+                  type="button"
+                  className={`mode-tab ${travelMode === 'bus' ? 'active' : ''}`}
+                  onClick={() => {
+                    onTravelModeChange('bus');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Bus
+                </button>
+                <button
+                  type="button"
+                  className={`mode-tab ${travelMode === 'flight' ? 'active' : ''}`}
+                  onClick={() => {
+                    onTravelModeChange('flight');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Flight
                 </button>
               </div>
 

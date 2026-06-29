@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./SearchBus.css";
 import { busApi } from "../services";
+import airports from "../data/airports";
 
 // Import custom icons from assets
 import fromIcon from "../assets/searchbar/from.svg";
@@ -16,22 +17,229 @@ const SearchIcon = () => (
   </svg>
 );
 
-const RECENT_SEARCHES_KEY = 'sancharie_recent_searches';
 const MAX_RECENT_SEARCHES = 5;
+const STATION_CACHE_KEY = 'sancharie_bus_stations_cache_v2';
+const STATION_CACHE_TTL_MS = 15 * 60 * 1000;
 
-const SearchBus = ({ onSearch, initialValues, compact = false }) => {
-  // Get current date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+const normalizeText = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+const normalizeKey = (value) => normalizeText(value).toLowerCase();
+
+const cityCorrections = {
+  hydrabad: 'Hyderabad',
+  hyderbad: 'Hyderabad',
+  hyderabad: 'Hyderabad',
+  secunderabad: 'Hyderabad',
+  secundrabad: 'Hyderabad',
+  vishakapatnam: 'Visakhapatnam',
+  visakapatnam: 'Visakhapatnam',
+  vishakhapatnam: 'Visakhapatnam',
+  vizag: 'Visakhapatnam',
+  visakhapatnam: 'Visakhapatnam',
+};
+
+const localityCityMap = [
+  {
+    city: 'Hyderabad',
+    state: 'Telangana',
+    aliases: ['Hyderabad', 'Hydrabad', 'Hyderbad'],
+    localities: [
+      'KPHB',
+      'Gachibowli',
+      'LB Nagar',
+      'Ameerpet',
+      'Secunderabad',
+      'Miyapur',
+      'Kukatpally',
+      'Mehdipatnam',
+      'Lakdikapul',
+      'MGBS',
+      'JBS',
+      'BHEL',
+      'Chanda Nagar',
+      'Nampally',
+      'Dilsukhnagar',
+      'Uppal',
+      'Shamshabad',
+      'Hitech City',
+      'Kondapur',
+      'SR Nagar',
+      'Abids',
+      'ECIL',
+      'Kompally',
+    ],
+  },
+  {
+    city: 'Visakhapatnam',
+    state: 'Andhra Pradesh',
+    aliases: ['Visakhapatnam', 'Vishakapatnam', 'Vizag'],
+    localities: [
+      'MVP Colony',
+      'Gajuwaka',
+      'NAD Junction',
+      'Maddilapalem',
+      'Dwaraka Nagar',
+      'RTC Complex',
+    ],
+  },
+];
+
+const getCorrectedCity = (name) => {
+  const cleaned = normalizeText(name).replace(/\s*\([^)]*\)\s*/g, '');
+  const key = normalizeKey(cleaned);
+  return cityCorrections[key] || cleaned;
+};
+
+const createStationOption = (station, source = 'api') => {
+  const rawName = normalizeText(
+    station.displayName ||
+    station.stationName ||
+    station.name ||
+    station.cityName ||
+    station.CityName ||
+    ''
+  );
+  if (!rawName) return null;
+
+  const stationId = String(station.stationId || station.id || station.code || rawName);
+  const state = normalizeText(station.state || station.stateName || station.StateName || station.region || '');
+  const city = normalizeText(station.searchCity || station.parentCity || station.cityName || station.city || '');
+  const correctedCity = getCorrectedCity(city || rawName);
+  const displayName = normalizeText(station.displayName || rawName);
+  const kind = station.kind || (displayName.includes('All boarding points') ? 'city' : 'station');
+  const subtitle = station.subtitle || (kind === 'city' ? state : correctedCity);
+  const aliases = [
+    ...(station.aliases || []),
+    rawName,
+    displayName,
+    correctedCity,
+    state,
+  ].filter(Boolean);
+
+  return {
+    displayName,
+    name: rawName,
+    stationId,
+    searchCity: correctedCity,
+    state,
+    kind,
+    subtitle,
+    source,
+    searchText: `${displayName} ${rawName} ${correctedCity} ${state} ${aliases.join(' ')}`.toLowerCase(),
+  };
+};
+
+const getCuratedBusStations = () => localityCityMap.flatMap(({ city, state, aliases, localities }) => [
+  createStationOption({
+    displayName: `${city} (All boarding points)`,
+    stationName: city,
+    stationId: `${city.toUpperCase().replace(/\s+/g, '_')}_ALL`,
+    searchCity: city,
+    state,
+    kind: 'city',
+    subtitle: state,
+    aliases,
+  }, 'curated'),
+  ...localities.map((locality) => createStationOption({
+    displayName: locality,
+    stationName: locality,
+    stationId: `${city.toUpperCase().replace(/\s+/g, '_')}_${locality.toUpperCase().replace(/\s+/g, '_')}`,
+    searchCity: city,
+    state,
+    kind: 'boarding',
+    subtitle: city,
+    aliases: [city, state, ...aliases],
+  }, 'curated')),
+]).filter(Boolean);
+
+const buildStationIndex = (options) => {
+  const map = new Map();
+  const deduped = [];
+  const seen = new Set();
+
+  options.filter(Boolean).forEach((option) => {
+    const uniqueKey = `${normalizeKey(option.displayName)}|${normalizeKey(option.searchCity)}`;
+    if (!seen.has(uniqueKey)) {
+      seen.add(uniqueKey);
+      deduped.push(option);
+    }
+
+    [
+      option.displayName,
+      option.name,
+      option.stationId,
+      option.searchCity,
+      ...(option.displayName.includes('(') ? [option.displayName.replace(/\s*\([^)]*\)\s*/g, '')] : []),
+    ].filter(Boolean).forEach((key) => {
+      if (!map.has(normalizeKey(key))) {
+        map.set(normalizeKey(key), option);
+      }
+    });
+  });
+
+  return { map, options: deduped };
+};
+
+const readStationCache = () => {
+  try {
+    const cached = JSON.parse(localStorage.getItem(STATION_CACHE_KEY) || 'null');
+    if (!cached?.timestamp || !Array.isArray(cached.options)) return null;
+    return cached;
+  } catch {
+    return null;
+  }
+};
+
+const writeStationCache = (options) => {
+  try {
+    localStorage.setItem(STATION_CACHE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      options,
+    }));
+  } catch {
+    // Cache is best-effort only.
+  }
+};
+
+const loadRecentSearches = (mode) => {
+  try {
+    const saved = localStorage.getItem(`sancharie_recent_searches_${mode}`);
+    const parsed = saved ? JSON.parse(saved) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) => {
+  const [{ today, tomorrow }] = useState(() => {
+    const currentDate = new Date();
+    const nextDate = new Date(currentDate);
+    nextDate.setDate(currentDate.getDate() + 1);
+    return {
+      today: currentDate.toISOString().split('T')[0],
+      tomorrow: nextDate.toISOString().split('T')[0],
+    };
+  });
   
   // Stations data from API
-  const [stations, setStations] = useState([]);
   const [stationMap, setStationMap] = useState(new Map());
-  const [stationNames, setStationNames] = useState([]);
-  const [isLoadingStations, setIsLoadingStations] = useState(true);
+  const [stationOptions, setStationOptions] = useState([]);
+  const [stationsLoading, setStationsLoading] = useState(false);
+  const stationMapRef = useRef(new Map());
+  const stationOptionsRef = useRef([]);
+  const stationsLoadedAtRef = useRef(0);
   
-  // Recent searches
-  const [recentSearches, setRecentSearches] = useState([]);
+  const [recentSearchesByMode, setRecentSearchesByMode] = useState(() => ({
+    bus: loadRecentSearches('bus'),
+    flight: loadRecentSearches('flight'),
+  }));
+  const recentSearches = recentSearchesByMode[mode] || [];
+  const setRecentSearches = (updater) => {
+    setRecentSearchesByMode((previous) => ({
+      ...previous,
+      [mode]: typeof updater === 'function' ? updater(previous[mode] || []) : updater,
+    }));
+  };
   const [showRecentFrom, setShowRecentFrom] = useState(false);
   const [showRecentTo, setShowRecentTo] = useState(false);
   
@@ -40,6 +248,8 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
     to: initialValues?.to || "",
     fromId: initialValues?.fromId || "",
     toId: initialValues?.toId || "",
+    fromSearchCity: initialValues?.fromSearchCity || initialValues?.fromCity || "",
+    toSearchCity: initialValues?.toSearchCity || initialValues?.toCity || "",
     date: initialValues?.date || today,
   });
 
@@ -48,30 +258,20 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [popup, setPopup] = useState({ show: false, message: "" });
-  const [quickDate, setQuickDate] = useState("today");
+  const quickDate = formData.date === today
+    ? 'today'
+    : formData.date === tomorrow
+      ? 'tomorrow'
+      : '';
 
   const dateRef = useRef(null);
   const fromRef = useRef(null);
   const toRef = useRef(null);
-
-  // Load recent searches from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(RECENT_SEARCHES_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setRecentSearches(parsed);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load recent searches:', error);
-    }
-  }, []);
+  const recentSearchesKey = `sancharie_recent_searches_${mode}`;
 
   // Save recent search to localStorage
-  const saveRecentSearch = (from, to) => {
-    const newSearch = { from, to, timestamp: Date.now() };
+  const saveRecentSearch = (from, to, fromId = '', toId = '', fromSearchCity = '', toSearchCity = '') => {
+    const newSearch = { from, to, fromId, toId, fromSearchCity, toSearchCity, timestamp: Date.now() };
     
     setRecentSearches(prev => {
       // Remove duplicate if exists
@@ -83,7 +283,7 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
       
       // Save to localStorage
       try {
-        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+        localStorage.setItem(recentSearchesKey, JSON.stringify(updated));
       } catch (error) {
         console.error('Failed to save recent searches:', error);
       }
@@ -92,62 +292,78 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
     });
   };
 
+  const applyStationOptions = (options, loadedAt = Date.now()) => {
+    const { map, options: indexedOptions } = buildStationIndex(options);
+    stationMapRef.current = map;
+    stationOptionsRef.current = indexedOptions;
+    stationsLoadedAtRef.current = loadedAt;
+    setStationMap(map);
+    setStationOptions(indexedOptions);
+    return { map, options: indexedOptions };
+  };
+
+  const loadStationOptions = async ({ force = false } = {}) => {
+    if (mode === 'flight') {
+      const airportList = airports.map((airport) => createStationOption({
+        displayName: airport.display,
+        stationName: airport.display,
+        stationId: airport.code,
+        searchCity: airport.code,
+        state: airport.country,
+        kind: 'airport',
+        subtitle: `${airport.city}, ${airport.country}`,
+        aliases: [airport.code, airport.city, airport.name, airport.country],
+      }, 'airport'));
+
+      return applyStationOptions(airportList);
+    }
+
+    const cached = readStationCache();
+    const cacheFresh = cached && Date.now() - cached.timestamp < STATION_CACHE_TTL_MS;
+    if (!force && cacheFresh) {
+      return applyStationOptions(cached.options, cached.timestamp);
+    }
+
+    setStationsLoading(true);
+    try {
+      const response = await busApi.getStations();
+      const apiOptions = Array.isArray(response?.stationList)
+        ? response.stationList.map((station) => createStationOption(station, 'api')).filter(Boolean)
+        : [];
+      const options = [...getCuratedBusStations(), ...apiOptions];
+      writeStationCache(options);
+      return applyStationOptions(options);
+    } catch (error) {
+      console.error('Failed to fetch stations:', error);
+      if (cached?.options?.length) {
+        return applyStationOptions(cached.options, cached.timestamp);
+      }
+      const fallbackOptions = getCuratedBusStations();
+      applyStationOptions(fallbackOptions);
+      setPopup({ show: true, message: "Live station list could not be refreshed. Showing saved popular stations." });
+      return { map: stationMapRef.current, options: stationOptionsRef.current };
+    } finally {
+      setStationsLoading(false);
+    }
+  };
+
+  const ensureStationsReady = async () => {
+    const isStale = Date.now() - stationsLoadedAtRef.current > STATION_CACHE_TTL_MS;
+    if (stationOptionsRef.current.length === 0 || (mode === 'bus' && isStale)) {
+      return loadStationOptions({ force: mode === 'bus' && isStale });
+    }
+    return { map: stationMapRef.current, options: stationOptionsRef.current };
+  };
+
   // Fetch stations from API on component mount
   useEffect(() => {
-    const fetchStations = async () => {
-      try {
-        setIsLoadingStations(true);
-        const response = await busApi.getStations();
-        
-        if (response?.stationList && Array.isArray(response.stationList)) {
-          const stationList = response.stationList;
-          setStations(stationList);
-          
-          // Create station map for quick lookup
-          const map = new Map();
-          stationList.forEach((station) => {
-            const stationName = station.stationName?.trim() || '';
-            if (stationName) {
-              map.set(stationName.toLowerCase(), {
-                name: stationName,
-                stationId: station.stationId,
-              });
-            }
-          });
-          setStationMap(map);
-          
-          // Extract station names
-          const names = stationList
-            .map((station) => station.stationName?.trim())
-            .filter(Boolean);
-          setStationNames(names);
-        }
-      } catch (error) {
-        console.error('Failed to fetch stations:', error);
-        setPopup({ show: true, message: "Failed to load stations. Please refresh the page." });
-      } finally {
-        setIsLoadingStations(false);
-      }
-    };
-    
-    fetchStations();
-  }, []);
+    loadStationOptions();
+  }, [mode]);
 
   // Helper function to find station data by name
   const getStationData = (stationName) => {
-    return stationMap.get(stationName.toLowerCase()) || null;
+    return stationMap.get(normalizeKey(stationName)) || stationMapRef.current.get(normalizeKey(stationName)) || null;
   };
-
-  // Update quick date selection when date changes
-  useEffect(() => {
-    if (formData.date === today) {
-      setQuickDate("today");
-    } else if (formData.date === tomorrow) {
-      setQuickDate("tomorrow");
-    } else {
-      setQuickDate("");
-    }
-  }, [formData.date, today, tomorrow]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -165,9 +381,19 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
 
   const filterStations = (input) => {
     if (!input) return [];
-    return stationNames.filter((station) =>
-      station.toLowerCase().startsWith(input.toLowerCase())
-    );
+    const search = normalizeKey(input);
+    const options = stationOptionsRef.current.length ? stationOptionsRef.current : stationOptions;
+    return options
+      .filter((station) => station.searchText?.includes(search) || normalizeKey(station.displayName).includes(search))
+      .sort((a, b) => {
+        const aStarts = normalizeKey(a.displayName).startsWith(search) ? 0 : 1;
+        const bStarts = normalizeKey(b.displayName).startsWith(search) ? 0 : 1;
+        if (aStarts !== bStarts) return aStarts - bStarts;
+        if (a.kind === 'city' && b.kind !== 'city') return -1;
+        if (a.kind !== 'city' && b.kind === 'city') return 1;
+        return a.displayName.localeCompare(b.displayName);
+      })
+      .slice(0, 12);
   };
 
   const formatDate = (date) => {
@@ -182,7 +408,14 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const idField = name === 'from' ? 'fromId' : name === 'to' ? 'toId' : null;
+    const searchCityField = name === 'from' ? 'fromSearchCity' : name === 'to' ? 'toSearchCity' : null;
+    setFormData({
+      ...formData,
+      [name]: value,
+      ...(idField ? { [idField]: '' } : {}),
+      ...(searchCityField ? { [searchCityField]: '' } : {}),
+    });
 
     if (name === "from") {
       if (value) {
@@ -192,7 +425,7 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
         setShowRecentFrom(false);
       } else {
         setShowRecentFrom(recentSearches.length > 0);
-        setFromSuggestions(stationNames.slice(0, 8));
+        setFromSuggestions(stationOptionsRef.current.slice(0, 8));
         setShowFromDropdown(true);
       }
     } else if (name === "to") {
@@ -203,27 +436,30 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
         setShowRecentTo(false);
       } else {
         setShowRecentTo(recentSearches.length > 0);
-        setToSuggestions(stationNames.slice(0, 8));
+        setToSuggestions(stationOptionsRef.current.slice(0, 8));
         setShowToDropdown(true);
       }
     }
   };
 
   const handleSelectCity = (field, station) => {
-    const stationInfo = getStationData(station);
+    const stationInfo = typeof station === 'object' ? station : getStationData(station);
+    const displayName = stationInfo?.displayName || stationInfo?.name || station;
     if (field === "from") {
       setFormData({ 
         ...formData, 
-        from: station,
-        fromId: stationInfo?.stationId || ""
+        from: displayName,
+        fromId: stationInfo?.stationId || "",
+        fromSearchCity: stationInfo?.searchCity || displayName,
       });
       setShowFromDropdown(false);
       setFromSuggestions([]);
     } else {
       setFormData({ 
         ...formData, 
-        to: station,
-        toId: stationInfo?.stationId || ""
+        to: displayName,
+        toId: stationInfo?.stationId || "",
+        toSearchCity: stationInfo?.searchCity || displayName,
       });
       setShowToDropdown(false);
       setToSuggestions([]);
@@ -239,7 +475,7 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
       } else {
         // Show recent searches if available, otherwise show popular stations
         setShowRecentFrom(recentSearches.length > 0);
-        setFromSuggestions(stationNames.slice(0, 8));
+        setFromSuggestions(stationOptionsRef.current.slice(0, 8));
       }
       setShowFromDropdown(true);
     } else if (field === "to") {
@@ -250,7 +486,7 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
       } else {
         // Show recent searches if available, otherwise show popular stations
         setShowRecentTo(recentSearches.length > 0);
-        setToSuggestions(stationNames.slice(0, 8));
+        setToSuggestions(stationOptionsRef.current.slice(0, 8));
       }
       setShowToDropdown(true);
     }
@@ -263,16 +499,16 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
       to: formData.from,
       fromId: formData.toId,
       toId: formData.fromId,
+      fromSearchCity: formData.toSearchCity,
+      toSearchCity: formData.fromSearchCity,
     });
   };
 
   const handleQuickDate = (type) => {
     if (type === "today") {
       setFormData({ ...formData, date: today });
-      setQuickDate("today");
     } else {
       setFormData({ ...formData, date: tomorrow });
-      setQuickDate("tomorrow");
     }
   };
 
@@ -285,8 +521,10 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
         ...formData,
         from: search.from,
         to: search.to,
-        fromId: fromStationInfo?.stationId || "",
-        toId: toStationInfo?.stationId || "",
+        fromId: search.fromId || fromStationInfo?.stationId || "",
+        toId: search.toId || toStationInfo?.stationId || "",
+        fromSearchCity: search.fromSearchCity || fromStationInfo?.searchCity || search.from,
+        toSearchCity: search.toSearchCity || toStationInfo?.searchCity || search.to,
       });
       setShowFromDropdown(false);
       setShowRecentFrom(false);
@@ -295,24 +533,44 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
       setFormData({
         ...formData,
         to: search.to,
-        toId: toStationInfo?.stationId || "",
+        toId: search.toId || toStationInfo?.stationId || "",
+        toSearchCity: search.toSearchCity || toStationInfo?.searchCity || search.to,
       });
       setShowToDropdown(false);
       setShowRecentTo(false);
     }
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (formData.from && formData.to && formData.date) {
-      // ETS API uses city names directly, so we just need valid names
-      // Ensure user selected from dropdown (stationId will be set)
-      if (!stationMap.has(formData.from.toLowerCase()) || !stationMap.has(formData.to.toLowerCase())) {
+      const { map } = await ensureStationsReady();
+      const extractIataCode = (value) => {
+        const text = value.trim().toUpperCase();
+        return text.match(/\(([A-Z]{3})\)$/)?.[1] || text.match(/^[A-Z]{3}$/)?.[0] || '';
+      };
+      const fromStationInfo = getStationData(formData.from) || map.get(normalizeKey(formData.from));
+      const toStationInfo = getStationData(formData.to) || map.get(normalizeKey(formData.to));
+      const typedFromCode = extractIataCode(formData.from);
+      const typedToCode = extractIataCode(formData.to);
+      const fromId = formData.fromId || fromStationInfo?.stationId || (mode === 'flight' ? typedFromCode : '');
+      const toId = formData.toId || toStationInfo?.stationId || (mode === 'flight' ? typedToCode : '');
+      const fromSearchCity = formData.fromSearchCity || fromStationInfo?.searchCity || getCorrectedCity(formData.from);
+      const toSearchCity = formData.toSearchCity || toStationInfo?.searchCity || getCorrectedCity(formData.to);
+
+      if (mode === 'flight') {
+        if (!fromId || !toId) {
+          setPopup({ show: true, message: "Please select airports or enter valid 3-letter IATA codes" });
+          return;
+        }
+      } else if (!fromStationInfo || !toStationInfo) {
         setPopup({ show: true, message: "Please select valid cities from the dropdown" });
         return;
       }
+
+      const searchData = { ...formData, fromId, toId, fromSearchCity, toSearchCity };
       // Save to recent searches
-      saveRecentSearch(formData.from, formData.to);
-      onSearch(formData);
+      saveRecentSearch(formData.from, formData.to, fromId, toId, fromSearchCity, toSearchCity);
+      onSearch(searchData);
     } else {
       setPopup({ show: true, message: "Please fill in From, To locations and Date" });
     }
@@ -326,11 +584,11 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
           <div className="search-field-figma" ref={fromRef}>
             <img src={fromIcon} alt="Origin" className="field-icon-img" />
             <div className="field-content-figma">
-              <span className="field-label-figma">Origin City</span>
+              <span className="field-label-figma">Origin {mode === 'flight' ? 'Airport' : 'City'}</span>
               <input
                 type="text"
                 name="from"
-                placeholder="From City"
+                placeholder={mode === 'flight' ? 'From Airport or City' : 'From City'}
                 value={formData.from}
                 onChange={handleChange}
                 onFocus={() => handleFocus("from")}
@@ -360,8 +618,13 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
                     {showRecentFrom && <div className="dropdown-section-header">Popular Cities</div>}
                     <ul className="suggestions-list">
                       {fromSuggestions.map((city, index) => (
-                        <li key={index} onClick={() => handleSelectCity("from", city)}>
-                          {city}
+                        <li key={`${city.displayName}-${index}`} onClick={() => handleSelectCity("from", city)}>
+                          <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : ''}`}>{city.kind === 'city' ? '▦' : '🚌'}</span>
+                          <span className="suggestion-copy">
+                            <b>{city.displayName}</b>
+                            <small>{city.subtitle || city.searchCity}</small>
+                          </span>
+                          <span className="suggestion-arrow">↗</span>
                         </li>
                       ))}
                     </ul>
@@ -386,11 +649,11 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
           <div className="search-field-figma" ref={toRef}>
             <img src={toIcon} alt="Destination" className="field-icon-img" />
             <div className="field-content-figma">
-              <span className="field-label-figma">Destination City</span>
+              <span className="field-label-figma">Destination {mode === 'flight' ? 'Airport' : 'City'}</span>
               <input
                 type="text"
                 name="to"
-                placeholder="To city"
+                placeholder={mode === 'flight' ? 'To Airport or City' : 'To city'}
                 value={formData.to}
                 onChange={handleChange}
                 onFocus={() => handleFocus("to")}
@@ -420,8 +683,13 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
                     {showRecentTo && <div className="dropdown-section-header">Popular Cities</div>}
                     <ul className="suggestions-list">
                       {toSuggestions.map((city, index) => (
-                        <li key={index} onClick={() => handleSelectCity("to", city)}>
-                          {city}
+                        <li key={`${city.displayName}-${index}`} onClick={() => handleSelectCity("to", city)}>
+                          <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : ''}`}>{city.kind === 'city' ? '▦' : '🚌'}</span>
+                          <span className="suggestion-copy">
+                            <b>{city.displayName}</b>
+                            <small>{city.subtitle || city.searchCity}</small>
+                          </span>
+                          <span className="suggestion-arrow">↗</span>
                         </li>
                       ))}
                     </ul>
@@ -470,9 +738,9 @@ const SearchBus = ({ onSearch, initialValues, compact = false }) => {
           </div>
 
           {/* Search Button - Audit Fix: Made more prominent */}
-          <button className="search-btn-figma search-btn-prominent" onClick={handleSearch} type="button">
+          <button className="search-btn-figma search-btn-prominent" onClick={handleSearch} type="button" disabled={stationsLoading}>
             <SearchIcon />
-            <span>Search Buses</span>
+            <span>{stationsLoading ? 'Loading stations…' : mode === 'flight' ? 'Search Flights' : 'Search Buses'}</span>
           </button>
         </div>
       </div>

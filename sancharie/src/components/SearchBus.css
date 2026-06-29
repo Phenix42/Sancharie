@@ -240,6 +240,12 @@
   height: 20px;
 }
 
+.search-btn-figma:disabled {
+  opacity: 0.7;
+  cursor: wait;
+  transform: none;
+}
+
 /* City Dropdown */
 .city-dropdown {
   position: absolute;
@@ -258,12 +264,63 @@
 }
 
 .city-dropdown li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px 16px;
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   color: #333;
   transition: background 0.2s ease;
+}
+
+.suggestion-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: #f7f9fb;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.suggestion-icon.city {
+  background: #fff8ed;
+  color: #a37226;
+  font-size: 18px;
+}
+
+.suggestion-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.suggestion-copy b {
+  overflow: hidden;
+  color: #1f2933;
+  font-size: 15px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-copy small {
+  overflow: hidden;
+  color: #8b95a1;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-arrow {
+  color: #8b95a1;
+  font-size: 17px;
 }
 
 .city-dropdown li:hover {
@@ -323,6 +380,9 @@
 
 .recent-list li,
 .suggestions-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px 16px;
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', sans-serif;

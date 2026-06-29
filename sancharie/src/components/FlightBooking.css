@@ -1,0 +1,354 @@
+.flight-booking-page {
+  min-height: calc(100vh - 160px);
+  padding: 32px max(20px, calc((100vw - 1180px) / 2));
+  background: #f4f7f8;
+  color: #163343;
+}
+
+.flight-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #274b5d;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.flight-booking-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(440px, 1.1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.flight-review-panel,
+.flight-passenger-form,
+.flight-booking-empty,
+.flight-booking-success {
+  background: #fff;
+  border: 1px solid #dce5e9;
+  border-radius: 18px;
+  box-shadow: 0 12px 35px rgba(0, 44, 63, 0.08);
+}
+
+.flight-review-panel {
+  padding: 24px;
+  position: sticky;
+  top: 20px;
+}
+
+.flight-review-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5ecef;
+}
+
+.flight-review-heading svg {
+  color: #b58b25;
+}
+
+.flight-review-heading h1,
+.flight-form-heading h2,
+.flight-rule-box h2 {
+  margin: 0;
+  color: #002c3f;
+}
+
+.flight-review-heading h1 {
+  font-size: 22px;
+}
+
+.flight-review-heading p,
+.flight-form-heading span {
+  margin: 3px 0 0;
+  color: #6b7e87;
+  font-size: 13px;
+}
+
+.flight-review-route {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 24px 0 12px;
+}
+
+.flight-review-route > div:last-child {
+  text-align: right;
+}
+
+.flight-review-route strong {
+  display: block;
+  font-size: 26px;
+  color: #002c3f;
+}
+
+.flight-review-route span {
+  display: block;
+  margin-top: 4px;
+  color: #6b7e87;
+  font-size: 12px;
+}
+
+.flight-review-line {
+  text-align: center;
+}
+
+.flight-review-line i {
+  display: block;
+  height: 1px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, #b58b25, #d7c27e, #b58b25);
+}
+
+.flight-review-carrier {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0 20px;
+  color: #3d5865;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.flight-fare-summary {
+  padding: 16px;
+  background: #f7fafb;
+  border-radius: 12px;
+}
+
+.flight-fare-summary > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.flight-fare-summary .total {
+  margin-top: 8px;
+  padding-top: 13px;
+  border-top: 1px solid #dce5e9;
+  color: #002c3f;
+  font-size: 18px;
+}
+
+.flight-rule-box {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #e7ddbd;
+  border-radius: 12px;
+  background: #fffdf6;
+}
+
+.flight-rule-box h2 {
+  font-size: 15px;
+}
+
+.flight-rule-box p {
+  max-height: 170px;
+  margin: 10px 0 0;
+  overflow: auto;
+  white-space: pre-line;
+  color: #536872;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.flight-passenger-form {
+  padding: 26px;
+}
+
+.flight-form-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.flight-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.flight-form-grid.three {
+  grid-template-columns: 0.55fr 1.25fr 1.2fr;
+}
+
+.flight-passenger-form label,
+.flight-full-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #385361;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.flight-passenger-form input,
+.flight-passenger-form select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #cfdce2;
+  border-radius: 9px;
+  background: #fff;
+  color: #163343;
+  font: inherit;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.flight-passenger-form input:focus,
+.flight-passenger-form select:focus {
+  outline: 2px solid rgba(181, 139, 37, 0.22);
+  border-color: #b58b25;
+}
+
+.flight-document-section {
+  margin: 22px 0;
+  padding: 18px;
+  border-radius: 12px;
+  background: #f7fafb;
+}
+
+.flight-document-section h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+}
+
+.flight-full-field {
+  margin-bottom: 18px;
+}
+
+.flight-ssr-note,
+.flight-preparation-warning,
+.flight-signin-notice,
+.flight-form-error {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.flight-ssr-note,
+.flight-signin-notice {
+  background: #eef6f8;
+  color: #28566a;
+}
+
+.flight-preparation-warning {
+  background: #fff8e6;
+  color: #765911;
+}
+
+.flight-form-error {
+  background: #fff0f0;
+  color: #a32626;
+}
+
+.flight-terms {
+  flex-direction: row !important;
+  align-items: flex-start;
+  gap: 10px !important;
+  margin: 20px 0;
+  line-height: 1.45;
+}
+
+.flight-terms input {
+  width: 18px;
+  min-height: 18px;
+  margin-top: 1px;
+}
+
+.flight-pay-button,
+.flight-booking-empty button,
+.flight-booking-success button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  border: 0;
+  border-radius: 11px;
+  background: #b58b25;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.flight-pay-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.flight-booking-empty,
+.flight-booking-success {
+  max-width: 560px;
+  margin: 45px auto;
+  padding: 42px;
+  text-align: center;
+}
+
+.flight-booking-empty svg,
+.flight-booking-success svg {
+  color: #b58b25;
+}
+
+.flight-booking-empty h1,
+.flight-booking-success h1 {
+  margin: 16px 0 8px;
+  color: #002c3f;
+}
+
+.flight-success-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.flight-booking-success button.danger {
+  background: #a43d3d;
+}
+
+@media (max-width: 900px) {
+  .flight-booking-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .flight-review-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .flight-booking-page {
+    padding: 20px 12px;
+  }
+
+  .flight-review-panel,
+  .flight-passenger-form {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .flight-form-grid,
+  .flight-form-grid.three {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .flight-review-route strong {
+    font-size: 21px;
+  }
+
+  .flight-success-actions {
+    flex-direction: column;
+  }
+}

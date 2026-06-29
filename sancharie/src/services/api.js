@@ -215,6 +215,87 @@ export const user = {
 // BUS API (ETS - eTravelSmart)
 // ============================================
 
+const flightRequest = async (endpoint, payload) => {
+  const data = await apiRequest(`/api/flights/${endpoint}`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if (data.apiStatus && !data.apiStatus.success) {
+    throw new Error(data.apiStatus.message || 'Flight request failed');
+  }
+
+  return data;
+};
+
+export const flights = {
+  /** Search one-way, return, or multi-city flights. */
+  search: async (originOrOptions, destination, date, options = {}) => {
+    const payload = typeof originOrOptions === 'object'
+      ? originOrOptions
+      : { ...options, origin: originOrOptions, destination, date };
+    const data = await flightRequest('search', payload);
+
+    return {
+      ...data,
+      flights: data.flights || [],
+      searchTokenId: data.searchTokenId || data.SearchTokenId || '',
+      source: data.source || 'provider',
+      success: data.apiStatus?.success ?? data.success ?? false,
+      message: data.apiStatus?.message,
+    };
+  },
+
+  /** Get the provider's lowest fares for surrounding dates. */
+  getCalendarFares: async (originOrOptions, destination, date, options = {}) => {
+    const payload = typeof originOrOptions === 'object'
+      ? originOrOptions
+      : { ...options, origin: originOrOptions, destination, date };
+    const data = await flightRequest('calendar-fares', payload);
+    return {
+      ...data,
+      calendarFares: data.calendarFares || data.Result || [],
+      searchTokenId: data.searchTokenId || data.SearchTokenId || '',
+    };
+  },
+
+  getFareRules: async (searchTokenId, resultIndex) => {
+    const data = await flightRequest('fare-rule', { searchTokenId, resultIndex });
+    return { ...data, fareRules: data.Result || [] };
+  },
+
+  confirmFare: async (searchTokenId, resultIndex) => {
+    const data = await flightRequest('fare-confirmation', { searchTokenId, resultIndex });
+    return { ...data, fareConfirmation: data.Result || null };
+  },
+
+  getSSR: async (searchTokenId, resultIndex) => {
+    const data = await flightRequest('ssr', { searchTokenId, resultIndex });
+    return { ...data, ssr: data.Result || null };
+  },
+
+  book: async ({ searchTokenId, resultIndex, passengers, paymentId, ...rest }) => {
+    const data = await flightRequest('book', { ...rest, searchTokenId, resultIndex, passengers, paymentId });
+    return { ...data, booking: data.Result || null };
+  },
+
+  getBookingDetail: async ({ searchTokenId, bookingId, pnr = '', ...rest }) => {
+    const data = await flightRequest('booking-detail', { ...rest, searchTokenId, bookingId, pnr });
+    return { ...data, booking: data.Result || null };
+  },
+
+  cancelBooking: async ({ searchTokenId, bookingId, requestType = 'FullCancellation', remark = 'Cancel Ticket', ...rest }) => {
+    const data = await flightRequest('cancel-request', {
+      ...rest,
+      searchTokenId,
+      bookingId,
+      requestType,
+      remark,
+    });
+    return { ...data, cancellation: data.Result || null };
+  },
+};
+
 export const bus = {
   /**
    * Get all stations/cities
@@ -452,6 +533,13 @@ export const bus = {
     contactDetails,
     fareData,
   }) => {
+    // Validate required parameters
+    if (!bus) throw new Error('Bus information is required');
+    if (!boardingPoint) throw new Error('Boarding point is required');
+    if (!droppingPoint) throw new Error('Dropping point is required');
+    if (!passengers || passengers.length === 0) throw new Error('At least one passenger is required');
+    if (!contactDetails) throw new Error('Contact details are required');
+
     const seatMap = (selectedSeats || []).reduce((map, seat) => {
       const key = (seat.seatName || seat.seatNbr || seat.id || '').toString();
       if (key) map[key] = seat;
@@ -488,7 +576,7 @@ export const bus = {
       destinationCity: bus?.destinationCity || bus?.destination,
       doj: bus?.dateOfJourney || bus?.doj,
       routeScheduleId: bus?.routeScheduleId,
-      inventoryType: bus?.inventoryType || 0,
+      inventoryType: bus?.inventoryType ?? 0,
       boardingPoint: {
         id: boardingPoint?.CityPointId || boardingPoint?.id,
         location: boardingPoint?.CityPointLocation || boardingPoint?.location || boardingPoint?.CityPointName,
@@ -499,29 +587,32 @@ export const bus = {
         location: droppingPoint?.CityPointLocation || droppingPoint?.location || droppingPoint?.CityPointName,
         time: droppingPoint?.CityPointTime || droppingPoint?.time,
       },
-      customerName: passengers[0]?.name?.split(' ')[0] || passengers[0]?.name || '',
+      customerName: passengers[0]?.name?.split(' ')[0] || passengers[0]?.name || 'Customer',
       customerLastName: passengers[0]?.name?.split(' ').slice(1).join(' ') || '',
-      customerEmail: contactDetails?.email || passengers[0]?.email || '',
+      customerEmail: contactDetails?.email || passengers[0]?.email || 'noemail@sancharie.com',
       customerPhone: contactDetails?.phone || passengers[0]?.phone || '',
       emergencyPhNumber: contactDetails?.phone || passengers[0]?.phone || '',
       customerAddress: contactDetails?.state || passengers[0]?.address || '',
       blockSeatPaxDetails: passengers.map((p, index) => {
+        if (!p.name) throw new Error(`Passenger ${index + 1} name is required`);
+        if (!p.age) throw new Error(`Passenger ${index + 1} age is required`);
+
         const seatFareDetails = getSeatFareDetails(p, index);
         return {
           age: String(p.age || '25'),
           name: p.name,
           seatNbr: p.seatNumber || p.seatName || p.seatNbr,
-          sex: p.gender === 'male' ? 'M' : 'F',
-          fare: seatFareDetails.fare,
-          serviceTaxAmount: seatFareDetails.serviceTaxAmount,
-          operatorServiceChargeAbsolute: seatFareDetails.operatorServiceChargeAbsolute,
-          totalFareWithTaxes: seatFareDetails.totalFareWithTaxes,
+          sex: (p.gender || 'male').charAt(0).toUpperCase() === 'M' ? 'M' : 'F',
+          fare: Math.round(seatFareDetails.fare * 100) / 100,
+          serviceTaxAmount: Math.round(seatFareDetails.serviceTaxAmount * 100) / 100,
+          operatorServiceChargeAbsolute: Math.round(seatFareDetails.operatorServiceChargeAbsolute * 100) / 100,
+          totalFareWithTaxes: Math.round(seatFareDetails.totalFareWithTaxes * 100) / 100,
           ladiesSeat: p.ladiesSeat || false,
           lastName: p.name?.split(' ').slice(1).join(' ') || '',
-          mobile: p.phone || contactDetails?.phone || '',
-          title: p.gender === 'male' ? 'Mr' : 'Ms',
-          email: p.email || contactDetails?.email || '',
-          idType: p.idType || '',
+          mobile: contactDetails?.phone || passengers[0]?.phone || '',
+          title: (p.gender || 'male').charAt(0).toUpperCase() === 'M' ? 'Mr' : 'Ms',
+          email: contactDetails?.email || passengers[0]?.email || '',
+          idType: p.idType || 'PASSPORT',
           idNumber: p.idNumber || '',
           nameOnId: p.nameOnId || p.name,
           primary: index === 0,
@@ -531,16 +622,19 @@ export const bus = {
       }),
     };
 
+    console.log('[BlockSeat] Sending request:', JSON.stringify(blockData, null, 2));
+
     const data = await apiRequest('/api/ets/blockTicket', {
       method: 'POST',
       body: JSON.stringify(blockData),
     });
 
     if (data.apiStatus && !data.apiStatus.success) {
-      // Log detailed error but throw a generic message to avoid API sequence error details
-      console.error('Block seat API error:', data.apiStatus.message);
+      console.error('[BlockSeat] Error response:', data.apiStatus);
       throw new Error(data.apiStatus.message || 'Failed to block seats');
     }
+
+    console.log('[BlockSeat] Success:', data.blockTicketKey);
 
     return {
       blockTicketKey: data.blockTicketKey,
@@ -582,7 +676,6 @@ export const bus = {
     const data = await apiRequest(`/api/ets/getRtcUpdatedFare?${params}`);
 
     if (data.apiStatus && !data.apiStatus.success) {
-      console.error('RTC updated fare API error:', data.apiStatus.message);
       throw new Error(data.apiStatus.message || 'Failed to get updated fare');
     }
 
@@ -607,7 +700,6 @@ export const bus = {
     const data = await apiRequest(`/api/ets/seatBooking?${params}`);
 
     if (data.apiStatus && !data.apiStatus.success) {
-      console.error('Book ticket API error:', data.apiStatus.message);
       throw new Error(data.apiStatus.message || 'Booking failed');
     }
 
@@ -995,6 +1087,7 @@ export default {
   auth,
   user,
   bus,
+  flights,
   payment,
   API_BASE_URL,
 };

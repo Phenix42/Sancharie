@@ -23,6 +23,7 @@ const authRoutes = require('./routes/auth');
 const paymentRoutes = require('./routes/payment');
 const userRoutes = require('./routes/user');
 const busRoutes = require('./routes/bus');
+const { router: flightRoutes } = require('./routes/flight');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -113,7 +114,7 @@ app.use(cors({
 }));
 
 // Parse JSON bodies with size limit (prevent large payload attacks)
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '100kb' }));
 
 // Parse URL-encoded bodies with size limit
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
@@ -139,8 +140,9 @@ app.use('/payment', paymentRoutes);
 // User routes (profile, bookings)
 app.use('/user', userRoutes);
 
-// Bus API proxy routes (hides actual API URL from browser)
+// Bus and flight API proxy routes (hide actual API URLs from browser)
 app.use('/api', busRoutes);
+app.use('/api/flights', flightRoutes);
 
 // ============================================
 // ERROR HANDLING
@@ -192,6 +194,7 @@ ${process.env.SMS_API_KEY ? '✅' : '❌'} SMS_API_KEY
 ${process.env.RAZORPAY_KEY_ID ? '✅' : '❌'} RAZORPAY_KEY_ID
 ${process.env.RAZORPAY_KEY_SECRET ? '✅' : '❌'} RAZORPAY_KEY_SECRET
 ${process.env.ETS_API_USERNAME ? '✅' : '❌'} ETS_API
+${process.env.FLIGHT_API_USERNAME && process.env.FLIGHT_API_PASSWORD ? '✅' : '❌'} FLIGHT_API
 ${process.env.MONGODB_URI ? '✅' : '❌'} MONGODB_URI
 ============================================
   `);

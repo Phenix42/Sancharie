@@ -167,109 +167,21 @@ export default function Payment() {
     return true;
   };
 
-  // TEST MODE - Set to true to bypass Razorpay payment
-  const TEST_MODE = true;
-
   const handlePayNow = async () => {
     if (!validatePayment()) return;
+
+    // Validate blockSeatData is available
+    if (!blockSeatData?.blockTicketKey) {
+      setBookingError('Block ticket session expired. Please select seats again.');
+      toast.error('Please select seats again and complete booking details.');
+      setTimeout(() => navigate(-2), 2000);
+      return;
+    }
 
     setIsProcessing(true);
     setBookingError(null);
 
     try {
-      if (TEST_MODE) {
-        console.log('TEST MODE: Bypassing Razorpay payment');
-        
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        const fakePaymentId = 'test_pay_' + Date.now();
-        setPaymentId(fakePaymentId);
-        
-        const mockBookingResult = {
-          bookingId: 'SAN' + Date.now().toString().slice(-8),
-          ticketNo: 'TKT' + Math.random().toString(36).substr(2, 8).toUpperCase(),
-          travelOperatorPNR: 'PNR' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-          bookingStatus: 'Confirmed',
-          invoiceAmount: grandTotal
-        };
-        
-        setBookingResponse({
-          ...mockBookingResult,
-          paymentId: fakePaymentId,
-          orderId: 'test_order_' + Date.now(),
-        });
-        actions.setBookingData(mockBookingResult);
-        
-        if (isAuthenticated) {
-          try {
-            await createBooking({
-              busName: busData?.name || busData?.TravelName || 'Bus Service',
-              busType: busData?.type || busData?.BusType || 'Sleeper',
-              busNumber: busData?.busNumber || '',
-              source: boardingPoint?.name || boardingPoint?.CityPointName || '',
-              destination: droppingPoint?.name || droppingPoint?.CityPointName || '',
-              fromCity: fromCity,
-              toCity: toCity,
-              journeyDate: busData?.date || busData?.DepartureTime || new Date().toISOString(),
-              boardingPoint: boardingPoint?.name || boardingPoint?.CityPointName || '',
-              droppingPoint: droppingPoint?.name || droppingPoint?.CityPointName || '',
-              departureTime: boardingPoint?.time || boardingPoint?.Time || '',
-              arrivalTime: droppingPoint?.time || droppingPoint?.Time || '',
-              seats: seatNames,
-              selectedSeats: seatNames,
-              passengers: passengers.map(p => ({
-                name: p.name,
-                age: p.age,
-                gender: p.gender,
-                seatNumber: p.seatName || p.seatNumber
-              })),
-              baseFare: fareData?.baseFare || fareData?.totalFare || grandTotal,
-              serviceTax: fareData?.serviceTax || 0,
-              totalFare: grandTotal,
-              paymentId: fakePaymentId,
-              paymentStatus: 'completed',
-              paymentMethod: 'test_mode',
-              externalBookingId: mockBookingResult?.bookingId,
-              ticketNo: mockBookingResult?.ticketNo,
-              pnr: mockBookingResult?.travelOperatorPNR
-            });
-            console.log('Booking saved to database (TEST MODE)');
-          } catch (dbError) {
-            console.error('Failed to save booking to database:', dbError);
-          }
-        }
-        
-        const ticketData = {
-          bookingId: mockBookingResult?.bookingId,
-          pnr: mockBookingResult?.travelOperatorPNR,
-          busName: busData?.name || busData?.TravelName || 'Bus Service',
-          busType: busData?.type || busData?.BusType || 'Sleeper',
-          fromCity: fromCity,
-          toCity: toCity,
-          journeyDate: busData?.date || busData?.DepartureTime,
-          boardingPoint: boardingPoint,
-          droppingPoint: droppingPoint,
-          departureTime: boardingPoint?.time || boardingPoint?.Time,
-          arrivalTime: droppingPoint?.time || droppingPoint?.Time,
-          seats: seatNames,
-          passengers: passengers,
-          totalFare: grandTotal,
-          paymentId: fakePaymentId,
-          contactPhone: contactDetails?.phone,
-          contactEmail: contactDetails?.email
-        };
-        
-        setTimeout(() => {
-          generateTicketPDF(ticketData);
-        }, 1000);
-        
-        // Stop session timer on successful booking
-        actions.resetSession();
-        
-        setPaymentSuccess(true);
-        setIsProcessing(false);
-        return;
-      }
 
       const bookingDetails = {
         busName: busData?.name || busData?.TravelName || "Bus Service",
@@ -307,22 +219,31 @@ export default function Payment() {
       if (paymentResult.verified) {
         // Use blockTicketKey from blockSeat response for final booking
         const blockTicketKey = blockSeatData?.blockTicketKey;
-        
+
         if (!blockTicketKey) {
-          throw new Error('Block ticket key not found. Please try booking again.');
+          throw new Error('Block ticket key not found. Please select seats and complete details again.');
         }
+
+        console.log('[Booking Flow] Starting seatBooking with blockTicketKey:', blockTicketKey.substring(0, 20) + '...');
+
+        let rtcFareData = null;
         
-        // For RTC services, get updated fare first (optional but recommended)
+        // For RTC services, get updated fare FIRST before seatBooking
         if (busData?.isRTC) {
           try {
-            await bus.getRtcUpdatedFare(blockTicketKey);
+            console.log('[Booking Flow] Bus is RTC, calling getRtcUpdatedFare...');
+            rtcFareData = await bus.getRtcUpdatedFare(blockTicketKey);
+            console.log('[Booking Flow] RTC fare update received:', rtcFareData);
           } catch (rtcError) {
-            console.warn('RTC fare update failed, proceeding with booking:', rtcError);
+            console.warn('[Booking Flow] RTC fare update failed (continuing anyway):', rtcError.message);
+            // Continue with booking even if RTC fare update fails
           }
         }
         
-        // Book the ticket using blockTicketKey
+        // Call seatBooking to complete reservation
+        console.log('[Booking Flow] Calling seatBooking...');
         const bookingResult = await bus.bookTicket(blockTicketKey);
+        console.log('[Booking Flow] Booking successful:', bookingResult);
         
         setBookingResponse({
           ...bookingResult,
@@ -402,23 +323,19 @@ export default function Payment() {
     } catch (error) {
       console.error("Payment/Booking error:", error);
       
-      if (error.message === 'Payment cancelled by user') {
+      // Handle specific API errors
+      if (error.message && error.message.includes('missing API')) {
+        setBookingError('Booking session expired. Please select seats again and complete details to retry.');
+        toast.error('Session expired. Starting fresh booking...');
+        setTimeout(() => navigate('/', { replace: true }), 3000);
+      } else if (error.message === 'Payment cancelled by user') {
         setBookingError(null);
+      } else if (error.message && error.message.includes('Block ticket')) {
+        setBookingError('Failed to reserve seats. Please try again.');
+        toast.error('Seat reservation failed. Please try a different route or bus.');
       } else {
-        // Show generic message for technical/API errors
-        const isNetworkError = error.message?.includes('Failed to fetch') || error.message?.includes('Network');
-        const isSequenceError = error.message?.includes('API Sequence') || error.message?.includes('API methods');
-        const isTechnicalError = error.message?.includes('U9') || error.message?.includes('timeout');
-        const isBlockTicketError = error.message?.includes('Block ticket') || error.message?.includes('blockTicket');
-        
-        if (isNetworkError || isSequenceError || isTechnicalError || isBlockTicketError) {
-          const errorMsg = 'Something went wrong. Please try again later.';
-          setBookingError(errorMsg);
-          toast.error(errorMsg);
-        } else {
-          setBookingError(error.message || "Payment failed. Please try again.");
-          toast.error(error.message || 'Payment failed. Please try again.');
-        }
+        setBookingError(error.message || "Booking failed. Please try again.");
+        toast.error(error.message || 'Booking failed. Please try again.');
       }
     } finally {
       setIsProcessing(false);
