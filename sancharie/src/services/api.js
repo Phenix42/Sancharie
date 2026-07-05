@@ -422,8 +422,8 @@ export const bus = {
         // Price info
         BusPrice: {
           PublishedPrice: fare,
-          BasePrice: Math.round(fare * 1.1), // Original price (10% higher for discount display)
-          Discount: 10, // Default discount percentage
+          BasePrice: Math.round(fare),
+          Discount: 0,
         },
         
         // Boarding/Dropping points

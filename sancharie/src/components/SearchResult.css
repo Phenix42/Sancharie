@@ -378,6 +378,75 @@
   border-radius: 6px;
 }
 
+/* ================= BUS SUMMARY CARD ================= */
+.bus-summary-card {
+  background: linear-gradient(135deg, #002C3F 0%, #004d6d 100%);
+  color: #ffffff;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 44, 63, 0.2);
+}
+
+.bus-summary-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bus-summary-card p {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.bus-summary-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.bus-summary-breakdown span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bus-summary-breakdown span b {
+  font-weight: 700;
+  color: #7FD8F3;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
 .filters-header {
   display: flex;
   justify-content: space-between;
@@ -819,10 +888,9 @@
   color: #666666;
 }
 
-/* Discount Ribbon - Positioned in Header */
+/* Discount Ribbon - hidden globally (removed Flat 10% OFF) */
 .discount-ribbon {
-  position: relative;
-  flex-shrink: 0;
+  display: none !important;
 }
 
 .ribbon-content {
@@ -848,7 +916,76 @@
   display: none;
 }
 
+/* Cheapest Bus Badge */
+.sr-card.cheapest-bus {
+  border-color: #ffc107;
+  background: linear-gradient(to right, #fffbf0 0%, #ffffff 50%);
+}
+
+.cheapest-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #FFB800 0%, #FFA500 100%);
+  color: #ffffff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
 /* Card Main Content */
+
+/* Bus Summary Card - styled similar to flight summary */
+.bus-summary-card, .flight-summary-card {
+  background: #fff;
+  border: 1px solid var(--flight-border, #dfe7eb);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 20px 55px rgba(0, 44, 63, 0.08);
+  margin-bottom: 18px;
+}
+
+.bus-summary-card h3 {
+  margin: 0 0 6px 0;
+  color: var(--flight-navy, #002c3f);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.bus-summary-card p {
+  margin: 0 0 12px 0;
+  color: #6f8088;
+  font-size: 13px;
+}
+
+.bus-summary-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bus-summary-breakdown span {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  color: #1d282f;
+}
+
+.page-back-btn-inline {
+  background: transparent;
+  border: 0;
+  color: var(--flight-navy, #002c3f);
+  font-weight: 800;
+  font-family: 'Montserrat', sans-serif;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
 .card-main-content {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) auto 1px auto;

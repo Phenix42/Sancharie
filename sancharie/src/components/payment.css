@@ -207,10 +207,11 @@
 }
 
 .journey-summary-card {
-  background: var(--color-bg);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: none;
 }
 
 /* Bus Header */
@@ -218,8 +219,8 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding-bottom: 16px;
-  margin-bottom: 16px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -236,7 +237,7 @@
 
 .bus-details h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--color-text);
 }
@@ -250,7 +251,7 @@
 .route-timeline {
   position: relative;
   padding-left: 24px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .timeline-item {
@@ -333,7 +334,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 16px;
+  padding-top: 20px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -356,8 +357,9 @@
 }
 
 .seat-tag {
-  background: linear-gradient(135deg, var(--color-secondary), var(--color-secondary-dark));
-  color: white;
+  background: var(--color-bg);
+  color: var(--color-secondary);
+  border: 1px solid var(--color-border);
   padding: 5px 12px;
   border-radius: var(--radius-full);
   font-size: 12px;

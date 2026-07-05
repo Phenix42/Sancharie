@@ -101,6 +101,24 @@
   letter-spacing: 1px;
 }
 
+.page-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #002C3F;
+  cursor: pointer;
+  margin-right: 12px;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.page-back-btn:hover {
+  background: rgba(2, 44, 63, 0.06);
+}
+
 .logo-img {
   height: 50px;
   width: auto;

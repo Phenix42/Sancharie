@@ -188,11 +188,12 @@ function BusPriceDisplay({ bus }) {
   }, [bus.ResultIndex, minFare]);
 
   const displayPrice = minFare || bus.BusPrice?.PublishedPrice;
-  const oldPrice = bus.BusPrice?.BasePrice || (bus.BusPrice?.PublishedPrice + 100);
+  const oldPrice = bus.BusPrice?.BasePrice || null;
+  const showOld = oldPrice && displayPrice && oldPrice > displayPrice;
 
   return (
     <div className="price-row">
-      <span className="old-price">₹{oldPrice}</span>
+      {showOld && <span className="old-price">₹{oldPrice}</span>}
       <span className="current-price">₹{displayPrice}</span>
     </div>
   );
@@ -489,6 +490,17 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
       return true;
     });
   }, [buses, maxPrice, selectedBusTypes, selectedTimes, selectedOperators, selectedBoarding, selectedDropping]);
+
+  /* Calculate bus price range and stats */
+  const busPriceRange = useMemo(() => {
+    const prices = filteredBuses
+      .map((bus) => bus.BusPrice?.PublishedPrice || 0)
+      .filter((price) => price > 0);
+    return {
+      min: prices.length ? Math.min(...prices) : 0,
+      max: prices.length ? Math.max(...prices) : 0,
+    };
+  }, [filteredBuses]);
 
   const flightPriceRange = useMemo(() => {
     const prices = flights.map((flight) => Number(flight.price || 0)).filter((price) => price > 0);
@@ -1172,9 +1184,20 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
 
   return (
     <div className="sr-page">
+      <button className="page-back-btn-inline" onClick={() => window.history.back()} title="Back">← Back</button>
       <div className="sr-layout">
-        {/* FILTERS */}
+        {/* BUS SUMMARY & FILTERS */}
         <aside className="filters-panel">
+          {/* BUS SUMMARY PANEL - Similar to flight summary */}
+          <div className="flight-summary-card bus-summary-card">
+            <h3>Search Summary</h3>
+            <p>Overview of available buses for this route.</p>
+            <div className="bus-summary-breakdown">
+              <span><b>{filteredBuses.length}</b> buses found</span>
+              <span><b>₹{busPriceRange.min}</b> lowest fare</span>
+            </div>
+          </div>
+
           <div className="filters-header">
             <h4>Filters</h4>
             <span
@@ -1418,9 +1441,13 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
             const totalStops = boardingPoints.length + droppingPoints.length;
             const otherStopsCount = Math.max(0, totalStops - 4);
             
+            // Check if this is the cheapest bus
+            const busPrice = bus.BusPrice?.PublishedPrice || 0;
+            const isCheapest = busPrice > 0 && busPrice === busPriceRange.min;
+            
             return (
             <React.Fragment key={bus.ResultIndex}>
-              <div className="sr-card">
+              <div className={`sr-card ${isCheapest ? 'cheapest-bus' : ''}`}>
                 {/* Header Row - Operator and Route */}
                 <div className="card-header-row">
                   <div className="operator-route">
@@ -1442,13 +1469,11 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
                       )}
                     </div>
                   </div>
-                  <div className="discount-ribbon">
-                    <div className="ribbon-content">
-                      <span>Flat </span>
-                      <strong>{bus.BusPrice?.Discount || 10}% OFF</strong>
+                  {isCheapest && (
+                    <div className="cheapest-badge">
+                      <Star size={14} /> Cheapest
                     </div>
-                    <div className="ribbon-zigzag"></div>
-                  </div>
+                  )}
                 </div>
                 
                 {/* Main Content Row */}
