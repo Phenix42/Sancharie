@@ -24,6 +24,7 @@ const paymentRoutes = require('./routes/payment');
 const userRoutes = require('./routes/user');
 const busRoutes = require('./routes/bus');
 const { router: flightRoutes } = require('./routes/flight');
+const { router: hotelRoutes } = require('./routes/hotel');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -92,7 +93,16 @@ const allowedOrigins = [
 
 // Add localhost only in development
 if (process.env.NODE_ENV !== 'production') {
-  allowedOrigins.push('http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000');
+  allowedOrigins.push(
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:4173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:4173',
+    'http://127.0.0.1:3000'
+  );
 }
 
 app.use(cors({
@@ -143,6 +153,7 @@ app.use('/user', userRoutes);
 // Bus and flight API proxy routes (hide actual API URLs from browser)
 app.use('/api', busRoutes);
 app.use('/api/flights', flightRoutes);
+app.use('/api/hotels', hotelRoutes);
 
 // ============================================
 // ERROR HANDLING
@@ -195,6 +206,7 @@ ${process.env.RAZORPAY_KEY_ID ? '✅' : '❌'} RAZORPAY_KEY_ID
 ${process.env.RAZORPAY_KEY_SECRET ? '✅' : '❌'} RAZORPAY_KEY_SECRET
 ${process.env.ETS_API_USERNAME ? '✅' : '❌'} ETS_API
 ${process.env.FLIGHT_API_USERNAME && process.env.FLIGHT_API_PASSWORD ? '✅' : '❌'} FLIGHT_API
+${process.env.HOTEL_API_USERNAME && process.env.HOTEL_API_PASSWORD ? '✅' : '⚠️'} HOTEL_API (mock fallback in development)
 ${process.env.MONGODB_URI ? '✅' : '❌'} MONGODB_URI
 ============================================
   `);

@@ -52,12 +52,14 @@ function BookingSteps() {
     <section className="booking-steps">
       <div className="booking-steps-container">
         <div className="booking-steps-header">
-          <span className="booking-steps-label">Simple Process</span>
-          <h2 className="booking-steps-title">
-            Book Your Ticket in <span className="highlight">6 Easy Steps</span>
-          </h2>
+          <div>
+            <span className="booking-steps-label">Simple Process</span>
+            <h2 className="booking-steps-title">
+              Book Your Ticket in <span className="highlight">6 Easy Steps</span>
+            </h2>
+          </div>
           <p className="booking-steps-subtitle">
-            From search to ticket, our streamlined process gets you travel-ready in under 2 minutes
+            From search to ticket, our streamlined process keeps every step simple and clear
           </p>
         </div>
 
@@ -80,13 +82,6 @@ function BookingSteps() {
           })}
         </div>
 
-        <div className="booking-stats">
-          <div className="stat-badge">
-            <span className="stat-time">1:47</span>
-            <span className="stat-unit">minutes</span>
-          </div>
-          <p className="stat-text">Average booking time</p>
-        </div>
       </div>
     </section>
   )

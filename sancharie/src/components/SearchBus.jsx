@@ -1,21 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./SearchBus.css";
 import { busApi } from "../services";
-import airports from "../data/airports";
+import { ArrowLeftRight, BadgeCheck, Building2, Clock3, MapPin, Search, ShieldCheck } from "lucide-react";
 
 // Import custom icons from assets
 import fromIcon from "../assets/searchbar/from.svg";
 import toIcon from "../assets/searchbar/to.svg";
-import swapIcon from "../assets/searchbar/swap.svg";
 import calIcon from "../assets/searchbar/cal.svg";
-
-// Search icon SVG component
-const SearchIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8"/>
-    <path d="M21 21l-4.35-4.35"/>
-  </svg>
-);
 
 const MAX_RECENT_SEARCHES = 5;
 const STATION_CACHE_KEY = 'sancharie_bus_stations_cache_v2';
@@ -257,6 +248,7 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
   const [toSuggestions, setToSuggestions] = useState([]);
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
+  const [stationNotice, setStationNotice] = useState("");
   const [popup, setPopup] = useState({ show: false, message: "" });
   const quickDate = formData.date === today
     ? 'today'
@@ -304,6 +296,8 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
 
   const loadStationOptions = async ({ force = false } = {}) => {
     if (mode === 'flight') {
+      setStationNotice("");
+      const { default: airports } = await import("../data/airports");
       const airportList = airports.map((airport) => createStationOption({
         displayName: airport.display,
         stationName: airport.display,
@@ -321,6 +315,7 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
     const cached = readStationCache();
     const cacheFresh = cached && Date.now() - cached.timestamp < STATION_CACHE_TTL_MS;
     if (!force && cacheFresh) {
+      setStationNotice("Using saved station list");
       return applyStationOptions(cached.options, cached.timestamp);
     }
 
@@ -332,15 +327,17 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
         : [];
       const options = [...getCuratedBusStations(), ...apiOptions];
       writeStationCache(options);
+      setStationNotice("");
       return applyStationOptions(options);
     } catch (error) {
       console.error('Failed to fetch stations:', error);
       if (cached?.options?.length) {
+        setStationNotice("Using saved station list");
         return applyStationOptions(cached.options, cached.timestamp);
       }
       const fallbackOptions = getCuratedBusStations();
       applyStationOptions(fallbackOptions);
-      setPopup({ show: true, message: "Live station list could not be refreshed. Showing saved popular stations." });
+      setStationNotice("Saved popular stations active");
       return { map: stationMapRef.current, options: stationOptionsRef.current };
     } finally {
       setStationsLoading(false);
@@ -358,6 +355,8 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
   // Fetch stations from API on component mount
   useEffect(() => {
     loadStationOptions();
+    // Reload stations only when switching between bus and flight modes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   // Helper function to find station data by name
@@ -579,9 +578,22 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
   return (
     <div className={`search-bus-wrapper ${compact ? 'compact' : ''}`}>
       <div className="search-container-figma">
+        {!compact && (
+          <div className="search-module-header">
+            <div className="search-heading-copy">
+              <span className="search-eyebrow">Bus Ticket Booking</span>
+              <h2>Compare routes, fares, and operators in one place</h2>
+            </div>
+            <div className={`search-module-status ${stationNotice ? 'is-notice' : ''}`} aria-label="Live booking assurance">
+              <span className="status-dot" />
+              {stationNotice || 'Live fares and seat availability'}
+            </div>
+          </div>
+        )}
+
         <div className="search-card-figma">
           {/* Origin - Audit Fix: Keep fixed labels */}
-          <div className="search-field-figma" ref={fromRef}>
+          <div className="search-field-figma route-field origin-field" ref={fromRef}>
             <img src={fromIcon} alt="Origin" className="field-icon-img" />
             <div className="field-content-figma">
               <span className="field-label-figma">Origin {mode === 'flight' ? 'Airport' : 'City'}</span>
@@ -597,7 +609,7 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
               />
             </div>
             {showFromDropdown && (fromSuggestions.length > 0 || showRecentFrom) && (
-              <div className="city-dropdown">
+              <div className="city-dropdown city-dropdown-origin">
                 {showRecentFrom && recentSearches.length > 0 && (
                   <div className="recent-searches-section">
                     <div className="dropdown-section-header">
@@ -619,7 +631,9 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
                     <ul className="suggestions-list">
                       {fromSuggestions.map((city, index) => (
                         <li key={`${city.displayName}-${index}`} onClick={() => handleSelectCity("from", city)}>
-                          <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : ''}`}>{city.kind === 'city' ? '▦' : '🚌'}</span>
+                          <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : 'boarding'}`} aria-hidden="true">
+                            {city.kind === 'city' ? <Building2 size={18} /> : <MapPin size={18} />}
+                          </span>
                           <span className="suggestion-copy">
                             <b>{city.displayName}</b>
                             <small>{city.subtitle || city.searchCity}</small>
@@ -642,11 +656,11 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
             title="Swap origin and destination"
             aria-label="Swap origin and destination cities"
           >
-            <img src={swapIcon} alt="Swap" className="swap-icon-img" />
+            <ArrowLeftRight className="swap-icon" size={18} strokeWidth={2.4} aria-hidden="true" />
           </button>
 
           {/* Destination - Audit Fix: Keep fixed labels */}
-          <div className="search-field-figma" ref={toRef}>
+          <div className="search-field-figma route-field destination-field" ref={toRef}>
             <img src={toIcon} alt="Destination" className="field-icon-img" />
             <div className="field-content-figma">
               <span className="field-label-figma">Destination {mode === 'flight' ? 'Airport' : 'City'}</span>
@@ -662,7 +676,7 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
               />
             </div>
             {showToDropdown && (toSuggestions.length > 0 || showRecentTo) && (
-              <div className="city-dropdown">
+              <div className="city-dropdown city-dropdown-destination">
                 {showRecentTo && recentSearches.length > 0 && (
                   <div className="recent-searches-section">
                     <div className="dropdown-section-header">
@@ -684,7 +698,9 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
                     <ul className="suggestions-list">
                       {toSuggestions.map((city, index) => (
                         <li key={`${city.displayName}-${index}`} onClick={() => handleSelectCity("to", city)}>
-                          <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : ''}`}>{city.kind === 'city' ? '▦' : '🚌'}</span>
+                          <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : 'boarding'}`} aria-hidden="true">
+                            {city.kind === 'city' ? <Building2 size={18} /> : <MapPin size={18} />}
+                          </span>
                           <span className="suggestion-copy">
                             <b>{city.displayName}</b>
                             <small>{city.subtitle || city.searchCity}</small>
@@ -739,10 +755,18 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
 
           {/* Search Button - Audit Fix: Made more prominent */}
           <button className="search-btn-figma search-btn-prominent" onClick={handleSearch} type="button" disabled={stationsLoading}>
-            <SearchIcon />
+            <Search size={20} strokeWidth={2.7} aria-hidden="true" />
             <span>{stationsLoading ? 'Loading stations…' : mode === 'flight' ? 'Search Flights' : 'Search Buses'}</span>
           </button>
         </div>
+
+        {!compact && (
+          <div className="search-assurance-row" aria-label="Booking assurances">
+            <span><ShieldCheck size={16} /> Secure checkout</span>
+            <span><BadgeCheck size={16} /> Verified operators</span>
+            <span><Clock3 size={16} /> Instant confirmation</span>
+          </div>
+        )}
       </div>
 
       {/* Validation Popup */}

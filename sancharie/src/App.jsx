@@ -21,13 +21,23 @@ import { ToastProvider } from "./components/Toast";
 import MobileBottomNav from "./components/MobileBottomNav";
 import FlightBooking from "./components/FlightBooking";
 import FlightHome from "./components/FlightHome";
+import HotelHome from "./components/HotelHome";
+
+const getInitialTravelMode = () => {
+  const mode = new URLSearchParams(window.location.search).get('mode');
+  return ['bus', 'flight', 'hotel'].includes(mode) ? mode : 'bus';
+};
+
+const getModePath = (mode) => {
+  if (mode === 'flight') return '/?mode=flight';
+  if (mode === 'hotel') return '/?mode=hotel';
+  return '/';
+};
 
 function App() {
   const [showSearchResult, setShowSearchResult] = useState(false);
   const [searchParams, setSearchParams] = useState(null);
-  const [travelMode, setTravelMode] = useState(() =>
-    new URLSearchParams(window.location.search).get('mode') === 'flight' ? 'flight' : 'bus'
-  );
+  const [travelMode, setTravelMode] = useState(getInitialTravelMode);
   const navigate = useNavigate();
 
   const handleSearch = (params) => {
@@ -39,7 +49,7 @@ function App() {
   const handleBackToHome = () => {
     setShowSearchResult(false);
     setSearchParams(null);
-    navigate(travelMode === 'flight' ? '/?mode=flight' : '/');
+    navigate(getModePath(travelMode));
   };
 
   const handleModeChange = (mode) => {
@@ -47,7 +57,7 @@ function App() {
     setTravelMode(mode);
     setShowSearchResult(false);
     setSearchParams(null);
-    navigate(mode === 'flight' ? '/?mode=flight' : '/');
+    navigate(getModePath(mode));
   };
 
   return (
@@ -114,6 +124,8 @@ function App() {
               <SearchResult searchParams={searchParams} onSearch={handleSearch} mode={travelMode} />
             ) : travelMode === 'flight' ? (
               <FlightHome onSearch={handleSearch} />
+            ) : travelMode === 'hotel' ? (
+              <HotelHome />
             ) : (
               <>
                 <Hero />

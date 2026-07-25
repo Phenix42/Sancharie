@@ -8,6 +8,7 @@ const {
 } = require('../routes/flight');
 const {
   getProviderError,
+  normalizeCalendarFares,
   normalizeSearchResults,
 } = require('../services/flightService');
 
@@ -108,6 +109,27 @@ test('search results retain token, fare IDs, segments, baggage, and lowest price
   assert.equal(flights[0].stops, 'Non-stop');
   assert.equal(flights[0].fares.length, 2);
   assert.ok(flights[0].amenities.includes('Cabin 7 Kg'));
+});
+
+test('calendar fares are normalized to stable date, price, and currency fields', () => {
+  const fares = normalizeCalendarFares({
+    Result: [
+      { DepartureDate: '12/12/2026', LowestFare: 18675.9, Currency: 'INR' },
+      { Date: '2026-12-13T00:00:00', Fare: { PublishedPrice: 19100, CurrencyCode: 'INR' } },
+      { CalendarFares: [{ TravelDate: '2026/12/14', OfferedFare: 18000, CurrencyCode: 'INR' }] },
+      { Date: 'bad-date', Fare: 20000 },
+    ],
+  });
+
+  assert.equal(fares.length, 3);
+  assert.deepEqual(
+    fares.map(({ date, price, currency }) => ({ date, price, currency })),
+    [
+      { date: '2026-12-12', price: 18675.9, currency: 'INR' },
+      { date: '2026-12-13', price: 19100, currency: 'INR' },
+      { date: '2026-12-14', price: 18000, currency: 'INR' },
+    ]
+  );
 });
 
 test('provider errors are detected even when the upstream HTTP status is 200', () => {

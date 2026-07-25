@@ -2799,6 +2799,441 @@
   }
 }
 
+/* ================= BUS RESULTS POLISH ================= */
+.sr-page {
+  min-height: 100vh;
+  padding: 28px 24px 56px;
+  background: #f5f7f9;
+}
+
+.sr-layout {
+  max-width: 1440px;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 24px;
+}
+
+.page-back-btn-inline {
+  display: block;
+  width: min(1440px, 100%);
+  margin: 0 auto 12px;
+  padding: 8px 0;
+  color: #52636c;
+  text-align: left;
+}
+
+.filters-panel {
+  position: sticky;
+  top: 88px;
+  align-self: start;
+  padding: 18px;
+  border: 1px solid #e1e8ec;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 44, 63, 0.05);
+}
+
+.bus-summary-card.flight-summary-card {
+  margin: -18px -18px 20px;
+  padding: 22px 18px;
+  border: 0;
+  border-bottom: 1px solid #e6ecef;
+  border-radius: 16px 16px 0 0;
+  box-shadow: none;
+}
+
+.bus-summary-card.flight-summary-card h3 {
+  color: #17242b;
+  font-size: 20px;
+}
+
+.bus-summary-card.flight-summary-card p {
+  overflow: hidden;
+  margin: 7px 0 16px;
+  color: #687981;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bus-summary-card.flight-summary-card button {
+  min-height: 44px;
+  border-color: #be951f;
+  border-radius: 10px;
+  background: #be951f;
+  color: #ffffff;
+}
+
+.bus-summary-card.flight-summary-card button:hover {
+  border-color: #a47f18;
+  background: #a47f18;
+  color: #ffffff;
+}
+
+.bus-summary-breakdown {
+  margin-top: 14px;
+  padding: 4px 2px 0;
+}
+
+.bus-summary-breakdown span {
+  padding: 8px 0;
+  border-top: 1px solid #edf1f3;
+  color: #53646c;
+}
+
+.bus-summary-breakdown span b {
+  color: #00394e;
+}
+
+.bus-route-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px;
+  border: 1px solid #dce5e9;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f7fafb 100%);
+  box-shadow: 0 12px 32px rgba(0, 44, 63, 0.06);
+}
+
+.bus-route-eyebrow {
+  color: #9c7635;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.bus-route-copy h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 7px;
+  color: #17242b;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.bus-route-copy h1 svg {
+  flex: 0 0 auto;
+  color: #9c7635;
+}
+
+.bus-route-copy p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #687981;
+  font-size: 13px;
+}
+
+.bus-route-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #edf5f7;
+  color: #14495c;
+}
+
+.bus-route-stat span {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+}
+
+.bus-route-stat strong {
+  font-size: 18px;
+}
+
+.date-selector {
+  min-height: 68px;
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(0, 44, 63, 0.12);
+}
+
+.bus-results-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  border: 1px solid #e0e7ea;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.bus-results-toolbar > div:first-child {
+  display: flex;
+  min-width: 180px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bus-results-toolbar strong {
+  color: #17242b;
+  font-size: 15px;
+}
+
+.bus-results-toolbar span {
+  color: #75858c;
+  font-size: 12px;
+}
+
+.bus-sort-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #f1f4f5;
+}
+
+.bus-sort-tabs button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #65757d;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bus-sort-tabs button:hover,
+.bus-sort-tabs button.active {
+  background: #fff;
+  color: #00394e;
+  box-shadow: 0 2px 8px rgba(0, 44, 63, 0.1);
+}
+
+.sr-card {
+  border-color: #dde5e9;
+  border-radius: 16px;
+  box-shadow: 0 8px 26px rgba(0, 44, 63, 0.055);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.sr-card:hover {
+  transform: translateY(-2px);
+  border-color: #c9d5da;
+  box-shadow: 0 14px 34px rgba(0, 44, 63, 0.1);
+}
+
+.sr-card.cheapest-bus {
+  border-color: #d3b45d;
+  background: linear-gradient(90deg, #fffdf6 0%, #fff 38%);
+}
+
+.card-header-row {
+  align-items: center;
+  padding: 16px 20px 12px;
+  background: transparent;
+}
+
+.operator-route {
+  align-items: baseline;
+  gap: 12px;
+}
+
+.operator-name {
+  color: #16242b;
+  font-size: 17px;
+}
+
+.route-point {
+  color: #65757d;
+  font-size: 11px;
+  text-transform: none;
+}
+
+.card-main-content {
+  padding: 18px 20px 20px;
+}
+
+.bus-type {
+  color: #52636b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.time-row .time {
+  color: #17242b;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.location-name {
+  max-width: 46%;
+  color: #65757d;
+  font-size: 11px;
+  line-height: 1.35;
+  text-transform: none;
+}
+
+.duration-line-left,
+.duration-line-right {
+  height: 1px;
+  background: #9aabb2;
+}
+
+.duration-line-right::after {
+  border-left-color: #9aabb2;
+  border-top-width: 4px;
+  border-bottom-width: 4px;
+}
+
+.duration-badge {
+  color: #687981;
+  font-weight: 700;
+}
+
+.price-section {
+  min-width: 174px;
+}
+
+.starts-from-label {
+  color: #687981;
+  font-size: 12px;
+}
+
+.current-price {
+  color: #17242b;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.price-row {
+  margin: 3px 0 1px;
+}
+
+.base-fare-note {
+  margin-bottom: 12px;
+  color: #88969c;
+  font-size: 10px;
+}
+
+.select-seat-btn {
+  min-width: 142px;
+  min-height: 42px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #a37226 0%, #7d5417 100%);
+  box-shadow: 0 5px 14px rgba(125, 84, 23, 0.24);
+}
+
+.bus-details-chips {
+  justify-content: flex-start;
+  padding: 11px 20px;
+  background: #f9fbfb;
+}
+
+.detail-chip {
+  min-height: 30px;
+  border-color: #dce4e7;
+  border-radius: 8px;
+  color: #52636b;
+}
+
+@media (max-width: 1180px) {
+  .bus-results-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .bus-sort-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .bus-sort-tabs button {
+    flex: 1 0 auto;
+  }
+}
+
+@media (max-width: 1024px) {
+  .filters-panel {
+    display: none;
+  }
+
+  .sr-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .sr-page {
+    padding: 12px 12px calc(220px + env(safe-area-inset-bottom));
+  }
+
+  .page-back-btn-inline {
+    padding-left: 4px;
+  }
+
+  .bus-route-overview {
+    align-items: flex-start;
+    padding: 18px;
+  }
+
+  .bus-route-copy h1 {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 19px;
+  }
+
+  .bus-route-copy h1 svg {
+    transform: rotate(90deg);
+  }
+
+  .bus-route-copy p {
+    align-items: flex-start;
+    line-height: 1.45;
+  }
+
+  .bus-route-stat {
+    padding: 10px;
+  }
+
+  .bus-results-toolbar {
+    padding: 14px;
+  }
+
+  .card-header-row {
+    padding: 14px 16px 10px;
+  }
+
+  .card-main-content {
+    padding: 14px 16px 18px;
+  }
+
+  .base-fare-note {
+    order: 2;
+    width: 100%;
+    text-align: center;
+  }
+
+  .bus-details-chips {
+    padding: 10px 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bus-route-stat svg {
+    display: none;
+  }
+
+  .bus-route-stat strong {
+    font-size: 16px;
+  }
+
+  .current-price {
+    font-size: 22px;
+  }
+}
+
 /* ================= LOAD MORE BUTTON ================= */
 .load-more-container {
   display: flex;
@@ -3524,6 +3959,19 @@
 .session-btn-secondary:hover {
   background: #e2e8f0;
   border-color: #cbd5e1;
+}
+
+.bus-details-chips {
+  justify-content: flex-start;
+  padding: 11px 20px;
+  background: #f9fbfb;
+}
+
+.detail-chip {
+  min-height: 30px;
+  border-color: #dce4e7;
+  border-radius: 8px;
+  color: #52636b;
 }
 
 /* Session Expired Responsive */

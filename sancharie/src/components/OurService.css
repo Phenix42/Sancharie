@@ -1,520 +1,191 @@
-/* ========== OUR SERVICE - DARK PHONE-FRAME DESIGN ========== */
 .our-service {
-  padding: 4rem 0.75rem;
-  background: #06080f;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Dot pattern overlay */
-.our-service::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0.025;
-  pointer-events: none;
-  background-image: radial-gradient(circle, rgb(184, 134, 11) 1px, transparent 1px);
-  background-size: 28px 28px;
+  padding: 76px 24px;
+  background: linear-gradient(180deg, #052f40 0%, #002435 100%);
+  border-top: 1px solid rgba(206, 180, 95, 0.18);
+  border-bottom: 1px solid rgba(206, 180, 95, 0.18);
+  color: #ffffff;
 }
 
 .service-container {
-  max-width: 900px;
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
-  position: relative;
 }
 
-/* ========== HEADER ========== */
 .service-header {
-  text-align: center;
-  margin-bottom: 2.5rem;
-}
-
-.service-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  border-radius: 9999px;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  background: rgba(245, 158, 11, 0.05);
-  margin-bottom: 16px;
-}
-
-.service-badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #fbbf24;
-  animation: svcPulse 2s ease-in-out infinite;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+  gap: 32px;
+  align-items: end;
+  margin-bottom: 28px;
 }
 
 .service-badge-text {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fbbf24;
+  display: block;
+  margin-bottom: 10px;
+  color: #d7bd6d;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
   text-transform: uppercase;
-  letter-spacing: 0.25em;
 }
 
 .service-title {
-  font-family: 'Montserrat', sans-serif;
-  font-size: clamp(24px, 5vw, 48px);
-  font-weight: 900;
-  color: #ffffff;
-  line-height: 1.15;
   margin: 0;
+  color: #ffffff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: 0;
 }
 
-.service-title-accent {
-  background: linear-gradient(to right, #fbbf24, #d97706);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.service-summary {
+  margin: 0;
+  color: rgba(235, 246, 250, 0.78);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.7;
 }
 
-/* ========== PHONE FRAME ========== */
-.svc-frame {
-  position: relative;
-  border: 2px solid rgba(245, 158, 11, 0.25);
-  border-radius: 2rem;
-  background: rgba(8, 9, 15, 0.9);
+.svc-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+  border: 1px solid rgba(206, 180, 95, 0.3);
+  border-radius: 8px;
+  background: #07364a;
+  box-shadow: 0 22px 55px rgba(0, 17, 24, 0.22);
   overflow: hidden;
 }
 
-/* Frame Top Bar */
-.svc-frame-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.1), transparent);
-  border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+.svc-metrics div {
+  padding: 18px 22px;
+  border-right: 1px solid rgba(206, 180, 95, 0.18);
 }
 
-.svc-frame-dots {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.svc-metrics div:last-child {
+  border-right: 0;
 }
 
-.svc-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(251, 191, 36, 0.3);
+.svc-metrics strong,
+.svc-metrics span {
+  display: block;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-.svc-dot.pulse {
-  background: rgba(251, 191, 36, 0.6);
-  animation: svcPulse 2s ease-in-out infinite;
-}
-
-.svc-frame-label {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 10px;
-  font-weight: 900;
-  color: #fbbf24;
-  text-transform: uppercase;
-  letter-spacing: 0.25em;
-}
-
-/* Toolbar */
-.svc-toolbar {
-  display: flex;
-  gap: 6px;
-  padding: 8px 20px;
-  border-bottom: 1px solid rgba(245, 158, 11, 0.1);
-}
-
-.svc-toolbar-bar {
-  flex: 1;
-  height: 20px;
-  border-radius: 2px;
-  background: rgba(245, 158, 11, 0.05);
-  border: 1px solid rgba(245, 158, 11, 0.1);
-}
-
-/* ========== CARDS CONTENT ========== */
-.svc-content {
-  display: flex;
-  gap: 12px;
-  padding: 16px 16px 20px;
-}
-
-@media (min-width: 640px) {
-  .svc-content {
-    gap: 16px;
-    padding: 24px 24px 32px;
-  }
-}
-
-.svc-column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* ========== SERVICE CARD ========== */
-.svc-card {
-  cursor: pointer;
-}
-
-.svc-card-inner {
-  position: relative;
-  background: #0f1220;
-  border: 1px solid rgba(245, 158, 11, 0.15);
-  border-radius: 12px;
-  padding: 16px;
-  overflow: hidden;
-  transition: border-color 0.3s, background 0.3s;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.svc-card:hover .svc-card-inner {
-  border-color: rgba(245, 158, 11, 0.5);
-  background: #141828;
-}
-
-/* Top accent bar */
-.svc-card-accent {
-  position: absolute;
-  top: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 6px;
-  border-radius: 0 0 999px 999px;
-  background: rgba(245, 158, 11, 0.3);
-  transition: background 0.3s;
-}
-
-.svc-card:hover .svc-card-accent {
-  background: rgba(245, 158, 11, 0.6);
-}
-
-/* Card ID label */
-.svc-card-id {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 10px;
-  font-weight: 900;
-  color: rgba(245, 158, 11, 0.4);
-  letter-spacing: 0.15em;
-  transition: color 0.3s;
-}
-
-.svc-card:hover .svc-card-id {
-  color: rgba(251, 191, 36, 0.7);
-}
-
-/* Card Icon */
-.svc-card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 12px;
-  color: rgba(251, 191, 36, 0.7);
-  transition: background 0.3s, border-color 0.3s, color 0.3s;
-}
-
-.svc-card:hover .svc-card-icon {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: rgba(251, 191, 36, 0.4);
-  color: #fcd34d;
-}
-
-/* Card Title */
-.svc-card-title {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0 0 4px 0;
-  line-height: 1.3;
-  transition: color 0.3s;
-}
-
-.svc-card:hover .svc-card-title {
+.svc-metrics strong {
   color: #ffffff;
-}
-
-/* Card Description */
-.svc-card-desc {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 12px;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.35);
-  margin: 0;
-  line-height: 1.5;
-  transition: color 0.3s;
-}
-
-.svc-card:hover .svc-card-desc {
-  color: rgba(255, 255, 255, 0.55);
-}
-
-/* Bottom line on card */
-.svc-card-bottom-line {
-  position: absolute;
-  bottom: 0;
-  left: 16px;
-  right: 16px;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(245, 158, 11, 0.2), transparent);
-  transition: background 0.3s;
-}
-
-.svc-card:hover .svc-card-bottom-line {
-  background: linear-gradient(to right, transparent, rgba(245, 158, 11, 0.5), transparent);
-}
-
-/* ========== CENTER AISLE ========== */
-.svc-aisle {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 20px;
-  flex-shrink: 0;
-  padding: 8px 0;
-}
-
-@media (min-width: 640px) {
-  .svc-aisle {
-    width: 32px;
-  }
-}
-
-.svc-aisle-line {
-  flex: 1;
-  width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(245, 158, 11, 0.2), transparent);
-}
-
-.svc-aisle-badge {
-  margin: 8px 0;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.svc-aisle-badge span {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 5px;
-  font-weight: 700;
-  color: rgba(245, 158, 11, 0.6);
+  font-size: 24px;
+  font-weight: 900;
   line-height: 1;
-  text-align: center;
 }
 
-/* ========== FRAME BOTTOM ========== */
-.svc-frame-bottom {
+.svc-metrics span {
+  margin-top: 6px;
+  color: rgba(235, 246, 250, 0.68);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.svc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.svc-card {
+  min-height: 174px;
+  padding: 22px;
+  border: 1px solid rgba(206, 180, 95, 0.22);
+  border-radius: 8px;
+  background: #073044;
+  box-shadow: 0 14px 32px rgba(0, 17, 24, 0.16);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.svc-card:hover {
+  border-color: rgba(215, 189, 109, 0.5);
+  background: #0a394d;
+  box-shadow: inset 0 3px 0 #d7bd6d, 0 18px 38px rgba(0, 17, 24, 0.24);
+  transform: translateY(-2px);
+}
+
+.svc-card-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 12px 24px;
-  border-top: 1px solid rgba(245, 158, 11, 0.15);
-  background: linear-gradient(0deg, rgba(245, 158, 11, 0.03), transparent);
+  width: 42px;
+  height: 42px;
+  margin-bottom: 18px;
+  border-radius: 8px;
+  background: #d7bd6d;
+  color: #002C3F;
 }
 
-.svc-bottom-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(245, 158, 11, 0.3));
+.svc-card-title {
+  margin: 0 0 8px;
+  color: #ffffff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
 }
 
-.svc-bottom-line:last-child {
-  background: linear-gradient(to left, transparent, rgba(245, 158, 11, 0.3));
+.svc-card-desc {
+  margin: 0;
+  color: rgba(235, 246, 250, 0.7);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
 }
 
-.svc-bottom-dots {
-  display: flex;
-  gap: 8px;
-}
-
-.svc-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.svc-indicator.amber {
-  background: rgba(251, 191, 36, 0.5);
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
-}
-
-.svc-indicator.red {
-  background: rgba(248, 113, 113, 0.5);
-  box-shadow: 0 0 8px rgba(248, 113, 113, 0.4);
-}
-
-/* ========== SIDE BUTTONS ========== */
-.svc-side-btn {
-  position: absolute;
-  width: 6px;
-  height: 56px;
-  background: rgba(245, 158, 11, 0.1);
-  border-radius: 0;
-}
-
-.svc-side-btn.left {
-  left: 0;
-  border-right: 1px solid rgba(245, 158, 11, 0.2);
-  border-radius: 0 8px 8px 0;
-}
-
-.svc-side-btn.right {
-  right: 0;
-  border-left: 1px solid rgba(245, 158, 11, 0.2);
-  border-radius: 8px 0 0 8px;
-}
-
-.svc-side-btn.top {
-  top: 38%;
-}
-
-.svc-side-btn.bottom {
-  top: 65%;
-}
-
-/* ========== PHONE FEET ========== */
-.svc-feet {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 32px;
-  margin-top: 2px;
-}
-
-@media (min-width: 640px) {
-  .svc-feet {
-    padding: 0 48px;
-  }
-}
-
-.svc-feet-group {
-  display: flex;
-  gap: 8px;
-}
-
-.svc-foot {
-  width: 32px;
-  height: 16px;
-  border-radius: 0 0 999px 999px;
-  background: #111;
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-top: none;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 2px;
-}
-
-@media (min-width: 640px) {
-  .svc-foot {
-    width: 40px;
-    height: 20px;
-  }
-}
-
-.svc-foot-line {
-  width: 12px;
-  height: 2px;
-  border-radius: 999px;
-  background: rgba(245, 158, 11, 0.4);
-}
-
-/* ========== ANIMATIONS ========== */
-@keyframes svcPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-/* ========== RESPONSIVE ========== */
-@media (max-width: 480px) {
+@media (max-width: 900px) {
   .our-service {
-    padding: 3rem 0.5rem;
+    padding: 56px 18px;
   }
 
-  .svc-frame {
-    border-radius: 1.5rem;
+  .service-header {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 
-  .svc-content {
-    gap: 8px;
-    padding: 12px 12px 16px;
+  .service-title {
+    font-size: 28px;
   }
 
-  .svc-column {
-    gap: 8px;
+  .svc-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .our-service {
+    padding: 44px 14px;
   }
 
-  .svc-card-inner {
-    padding: 12px;
-    border-radius: 10px;
+  .service-title {
+    font-size: 24px;
   }
 
-  .svc-card-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    margin-bottom: 8px;
+  .svc-metrics,
+  .svc-grid {
+    grid-template-columns: 1fr;
   }
 
-  .svc-card-icon svg {
-    width: 14px;
-    height: 14px;
+  .svc-metrics div {
+    border-right: 0;
+    border-bottom: 1px solid rgba(206, 180, 95, 0.18);
   }
 
-  .svc-card-title {
-    font-size: 12px;
+  .svc-metrics div:last-child {
+    border-bottom: 0;
   }
 
-  .svc-card-desc {
-    font-size: 10px;
-  }
-
-  .svc-card-id {
-    font-size: 8px;
-  }
-
-  .svc-frame-label {
-    font-size: 8px;
-    letter-spacing: 0.2em;
-  }
-
-  .svc-toolbar {
-    gap: 4px;
-    padding: 6px 12px;
-  }
-
-  .svc-toolbar-bar {
-    height: 16px;
-  }
-
-  .svc-aisle {
-    width: 16px;
-  }
-
-  .svc-aisle-badge {
-    width: 16px;
-    height: 16px;
-  }
-
-  .svc-feet {
-    padding: 0 24px;
+  .svc-card {
+    min-height: auto;
   }
 }

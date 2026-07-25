@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import SelectSeat from "./selectseat";
 import NoResult from "./noresult";
-import MiniSeatPreview, { clearSeatLayoutCache, prefetchAllSeatLayouts, subscribeSeatLayout, getMinFareFromCache } from "./MiniSeatPreview";
+import MiniSeatPreview, { clearSeatLayoutCache, prefetchAllSeatLayouts, subscribeSeatLayout, getMinBaseFareFromCache } from "./MiniSeatPreview";
 import Logo from "../assets/logosan.svg";
 import SearchBus from "./SearchBus";
 import { useBooking } from "../context/BookingContext";
@@ -136,6 +136,21 @@ const formatFlightPrice = (value) => {
   });
 };
 
+const formatBusPrice = (value) => Math.round(Number(value || 0)).toLocaleString("en-IN");
+
+const getSearchBaseFare = (bus) => Number(
+  bus?.BusPrice?.BasePrice ?? bus?.BusPrice?.PublishedPrice ?? 0
+);
+
+const getMinimumAvailableBaseFare = (seats) => {
+  if (!Array.isArray(seats)) return null;
+  const fares = seats
+    .filter((seat) => seat.available === true)
+    .map((seat) => Number.parseFloat(seat.fare))
+    .filter((fare) => Number.isFinite(fare) && fare > 0);
+  return fares.length ? Math.round(Math.min(...fares)) : null;
+};
+
 const getAirportCode = (value) => {
   const text = String(value || "").trim();
   return text.match(/\(([A-Z]{3})\)$/)?.[1] || text.match(/^([A-Z]{3})\b/)?.[1] || text.slice(0, 3).toUpperCase();
@@ -168,33 +183,10 @@ const calculateDuration = (departure, arrival, durationInMins) => {
   return `${hours}:${minutes.toString().padStart(2, '0')} hrs`;
 };
 
-/* Small component that subscribes to seat layout cache and shows min fare */
-function BusPriceDisplay({ bus }) {
-  const [minFare, setMinFare] = useState(() => getMinFareFromCache(bus.ResultIndex));
-
-  useEffect(() => {
-    if (minFare != null) return; // Already have it
-    const unsubscribe = subscribeSeatLayout(bus.ResultIndex, (seats) => {
-      if (!seats || !Array.isArray(seats)) return;
-      let min = Infinity;
-      for (const seat of seats) {
-        if (seat.available !== true) continue;
-        const fare = parseFloat(seat.totalFareWithTaxes) || parseFloat(seat.fare) || 0;
-        if (fare > 0 && fare < min) min = fare;
-      }
-      if (min !== Infinity) setMinFare(Math.round(min));
-    });
-    return unsubscribe;
-  }, [bus.ResultIndex, minFare]);
-
-  const displayPrice = minFare || bus.BusPrice?.PublishedPrice;
-  const oldPrice = bus.BusPrice?.BasePrice || null;
-  const showOld = oldPrice && displayPrice && oldPrice > displayPrice;
-
+function BusPriceDisplay({ price }) {
   return (
     <div className="price-row">
-      {showOld && <span className="old-price">₹{oldPrice}</span>}
-      <span className="current-price">₹{displayPrice}</span>
+      <span className="current-price">₹{formatBusPrice(price)}</span>
     </div>
   );
 }
@@ -221,6 +213,8 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
   const [selectedFlightAirlines, setSelectedFlightAirlines] = useState([]);
   const [expandedFlightId, setExpandedFlightId] = useState(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [busSort, setBusSort] = useState('recommended');
+  const [baseFaresByBus, setBaseFaresByBus] = useState({});
 
   /* ---------------- FILTER STATES ---------------- */
   const [maxPrice, setMaxPrice] = useState(5000);
@@ -252,6 +246,32 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
   useEffect(() => {
     bookingActionsRef.current = actions;
   }, [actions]);
+
+  useEffect(() => {
+    if (mode !== 'bus' || buses.length === 0) return undefined;
+
+    const cachedBaseFares = {};
+    const unsubscribes = buses.map((bus) => {
+      const cachedFare = getMinBaseFareFromCache(bus.ResultIndex);
+      if (cachedFare != null) cachedBaseFares[bus.ResultIndex] = cachedFare;
+
+      return subscribeSeatLayout(bus.ResultIndex, (seats) => {
+        const baseFare = getMinimumAvailableBaseFare(seats);
+        if (baseFare == null) return;
+        setBaseFaresByBus((current) => (
+          current[bus.ResultIndex] === baseFare
+            ? current
+            : { ...current, [bus.ResultIndex]: baseFare }
+        ));
+      });
+    });
+
+    if (Object.keys(cachedBaseFares).length > 0) {
+      setBaseFaresByBus((current) => ({ ...current, ...cachedBaseFares }));
+    }
+
+    return () => unsubscribes.forEach((unsubscribe) => unsubscribe?.());
+  }, [buses, mode]);
 
   /* ---------------- FETCH BUSES ON MOUNT ---------------- */
   useEffect(() => {
@@ -310,6 +330,8 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
         setLoading(true);
         setError(null);
         setVisibleCount(6); // Reset to 6 when new search
+        setBusSort('recommended');
+        setBaseFaresByBus({});
         
         // Clear seat layout cache when search params change
         clearSeatLayoutCache();
@@ -443,8 +465,8 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
   /* ---------------- FILTER LOGIC ---------------- */
   const filteredBuses = useMemo(() => {
     return buses.filter((bus) => {
-      // Price
-      const price = bus.BusPrice?.PublishedPrice || 0;
+      // Filter against the available seat base fare, not the tax-inclusive total.
+      const price = baseFaresByBus[bus.ResultIndex] ?? getSearchBaseFare(bus);
       if (price > maxPrice) return false;
 
       // Bus Type (AC/Non-AC, Sleeper/Seater)
@@ -489,18 +511,42 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
 
       return true;
     });
-  }, [buses, maxPrice, selectedBusTypes, selectedTimes, selectedOperators, selectedBoarding, selectedDropping]);
+  }, [buses, baseFaresByBus, maxPrice, selectedBusTypes, selectedTimes, selectedOperators, selectedBoarding, selectedDropping]);
 
   /* Calculate bus price range and stats */
   const busPriceRange = useMemo(() => {
     const prices = filteredBuses
-      .map((bus) => bus.BusPrice?.PublishedPrice || 0)
+      .map((bus) => baseFaresByBus[bus.ResultIndex] ?? getSearchBaseFare(bus))
       .filter((price) => price > 0);
     return {
       min: prices.length ? Math.min(...prices) : 0,
       max: prices.length ? Math.max(...prices) : 0,
     };
-  }, [filteredBuses]);
+  }, [filteredBuses, baseFaresByBus]);
+
+  const sortedBuses = useMemo(() => {
+    const sorted = [...filteredBuses];
+    const baseFare = (bus) => baseFaresByBus[bus.ResultIndex] ?? getSearchBaseFare(bus);
+    const departureTime = (bus) => {
+      const parsed = new Date(bus.DepartureTime).getTime();
+      return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+    };
+
+    if (busSort === 'price') {
+      return sorted.sort((a, b) => baseFare(a) - baseFare(b));
+    }
+    if (busSort === 'departure') {
+      return sorted.sort((a, b) => departureTime(a) - departureTime(b));
+    }
+    if (busSort === 'seats') {
+      return sorted.sort((a, b) => Number(b.AvailableSeats || 0) - Number(a.AvailableSeats || 0));
+    }
+
+    return sorted.sort((a, b) => {
+      const availabilityDifference = Number(b.AvailableSeats || 0) - Number(a.AvailableSeats || 0);
+      return baseFare(a) - baseFare(b) || availabilityDifference;
+    });
+  }, [filteredBuses, baseFaresByBus, busSort]);
 
   const flightPriceRange = useMemo(() => {
     const prices = flights.map((flight) => Number(flight.price || 0)).filter((price) => price > 0);
@@ -638,6 +684,7 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
           setLoading(true);
           setError(null);
           setVisibleCount(6); // Reset to 6 when date changes
+          setBaseFaresByBus({});
           
           // Clear seat layout cache when date changes
           clearSeatLayoutCache();
@@ -1190,12 +1237,19 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
         <aside className="filters-panel">
           {/* BUS SUMMARY PANEL - Similar to flight summary */}
           <div className="flight-summary-card bus-summary-card">
-            <h3>Search Summary</h3>
-            <p>Overview of available buses for this route.</p>
-            <div className="bus-summary-breakdown">
-              <span><b>{filteredBuses.length}</b> buses found</span>
-              <span><b>₹{busPriceRange.min}</b> lowest fare</span>
-            </div>
+            <h3>Search summary</h3>
+            <p>{searchParams?.from} to {searchParams?.to}</p>
+            <button type="button" onClick={() => setSummaryOpen((open) => !open)}>
+              <Star size={17} /> {summaryOpen ? 'Hide summary' : 'View summary'}
+            </button>
+            {summaryOpen && (
+              <div className="bus-summary-breakdown">
+                <span><b>{filteredBuses.length}</b> buses available</span>
+                <span><b>{uniqueOperators.length}</b> operators</span>
+                <span><b>{busPriceRange.min ? `₹${formatBusPrice(busPriceRange.min)}` : '—'}</b> lowest base fare</span>
+                <span><b>{formatFlightDate(searchParams?.date)}</b> travel date</span>
+              </div>
+            )}
           </div>
 
           <div className="filters-header">
@@ -1403,6 +1457,22 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
             />
           </div>
 
+          <div className="bus-route-overview">
+            <div className="bus-route-copy">
+              <span className="bus-route-eyebrow">Bus results</span>
+              <h1>
+                <span>{searchParams?.from}</span>
+                <ArrowLeftRight size={20} />
+                <span>{searchParams?.to}</span>
+              </h1>
+              <p><CalendarDays size={15} /> {formatFlightDate(searchParams?.date)} · Base fares shown, taxes added at checkout</p>
+            </div>
+            <div className="bus-route-stat">
+              <Bus size={21} />
+              <span><strong>{filteredBuses.length}</strong> buses</span>
+            </div>
+          </div>
+
           {/* DATE SELECTOR */}
           <div className="date-selector">
             <button className="date-nav prev" onClick={handleDateNavPrev}>
@@ -1429,20 +1499,39 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
             </button>
           </div>
 
-          {filteredBuses.slice(0, visibleCount).map((bus) => {
+          <div className="bus-results-toolbar">
+            <div>
+              <strong>{filteredBuses.length} buses found</strong>
+              <span>Choose the timing and seat that work best for you</span>
+            </div>
+            <div className="bus-sort-tabs" role="group" aria-label="Sort buses">
+              {[
+                ['recommended', 'Recommended'],
+                ['price', 'Lowest fare'],
+                ['departure', 'Departure'],
+                ['seats', 'Seats'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={busSort === value ? 'active' : ''}
+                  onClick={() => setBusSort(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {sortedBuses.slice(0, visibleCount).map((bus) => {
             // Get boarding points for route display
             const boardingPoints = bus.BoardingPointsDetails || [];
             const droppingPoints = bus.DroppingPointsDetails || [];
             const firstBoardingPoint = boardingPoints[0]?.CityPointName || searchParams?.from;
             const lastDroppingPoint = droppingPoints[droppingPoints.length - 1]?.CityPointName || searchParams?.to;
             
-            // Get additional stops for display
-            const midPoints = boardingPoints.slice(1, 3).map(bp => bp.CityPointName).filter(Boolean);
-            const totalStops = boardingPoints.length + droppingPoints.length;
-            const otherStopsCount = Math.max(0, totalStops - 4);
-            
             // Check if this is the cheapest bus
-            const busPrice = bus.BusPrice?.PublishedPrice || 0;
+            const busPrice = baseFaresByBus[bus.ResultIndex] ?? getSearchBaseFare(bus);
             const isCheapest = busPrice > 0 && busPrice === busPriceRange.min;
             
             return (
@@ -1453,20 +1542,9 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
                   <div className="operator-route">
                     <h3 className="operator-name">{bus.TravelName || 'Bus Operator'}</h3>
                     <div className="route-breadcrumb">
-                      <span className="route-label">from:</span>
                       <span className="route-point">{firstBoardingPoint}</span>
-                      {midPoints.map((point, idx) => (
-                        <React.Fragment key={idx}>
-                          <MdKeyboardArrowRight className="route-arrow" />
-                          <span className="route-point">{point}</span>
-                        </React.Fragment>
-                      ))}
-                      {otherStopsCount > 0 && (
-                        <>
-                          <MdKeyboardArrowRight className="route-arrow" />
-                          <span className="route-point other-stops">{otherStopsCount} other stops</span>
-                        </>
-                      )}
+                      <MdKeyboardArrowRight className="route-arrow" />
+                      <span className="route-point">{lastDroppingPoint}</span>
                     </div>
                   </div>
                   {isCheapest && (
@@ -1511,8 +1589,9 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
 
                   {/* Right Section - Price */}
                   <div className="price-section">
-                    <p className="starts-from-label">Starts From</p>
-                    <BusPriceDisplay bus={bus} />
+                    <p className="starts-from-label">Base fare from</p>
+                    <BusPriceDisplay price={busPrice} />
+                    <span className="base-fare-note">per seat · excludes taxes</span>
                     <button 
                       className="select-seat-btn" 
                       onClick={() => handleBusSelect(bus)}
@@ -1573,13 +1652,13 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
           )})}
 
           {/* LOAD MORE BUTTON */}
-          {filteredBuses.length > visibleCount && (
+          {sortedBuses.length > visibleCount && (
             <div className="load-more-container">
               <button 
                 className="load-more-btn"
                 onClick={() => setVisibleCount(prev => prev + 6)}
               >
-                Load More Buses ({filteredBuses.length - visibleCount} remaining)
+                Load More Buses ({sortedBuses.length - visibleCount} remaining)
               </button>
             </div>
           )}
@@ -1869,7 +1948,7 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
                       }
                       
                       return policies.map((policy, idx) => {
-                        const busPrice = modalBus.BusPrice?.PublishedPrice || 500;
+                        const busPrice = (baseFaresByBus[modalBus.ResultIndex] ?? getSearchBaseFare(modalBus)) || 500;
                         
                         // Handle ETS format: { cutoffTime: "0-24", refundInPercentage: "10" }
                         if (policy.cutoffTime !== undefined) {

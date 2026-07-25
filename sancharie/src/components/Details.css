@@ -1483,3 +1483,272 @@
     height: 40px;
   }
 }
+
+/* Professional, page-scoped booking details treatment */
+.details-page {
+  --details-navy: #002c3f;
+  --details-navy-soft: #0a465d;
+  --details-gold: #be951f;
+  --details-border: #dfe7ea;
+  padding: 32px 24px 56px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(190, 149, 31, 0.08), transparent 28%),
+    #f4f7f8;
+}
+
+.details-page .booking-progress {
+  max-width: 620px;
+  margin-bottom: 28px;
+  border: 1px solid var(--details-border);
+  box-shadow: 0 8px 28px rgba(0, 44, 63, 0.06);
+}
+
+.details-page .progress-step.active .step-icon {
+  background: var(--details-gold);
+  box-shadow: 0 4px 14px rgba(190, 149, 31, 0.28);
+}
+
+.details-page .details-container {
+  max-width: 1280px;
+  overflow: hidden;
+  border: 1px solid var(--details-border);
+  border-radius: 18px;
+  box-shadow: 0 22px 60px rgba(0, 44, 63, 0.09);
+}
+
+.details-page .details-header {
+  padding: 24px 30px;
+  border-radius: 0;
+  background: linear-gradient(135deg, var(--details-navy), var(--details-navy-soft));
+}
+
+.details-page .details-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #e7c558;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.details-page .header-info h4 {
+  font-size: 22px;
+  font-weight: 750;
+}
+
+.details-page .header-info p {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.details-page .header-badge {
+  border-color: rgba(231, 197, 88, 0.42);
+  background: rgba(190, 149, 31, 0.16);
+}
+
+.details-page .details-body {
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 28px;
+  padding: 28px;
+  background: #f8fafb;
+}
+
+.details-page .bus-summary-card,
+.details-page .section-card,
+.details-page .fare-card {
+  border: 1px solid var(--details-border);
+  background: #fff;
+  box-shadow: 0 8px 25px rgba(0, 44, 63, 0.045);
+}
+
+.details-page .bus-summary-header {
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: var(--details-navy);
+}
+
+.details-page .bus-summary-header > div,
+.details-page .journey-date-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.details-page .journey-date-pill {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 11px;
+}
+
+.details-page .bus-summary-content {
+  padding: 22px;
+}
+
+.details-page .bus-operator strong {
+  color: #17262d;
+  font-size: 17px;
+}
+
+.details-page .bus-type-badge {
+  border-color: rgba(190, 149, 31, 0.34);
+  background: #fffaf0;
+  color: #8b6a10;
+}
+
+.details-page .journey-route {
+  padding: 16px;
+  border-radius: 12px;
+  background: #f6f9fa;
+}
+
+.details-page .point-marker.start,
+.details-page .point-marker.end {
+  background: var(--details-gold);
+  box-shadow: 0 0 0 4px rgba(190, 149, 31, 0.16);
+}
+
+.details-page .point-time {
+  color: #17262d;
+  font-size: 16px;
+}
+
+.details-page .section-card {
+  padding: 26px;
+}
+
+.details-page .section-icon,
+.details-page .assurance-icon {
+  background: var(--details-navy);
+  box-shadow: none;
+}
+
+.details-page .section-title-group h3,
+.details-page .assurance-title h3 {
+  color: #17262d;
+}
+
+.details-page .passenger-form {
+  border-color: #e3e9ec;
+  background: #f7f9fa;
+}
+
+.details-page .primary-badge,
+.details-page .seat-tag,
+.details-page .assurance-badge {
+  background: var(--details-gold);
+}
+
+.details-page .form-group input,
+.details-page .form-group select,
+.details-page .country-code,
+.details-page .phone-field,
+.details-page .input-with-icon {
+  min-height: 50px;
+  border-color: #d9e1e4;
+  border-radius: 10px;
+}
+
+.details-page .form-group input:focus,
+.details-page .form-group select:focus,
+.details-page .phone-field:focus-within,
+.details-page .input-with-icon:focus-within {
+  border-color: var(--details-gold);
+  box-shadow: 0 0 0 3px rgba(190, 149, 31, 0.12);
+}
+
+.details-page .assurance-card {
+  background: #fffdf7;
+}
+
+.details-page .benefit-card {
+  border-color: #e6e0cd;
+  background: #fff;
+}
+
+.details-page .assurance-option.selected {
+  border-color: var(--details-gold);
+  background: #fffaf0;
+}
+
+.details-page .fare-section {
+  top: 92px;
+}
+
+.details-page .fare-card-header {
+  background: var(--details-navy);
+}
+
+.details-page .fare-row.total {
+  background: #f4f7f8;
+  border-top-color: rgba(190, 149, 31, 0.5);
+}
+
+.details-page .proceed-btn {
+  min-height: 52px;
+  background: var(--details-gold);
+  box-shadow: 0 8px 20px rgba(190, 149, 31, 0.24);
+}
+
+.details-page .proceed-btn:hover:not(:disabled) {
+  background: #a98218;
+}
+
+.details-page .secure-info {
+  color: #62737a;
+}
+
+.details-page .booking-trust-list {
+  display: grid;
+  gap: 8px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid #edf1f2;
+  color: #5f7077;
+  font-size: 11px;
+}
+
+.details-page .booking-trust-list span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.details-page .booking-trust-list svg {
+  color: #16845b;
+}
+
+@media (max-width: 900px) {
+  .details-page {
+    padding: 16px 12px 90px;
+  }
+
+  .details-page .details-body {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .details-page .fare-section {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .details-page .details-header {
+    padding: 18px;
+  }
+
+  .details-page .header-info h4 {
+    font-size: 18px;
+  }
+
+  .details-page .journey-date-pill {
+    display: none;
+  }
+
+  .details-page .details-body,
+  .details-page .section-card {
+    padding: 16px;
+  }
+}

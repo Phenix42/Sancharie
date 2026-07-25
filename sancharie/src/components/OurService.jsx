@@ -14,20 +14,17 @@ const rightServices = [
   { id: '3B', title: '24/7 Support', description: 'Round-The-Clock Assistance.', Icon: Headphones },
 ]
 
+const services = [...leftServices, ...rightServices]
+
 function ServiceCard({ service }) {
-  const { id, title, description, Icon } = service
+  const { title, description, Icon } = service
   return (
     <div className="svc-card">
-      <div className="svc-card-inner">
-        <div className="svc-card-accent" />
-        <span className="svc-card-id">{id}</span>
-        <div className="svc-card-icon">
-          <Icon size={16} strokeWidth={1.5} />
-        </div>
-        <h3 className="svc-card-title">{title}</h3>
-        <p className="svc-card-desc">{description}</p>
-        <div className="svc-card-bottom-line" />
+      <div className="svc-card-icon">
+        <Icon size={20} strokeWidth={1.8} />
       </div>
+      <h3 className="svc-card-title">{title}</h3>
+      <p className="svc-card-desc">{description}</p>
     </div>
   )
 }
@@ -36,88 +33,35 @@ function OurService() {
   return (
     <section className="our-service">
       <div className="service-container">
-        {/* Header */}
         <div className="service-header">
-          <div className="service-badge">
-            <span className="service-badge-dot" />
-            <span className="service-badge-text">Our Services</span>
+          <div>
+            <span className="service-badge-text">Platform Capabilities</span>
+            <h2 className="service-title">
+              Built for reliable bus ticket operations
+            </h2>
           </div>
-          <h2 className="service-title">
-            Everything You Need For A{' '}
-            <span className="service-title-accent">Better Travel</span>
-          </h2>
+          <p className="service-summary">
+            A cleaner booking workflow with verified supply, secure payments, support coverage, and faster decisions for every route.
+          </p>
         </div>
 
-        {/* Phone Frame */}
-        <div className="svc-frame">
-          {/* Frame Top Bar */}
-          <div className="svc-frame-top">
-            <div className="svc-frame-dots left">
-              <span className="svc-dot pulse" />
-              <span className="svc-dot" />
-            </div>
-            <span className="svc-frame-label">Premium Travel Services</span>
-            <div className="svc-frame-dots right">
-              <span className="svc-dot" />
-              <span className="svc-dot pulse" />
-            </div>
+        <div className="svc-metrics">
+          <div>
+            <strong>2 min</strong>
+            <span>Average booking flow</span>
           </div>
-
-          {/* Toolbar Bars */}
-          <div className="svc-toolbar">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="svc-toolbar-bar" />
-            ))}
+          <div>
+            <strong>24/7</strong>
+            <span>Customer support desk</span>
           </div>
-
-          {/* Cards Content */}
-          <div className="svc-content">
-            <div className="svc-column">
-              {leftServices.map(s => <ServiceCard key={s.id} service={s} />)}
-            </div>
-
-            {/* Center Aisle */}
-            <div className="svc-aisle">
-              <div className="svc-aisle-line" />
-              <div className="svc-aisle-badge">
-                <span>EXIT</span>
-              </div>
-              <div className="svc-aisle-line" />
-            </div>
-
-            <div className="svc-column">
-              {rightServices.map(s => <ServiceCard key={s.id} service={s} />)}
-            </div>
+          <div>
+            <strong>PCI</strong>
+            <span>Secure payment handling</span>
           </div>
-
-          {/* Frame Bottom Bar */}
-          <div className="svc-frame-bottom">
-            <div className="svc-bottom-line" />
-            <div className="svc-bottom-dots">
-              <span className="svc-indicator amber" />
-              <span className="svc-indicator red" />
-              <span className="svc-indicator amber" />
-            </div>
-            <div className="svc-bottom-line" />
-          </div>
-
-          {/* Side Buttons */}
-          <div className="svc-side-btn left top" />
-          <div className="svc-side-btn left bottom" />
-          <div className="svc-side-btn right top" />
-          <div className="svc-side-btn right bottom" />
         </div>
 
-        {/* Phone Feet */}
-        <div className="svc-feet">
-          <div className="svc-feet-group">
-            <div className="svc-foot"><div className="svc-foot-line" /></div>
-            <div className="svc-foot"><div className="svc-foot-line" /></div>
-          </div>
-          <div className="svc-feet-group">
-            <div className="svc-foot"><div className="svc-foot-line" /></div>
-            <div className="svc-foot"><div className="svc-foot-line" /></div>
-          </div>
+        <div className="svc-grid">
+          {services.map(s => <ServiceCard key={s.id} service={s} />)}
         </div>
       </div>
     </section>

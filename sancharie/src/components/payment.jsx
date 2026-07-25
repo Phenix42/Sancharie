@@ -154,6 +154,11 @@ export default function Payment() {
   const seatNames = getSeatNames();
   const assuranceTotal = assurance === 'yes' ? 24 * selectedSeats.length : 0;
   const grandTotal = (fareData?.totalFare || 0) + assuranceTotal;
+  const rawJourneyDate = busData?.dateOfJourney || busData?.date || busData?.DepartureTime;
+  const parsedJourneyDate = rawJourneyDate ? new Date(rawJourneyDate) : null;
+  const journeyDateLabel = parsedJourneyDate && !Number.isNaN(parsedJourneyDate.getTime())
+    ? parsedJourneyDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+    : 'Journey date';
 
   const validatePayment = () => {
     if (!fareData || !selectedSeats || selectedSeats.length === 0) {
@@ -292,8 +297,9 @@ export default function Payment() {
         }
         
         const ticketData = {
-          bookingId: bookingResult?.bookingId || `SAN${Date.now().toString().slice(-8)}`,
-          pnr: bookingResult?.opPNR || bookingResult?.travelOperatorPNR,
+          bookingId: bookingResult?.BookingID || bookingResult?.bookingId || `SAN${Date.now().toString().slice(-8)}`,
+          ticketNo: bookingResult?.TicketNo || bookingResult?.ticketNo || bookingResult?.etsTicketNumber,
+          pnr: bookingResult?.TravelOperatorPNR || bookingResult?.opPNR || bookingResult?.travelOperatorPNR || bookingResult?.pnr,
           busName: busData?.name || busData?.TravelName || 'Bus Service',
           busType: busData?.type || busData?.BusType || 'Sleeper',
           fromCity: fromCity,
@@ -365,6 +371,7 @@ export default function Payment() {
             </div>
             
             <h1 className="success-title">Payment Successful!</h1>
+            <span className="success-kicker"><BadgeCheck size={15} /> Booking confirmed</span>
             <p className="success-subtitle">Your booking has been confirmed</p>
             
             {/* Booking Reference */}
@@ -490,6 +497,7 @@ export default function Payment() {
             <div className="success-actions">
               <button className="btn-primary" onClick={() => generateTicketPDF({
                 bookingId,
+                ticketNo,
                 pnr,
                 busName: busData?.name || busData?.TravelName || 'Bus Service',
                 busType: busData?.type || busData?.BusType || 'Sleeper',
@@ -576,6 +584,14 @@ export default function Payment() {
           </div>
         </header>
 
+        <div className="checkout-progress" aria-label="Booking progress">
+          <div className="checkout-step complete"><CheckCircle size={16} /><span>Seat selected</span></div>
+          <span className="checkout-line complete"></span>
+          <div className="checkout-step complete"><CheckCircle size={16} /><span>Traveller details</span></div>
+          <span className="checkout-line active"></span>
+          <div className="checkout-step active"><CreditCard size={16} /><span>Secure payment</span></div>
+        </div>
+
         {/* Main Content */}
         <main className="payment-main">
           <div className="payment-content">
@@ -596,6 +612,7 @@ export default function Payment() {
                     <h3>{busData?.name || busData?.TravelName || "Bus Service"}</h3>
                     <span className="bus-type">{busData?.type || busData?.BusType || "Sleeper"}</span>
                   </div>
+                  <div className="journey-date-chip"><Calendar size={15} /> {journeyDateLabel}</div>
                 </div>
 
                 {/* Route Timeline */}
@@ -775,6 +792,13 @@ export default function Payment() {
               </div>
             </div>
 
+            {bookingError && (
+              <div className="payment-error-banner" role="alert">
+                <AlertCircle size={18} />
+                <span>{bookingError}</span>
+              </div>
+            )}
+
             {/* Pay Button */}
             <button 
               className="pay-button" 
@@ -785,6 +809,11 @@ export default function Payment() {
                 <>
                   <Loader2 size={20} className="spinner" />
                   Processing...
+                </>
+              ) : !razorpayLoaded ? (
+                <>
+                  <Loader2 size={20} className="spinner" />
+                  Preparing secure payment...
                 </>
               ) : (
                 <>

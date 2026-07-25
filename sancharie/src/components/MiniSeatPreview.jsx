@@ -422,14 +422,15 @@ export const subscribeSeatLayout = (resultIndex, callback) => {
   return seatLayoutManager.subscribe(resultIndex, callback);
 };
 
-// Export function to get minimum available seat fare from cached layout
-export const getMinFareFromCache = (resultIndex) => {
+// Export the minimum available base fare. Tax-inclusive totals are intentionally
+// kept for checkout and must not be presented as the search-result base price.
+export const getMinBaseFareFromCache = (resultIndex) => {
   const seats = seatLayoutManager.getCached(resultIndex);
   if (!seats || !Array.isArray(seats) || seats.length === 0) return null;
   let min = Infinity;
   for (const seat of seats) {
     if (seat.available !== true) continue;
-    const fare = parseFloat(seat.totalFareWithTaxes) || parseFloat(seat.fare) || 0;
+    const fare = parseFloat(seat.fare) || 0;
     if (fare > 0 && fare < min) min = fare;
   }
   return min === Infinity ? null : Math.round(min);

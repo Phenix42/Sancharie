@@ -4,6 +4,7 @@ const paymentService = require('../services/paymentService');
 const {
   FlightProviderError,
   getProviderError,
+  normalizeCalendarFares,
   normalizeSearchResults,
   requestFlightProvider,
 } = require('../services/flightService');
@@ -236,9 +237,16 @@ const calendarFareHandler = asyncRoute(async (req, res) => {
   const body = req.body || {};
   const airSegments = buildAirSegments(body);
   validateAirSegments(airSegments);
+  const adult = asInteger(read(body, 'Adult', 'adult'), 1, 1);
+  const child = asInteger(read(body, 'Child', 'child'), 0);
+  const infant = asInteger(read(body, 'Infant', 'infant'), 0);
 
   const providerPayload = await requestFlightProvider('getcalendarfare', {
     UserIp: getUserIp(req),
+    Adult: adult,
+    Child: child,
+    Infant: infant,
+    DirectFlight: asBoolean(read(body, 'DirectFlight', 'directFlight')),
     JourneyType: asInteger(read(body, 'JourneyType', 'journeyType'), 1, 1, 5),
     PreferredCarriers: read(body, 'PreferredCarriers', 'preferredCarriers') ?? null,
     CabinClass: asInteger(read(body, 'CabinClass', 'cabinClass'), 1, 1, 6),
@@ -247,7 +255,8 @@ const calendarFareHandler = asyncRoute(async (req, res) => {
   });
 
   return sendProviderResponse(res, providerPayload, {
-    calendarFares: providerPayload?.Result || [],
+    calendarFares: normalizeCalendarFares(providerPayload),
+    rawCalendarFares: providerPayload?.Result || [],
     searchTokenId: providerPayload?.SearchTokenId || '',
   });
 });

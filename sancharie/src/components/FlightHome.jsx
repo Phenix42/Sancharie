@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -6,6 +7,8 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleDollarSign,
   Clock3,
   Luggage,
@@ -18,8 +21,9 @@ import {
   Sparkles,
   Tag,
   Users,
+  X,
 } from 'lucide-react';
-import airports from '../data/airports';
+import { flights as flightApi } from '../services';
 import './FlightHome.css';
 
 const cabinOptions = [
@@ -31,10 +35,125 @@ const cabinOptions = [
 
 const specialFares = ['Regular', 'Student', 'Senior Citizen', 'Armed Forces'];
 
+const toIsoDateString = (year, monthIndex, day) => (
+  `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+);
+
 const getInitialDate = (offset = 7) => {
   const date = new Date();
   date.setDate(date.getDate() + offset);
-  return date.toISOString().split('T')[0];
+  return toIsoDateString(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+const addDaysToIsoDate = (isoDate, offset) => {
+  const date = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return getInitialDate(offset);
+  date.setDate(date.getDate() + offset);
+  return toIsoDateString(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+const formatFareAmount = (value) => new Intl.NumberFormat('en-IN', {
+  maximumFractionDigits: 0,
+}).format(Number(value || 0));
+
+const getMonthStart = (isoDate) => {
+  const match = String(isoDate || '').match(/^(\d{4})-(\d{2})-\d{2}$/);
+  if (match) return `${match[1]}-${match[2]}-01`;
+
+  const fallback = new Date();
+  return toIsoDateString(fallback.getFullYear(), fallback.getMonth(), 1);
+};
+
+const shiftMonth = (isoMonth, offset) => {
+  const match = String(isoMonth || '').match(/^(\d{4})-(\d{2})-\d{2}$/);
+  const date = match
+    ? new Date(Number(match[1]), Number(match[2]) - 1 + offset, 1)
+    : new Date();
+  if (Number.isNaN(date.getTime())) return getMonthStart(getInitialDate());
+  return toIsoDateString(date.getFullYear(), date.getMonth(), 1);
+};
+
+const formatDisplayDate = (value) => {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return String(value || '');
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatMonthTitle = (value) => {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+};
+
+const getMonthCells = (monthIso) => {
+  const start = new Date(`${monthIso}T00:00:00`);
+  if (Number.isNaN(start.getTime())) return [];
+  const year = start.getFullYear();
+  const month = start.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  const cells = Array.from({ length: firstDay.getDay() }, (_, index) => ({
+    key: `blank-${index}`,
+    blank: true,
+  }));
+
+  for (let day = 1; day <= totalDays; day += 1) {
+    const date = toIsoDateString(year, month, day);
+    cells.push({
+      key: date,
+      date,
+      day,
+    });
+  }
+
+  return cells;
+};
+
+const isBeforeIsoDate = (date, minDate) => Boolean(date && minDate && date < minDate);
+
+const getFareMap = (fares) => fares.reduce((map, fare) => {
+  if (fare.date && Number(fare.price) > 0) map.set(fare.date, fare);
+  return map;
+}, new Map());
+
+const getSelectionKey = (selection) => selection ? `${selection.kind}-${selection.index}` : '';
+
+const useFloatingRect = (open, { offset = 8, preferredWidth = 360, minWidth = 280 } = {}) => {
+  const anchorRef = useRef(null);
+  const [rect, setRect] = useState(null);
+
+  const updateRect = useCallback(() => {
+    if (!anchorRef.current || typeof window === 'undefined') return;
+    const bounds = anchorRef.current.getBoundingClientRect();
+    const width = Math.min(
+      Math.max(bounds.width, minWidth),
+      preferredWidth,
+      window.innerWidth - 32
+    );
+    const left = Math.min(Math.max(bounds.left, 16), window.innerWidth - width - 16);
+
+    setRect({
+      top: Math.round(bounds.bottom + offset),
+      left: Math.round(left),
+      width: Math.round(width),
+    });
+  }, [offset, preferredWidth, minWidth]);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+
+    updateRect();
+    const handleUpdate = () => updateRect();
+    window.addEventListener('resize', handleUpdate);
+    window.addEventListener('scroll', handleUpdate, true);
+
+    return () => {
+      window.removeEventListener('resize', handleUpdate);
+      window.removeEventListener('scroll', handleUpdate, true);
+    };
+  }, [open, updateRect]);
+
+  return { anchorRef, rect, updateRect };
 };
 
 const emptySegment = (date = '') => ({
@@ -50,18 +169,23 @@ const extractIataCode = (value) => {
   return text.match(/\(([A-Z]{3})\)$/)?.[1] || text.match(/^[A-Z]{3}$/)?.[0] || '';
 };
 
-function AirportField({ label, value, code, onChange, placeholder }) {
+function AirportField({ label, value, code, airports, onChange, placeholder }) {
   const [open, setOpen] = useState(false);
+  const { anchorRef, rect, updateRect } = useFloatingRect(open, {
+    offset: 8,
+    preferredWidth: 380,
+    minWidth: 320,
+  });
   const filteredAirports = useMemo(() => {
     const query = String(value || '').trim().toLowerCase();
     if (!query) return airports.slice(0, 8);
     return airports.filter((airport) =>
       `${airport.code} ${airport.city} ${airport.name} ${airport.country}`.toLowerCase().includes(query)
     ).slice(0, 8);
-  }, [value]);
+  }, [airports, value]);
 
   return (
-    <label className="fh-field fh-airport-field">
+    <label className="fh-field fh-airport-field" ref={anchorRef}>
       <span className="fh-field-label"><MapPin size={14} /> {label}</span>
       <div className="fh-airport-input-row">
         <input
@@ -70,15 +194,18 @@ function AirportField({ label, value, code, onChange, placeholder }) {
             onChange({ display: event.target.value, code: '' });
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true);
+            requestAnimationFrame(updateRect);
+          }}
           onBlur={() => window.setTimeout(() => setOpen(false), 120)}
           placeholder={placeholder}
           autoComplete="off"
         />
         {code && <strong>{code}</strong>}
       </div>
-      {open && filteredAirports.length > 0 && (
-        <div className="fh-airport-dropdown">
+      {open && filteredAirports.length > 0 && rect && createPortal((
+        <div className="fh-airport-dropdown fh-floating-popover" style={rect}>
           {filteredAirports.map((airport) => (
             <button
               type="button"
@@ -94,7 +221,7 @@ function AirportField({ label, value, code, onChange, placeholder }) {
             </button>
           ))}
         </div>
-      )}
+      ), document.body)}
     </label>
   );
 }
@@ -108,6 +235,101 @@ function PassengerCounter({ label, hint, value, minimum, maximum, onChange }) {
         <strong>{value}</strong>
         <button type="button" onClick={() => onChange(Math.min(maximum, value + 1))} disabled={value >= maximum}><Plus size={14} /></button>
       </div>
+    </div>
+  );
+}
+
+function DateFareField({
+  label,
+  value,
+  min,
+  open,
+  month,
+  fares,
+  loading,
+  error,
+  onOpen,
+  onClose,
+  onMonthChange,
+  onSelect,
+}) {
+  const { anchorRef, rect, updateRect } = useFloatingRect(open, {
+    offset: 10,
+    preferredWidth: 360,
+    minWidth: 320,
+  });
+  const fareMap = useMemo(() => getFareMap(fares), [fares]);
+  const cells = useMemo(() => getMonthCells(month), [month]);
+  const selectedLabel = formatDisplayDate(value);
+
+  return (
+    <div className={`fh-field fh-date-field fh-fare-date-field ${open ? 'active' : ''}`} ref={anchorRef}>
+      <span className="fh-field-label"><CalendarDays size={14} /> {label}</span>
+      <button
+        className="fh-date-trigger"
+        type="button"
+        onClick={() => {
+          onOpen();
+          requestAnimationFrame(updateRect);
+        }}
+      >
+        <b>{selectedLabel}</b>
+        <ChevronDown size={15} />
+      </button>
+
+      {open && rect && createPortal((
+        <div className="fh-date-popover fh-floating-popover" style={rect}>
+          <div className="fh-date-popover-head">
+            <button type="button" className="fh-date-nav" onClick={() => onMonthChange(-1)} aria-label="Previous month">
+              <ChevronLeft size={17} />
+            </button>
+            <strong>{formatMonthTitle(month)}</strong>
+            <div className="fh-date-head-actions">
+              <button type="button" className="fh-date-nav" onClick={() => onMonthChange(1)} aria-label="Next month">
+                <ChevronRight size={17} />
+              </button>
+              <button type="button" className="fh-date-close" onClick={onClose} aria-label="Close calendar">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div className="fh-date-weekdays" aria-hidden="true">
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => <span key={day}>{day}</span>)}
+          </div>
+
+          <div className="fh-date-grid">
+            {cells.map((cell) => {
+              if (cell.blank) return <span className="fh-date-cell blank" key={cell.key} />;
+              const fare = fareMap.get(cell.date);
+              const disabled = isBeforeIsoDate(cell.date, min);
+              return (
+                <button
+                  type="button"
+                  key={cell.key}
+                  className={`fh-date-cell ${cell.date === value ? 'selected' : ''} ${fare ? 'has-fare' : ''}`}
+                  onClick={() => {
+                    if (!disabled) {
+                      onSelect(cell.date);
+                      onClose();
+                    }
+                  }}
+                  disabled={disabled}
+                >
+                  <span>{cell.day}</span>
+                  {fare && <small>{formatFareAmount(fare.price)}</small>}
+                </button>
+              );
+            })}
+          </div>
+
+          {(loading || error) && (
+            <div className={`fh-date-popover-note ${error ? 'error' : ''}`}>
+              {loading ? 'Loading fares...' : error}
+            </div>
+          )}
+        </div>
+      ), document.body)}
     </div>
   );
 }
@@ -127,13 +349,34 @@ export default function FlightHome({ onSearch }) {
   const [promoCode, setPromoCode] = useState('');
   const [error, setError] = useState('');
   const [utilityNotice, setUtilityNotice] = useState('');
+  const [calendarFares, setCalendarFares] = useState([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarError, setCalendarError] = useState('');
+  const [calendarMonth, setCalendarMonth] = useState(() => getMonthStart(getInitialDate()));
+  const [activeDatePicker, setActiveDatePicker] = useState(null);
+  const [airportOptions, setAirportOptions] = useState([]);
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const activeDatePickerKey = getSelectionKey(activeDatePicker);
 
   const updateSegment = (index, updates) => {
     setSegments((current) => current.map((segment, segmentIndex) =>
       segmentIndex === index ? { ...segment, ...updates } : segment
     ));
   };
+
+  useEffect(() => {
+    let mounted = true;
+    import('../data/airports')
+      .then((module) => {
+        if (mounted) setAirportOptions(module.default || []);
+      })
+      .catch(() => {
+        if (mounted) setAirportOptions([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const changeTripType = (nextType) => {
     setTripType(nextType);
@@ -218,6 +461,92 @@ export default function FlightHome({ onSearch }) {
     });
   };
 
+  const getDatePickerContext = (selection, dateOverride = '') => {
+    const firstSegment = segments[0] || {};
+    const selectedSegment = segments[selection?.index || 0] || {};
+    const isReturn = selection?.kind === 'return';
+    const source = isReturn ? firstSegment : selectedSegment;
+    const fromId = isReturn
+      ? firstSegment.toId || extractIataCode(firstSegment.to)
+      : source.fromId || extractIataCode(source.from);
+    const toId = isReturn
+      ? firstSegment.fromId || extractIataCode(firstSegment.from)
+      : source.toId || extractIataCode(source.to);
+    const date = dateOverride || (isReturn ? returnDate : source.date);
+
+    return { fromId, toId, date };
+  };
+
+  const loadFareCalendar = async (selection = activeDatePicker, dateOverride = '') => {
+    setCalendarError('');
+    setError('');
+    setCalendarFares([]);
+
+    const { fromId, toId, date } = getDatePickerContext(selection, dateOverride);
+
+    if (!fromId || !toId || !date) {
+      setCalendarError('Select airports first to show live fares.');
+      return;
+    }
+    if (fromId === toId) {
+      setCalendarError('Origin and destination airports must be different.');
+      return;
+    }
+
+    setCalendarLoading(true);
+    try {
+      const data = await flightApi.getCalendarFares({
+        origin: fromId,
+        destination: toId,
+        date,
+        adult: adults,
+        child: children,
+        infant: infants,
+        cabinClass,
+        journeyType: 1,
+      });
+      const fares = (data.calendarFares || [])
+        .filter((fare) => fare.date && Number(fare.price) > 0)
+        .slice(0, 45);
+
+      setCalendarFares(fares);
+      if (!fares.length) {
+        setCalendarError('No calendar fares returned for this route.');
+      }
+    } catch (err) {
+      setCalendarError(err.message || 'Fares could not be loaded.');
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  const openDatePicker = (selection) => {
+    const { date } = getDatePickerContext(selection);
+    const month = getMonthStart(date || getInitialDate());
+    setActiveDatePicker(selection);
+    setCalendarMonth(month);
+    loadFareCalendar(selection, month);
+  };
+
+  const changeCalendarMonth = (offset) => {
+    const month = shiftMonth(calendarMonth, offset);
+    setCalendarMonth(month);
+    loadFareCalendar(activeDatePicker, month);
+  };
+
+  const selectCalendarDate = (date) => {
+    if (!activeDatePicker) return;
+    if (activeDatePicker.kind === 'return') {
+      setReturnDate(date);
+      return;
+    }
+
+    updateSegment(activeDatePicker.index, { date });
+    if (activeDatePicker.index === 0 && tripType === 'roundTrip' && returnDate <= date) {
+      setReturnDate(addDaysToIsoDate(date, 1));
+    }
+  };
+
   const showUtilityNotice = (message) => {
     setUtilityNotice(message);
     window.setTimeout(() => setUtilityNotice(''), 3200);
@@ -269,6 +598,7 @@ export default function FlightHome({ onSearch }) {
                       label="From"
                       value={segment.from}
                       code={segment.fromId}
+                      airports={airportOptions}
                       placeholder="City or airport"
                       onChange={(airport) => updateSegment(index, { from: airport.display, fromId: airport.code })}
                     />
@@ -277,23 +607,49 @@ export default function FlightHome({ onSearch }) {
                       label="To"
                       value={segment.to}
                       code={segment.toId}
+                      airports={airportOptions}
                       placeholder="Where to?"
                       onChange={(airport) => updateSegment(index, { to: airport.display, toId: airport.code })}
                     />
                   </div>
 
-                  <label className="fh-field fh-date-field">
-                    <span className="fh-field-label"><CalendarDays size={14} /> Depart</span>
-                    <input type="date" min={today} value={segment.date} onChange={(event) => updateSegment(index, { date: event.target.value })} />
-                  </label>
+                  <DateFareField
+                    label="Depart"
+                    value={segment.date}
+                    min={today}
+                    open={activeDatePickerKey === `depart-${index}`}
+                    month={calendarMonth}
+                    fares={calendarFares}
+                    loading={calendarLoading}
+                    error={calendarError}
+                    onOpen={() => openDatePicker({ kind: 'depart', index })}
+                    onClose={() => setActiveDatePicker(null)}
+                    onMonthChange={changeCalendarMonth}
+                    onSelect={selectCalendarDate}
+                  />
 
                   {index === 0 && tripType !== 'multiCity' && (
-                    <label className={`fh-field fh-date-field ${tripType === 'oneWay' ? 'muted' : ''}`}>
-                      <span className="fh-field-label"><CalendarDays size={14} /> Return</span>
-                      {tripType === 'roundTrip'
-                        ? <input type="date" min={segment.date || today} value={returnDate} onChange={(event) => setReturnDate(event.target.value)} />
-                        : <button type="button" onClick={() => changeTripType('roundTrip')}>Add return</button>}
-                    </label>
+                    tripType === 'roundTrip' ? (
+                      <DateFareField
+                        label="Return"
+                        value={returnDate}
+                        min={segment.date || today}
+                        open={activeDatePickerKey === 'return-0'}
+                        month={calendarMonth}
+                        fares={calendarFares}
+                        loading={calendarLoading}
+                        error={calendarError}
+                        onOpen={() => openDatePicker({ kind: 'return', index: 0 })}
+                        onClose={() => setActiveDatePicker(null)}
+                        onMonthChange={changeCalendarMonth}
+                        onSelect={selectCalendarDate}
+                      />
+                    ) : (
+                      <label className="fh-field fh-date-field muted">
+                        <span className="fh-field-label"><CalendarDays size={14} /> Return</span>
+                        <button type="button" onClick={() => changeTripType('roundTrip')}>Add return</button>
+                      </label>
+                    )
                   )}
 
                   {tripType === 'multiCity' && index > 1 && (

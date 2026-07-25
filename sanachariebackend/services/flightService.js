@@ -34,6 +34,18 @@ const getProviderError = (payload) => {
   };
 };
 
+const read = (object, ...keys) => {
+  for (const key of keys) {
+    if (object?.[key] !== undefined && object?.[key] !== null) return object[key];
+  }
+  return undefined;
+};
+
+const toArray = (value) => {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+};
+
 const requestFlightProvider = async (endpoint, payload) => {
   const config = getFlightConfig();
 
@@ -196,12 +208,86 @@ const normalizeSearchResults = (payload) => {
   });
 };
 
+const flattenCalendarFares = (value, fares = []) => {
+  if (Array.isArray(value)) {
+    value.forEach((item) => flattenCalendarFares(item, fares));
+    return fares;
+  }
+
+  if (value && typeof value === 'object') {
+    const date = read(value, 'DepartureDate', 'TravelDate', 'JourneyDate', 'FlightDate', 'Date', 'PreferredTime');
+    const price = read(value, 'LowestFare', 'Fare', 'PublishedFare', 'PublishedPrice', 'OfferedFare', 'OfferedPrice', 'TotalFare', 'BaseFare', 'Price');
+    if (date !== undefined || price !== undefined) fares.push(value);
+    else Object.values(value).forEach((item) => flattenCalendarFares(item, fares));
+    return fares;
+  }
+
+  return fares;
+};
+
+const normalizeCalendarDate = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return '';
+
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/) ||
+    text.match(/^(\d{4})\/(\d{2})\/(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  const providerDate = text.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (providerDate) return `${providerDate[3]}-${providerDate[2]}-${providerDate[1]}`;
+
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+};
+
+const normalizeCalendarPrice = (value) => {
+  const fare = Array.isArray(value) ? value[0] : value;
+  const amount = typeof fare === 'object'
+    ? read(fare, 'PublishedPrice', 'PublishedFare', 'OfferedPrice', 'OfferedFare', 'TotalFare', 'BaseFare', 'Amount', 'Fare')
+    : fare;
+  const price = Number(amount);
+  return Number.isFinite(price) ? price : 0;
+};
+
+const normalizeCalendarFares = (payload) => {
+  const seen = new Set();
+  return flattenCalendarFares(payload?.Result || payload)
+    .map((fare, index) => {
+      const date = normalizeCalendarDate(
+        read(fare, 'DepartureDate', 'TravelDate', 'JourneyDate', 'FlightDate', 'Date', 'PreferredTime')
+      );
+      const price = normalizeCalendarPrice(
+        read(fare, 'LowestFare', 'Fare', 'PublishedFare', 'PublishedPrice', 'OfferedFare', 'OfferedPrice', 'TotalFare', 'BaseFare', 'Price')
+      );
+      const currency = read(fare, 'Currency', 'CurrencyCode') || read(fare?.Fare, 'Currency', 'CurrencyCode') || 'INR';
+      const id = `${date || index}-${price || 'fare'}`;
+
+      return {
+        id,
+        date,
+        price,
+        currency,
+        airlineCode: read(fare, 'AirlineCode', 'CarrierCode') || '',
+        airlineName: read(fare, 'AirlineName', 'CarrierName') || '',
+        raw: fare,
+      };
+    })
+    .filter((fare) => fare.date && fare.price > 0)
+    .filter((fare) => {
+      if (seen.has(fare.id)) return false;
+      seen.add(fare.id);
+      return true;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+};
+
 module.exports = {
   FlightProviderError,
   flattenItineraries,
   formatDuration,
   getFlightConfig,
   getProviderError,
+  normalizeCalendarFares,
   normalizeFare,
   normalizeSearchResults,
   requestFlightProvider,

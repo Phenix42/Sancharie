@@ -6,9 +6,27 @@ import MyAccount from './Myaccount'
 import ProfileCompletion from './ProfileCompletion'
 import { useAuth } from '../context/AuthContext'
 import { useBooking } from '../context/BookingContext'
-import { Timer, Home, BookOpen, HelpCircle, X, LogIn, ChevronDown, ChevronLeft } from 'lucide-react'
+import {
+  BadgePercent,
+  BookOpen,
+  Building2,
+  BusFront,
+  ChevronDown,
+  ChevronLeft,
+  Headphones,
+  HelpCircle,
+  Home,
+  LogIn,
+  Menu,
+  Plane,
+  TicketCheck,
+  Timer,
+  TrainFront,
+  UserRound,
+  X
+} from 'lucide-react'
 
-function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange = () => {} }) {
+function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showAccountDropdown, setShowAccountDropdown] = useState(false)
@@ -21,6 +39,17 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const isHomePage = location.pathname === '/'
+  const travelTabs = [
+    { key: 'flight', label: 'Flights', icon: Plane, enabled: true },
+    { key: 'hotel', label: 'Hotels', icon: Building2, enabled: true },
+    { key: 'train', label: 'Trains', icon: TrainFront, enabled: false },
+    { key: 'bus', label: 'Buses', icon: BusFront, enabled: true }
+  ]
+  const bookingTitle = travelMode === 'flight'
+    ? 'Flight Ticket Booking Online'
+    : travelMode === 'hotel'
+      ? 'Hotel Booking Online'
+      : 'Bus Ticket Booking Online'
 
   // Update remaining time every second
   useEffect(() => {
@@ -99,53 +128,120 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange = () => {
     }
   };
 
+  const handleTravelModeClick = (mode, enabled) => {
+    if (!enabled || mode === travelMode) return;
+
+    if (onTravelModeChange) {
+      onTravelModeChange(mode);
+      return;
+    }
+
+    window.location.assign(mode === 'flight' ? '/?mode=flight' : mode === 'hotel' ? '/?mode=hotel' : '/');
+  };
+
   return (
     <>
       <header className="header">
-        <div className="header-container">
-          {!isHomePage && (
-            <button className="page-back-btn" onClick={() => navigate(-1)} title="Back">
-              <ChevronLeft size={18} />
-            </button>
-          )}
-          <div className="logo" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
-            <span className="logo-text">Sancharie</span>
-          </div>
-          <div className="mode-tabs-header">
-            <button
-              type="button"
-              className={`mode-tab ${travelMode === 'bus' ? 'active' : ''}`}
-              onClick={() => onTravelModeChange('bus')}
-            >
-              Bus
-            </button>
-            <button
-              type="button"
-              className={`mode-tab ${travelMode === 'flight' ? 'active' : ''}`}
-              onClick={() => onTravelModeChange('flight')}
-            >
-              Flight
+        <div className="header-container header-main-inner">
+          <div className="brand-cluster">
+            {!isHomePage && (
+              <button className="page-back-btn" onClick={() => navigate(-1)} title="Back">
+                <ChevronLeft size={18} />
+              </button>
+            )}
+            <button className="logo" onClick={handleLogoClick} type="button">
+              <span className="logo-text">Sancharie</span>
             </button>
           </div>
-          
+
           <button 
             className="mobile-menu-btn" 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Open menu"
           >
-            ☰
+            <Menu size={24} />
           </button>
 
-          {/* Session Timer - Only show during booking flow, not on home page */}
-          {sessionStartTime && !sessionExpired && !isHomePage && (
-            <div className={`header-timer ${remainingTime.minutes < 2 ? 'warning' : ''} ${remainingTime.minutes < 1 ? 'critical' : ''}`}>
-              <Timer size={14} />
-              <span className="timer-time">
-                {String(remainingTime.minutes).padStart(2, '0')}:{String(remainingTime.seconds).padStart(2, '0')}
-              </span>
-            </div>
-          )}
+          <div className="mode-tabs-header" aria-label="Travel services">
+            {travelTabs.map(({ key, label, icon: Icon, enabled }) => (
+              <button
+                key={key}
+                type="button"
+                className={`mode-tab ${travelMode === key ? 'active' : ''}`}
+                onClick={() => handleTravelModeClick(key, enabled)}
+                disabled={!enabled}
+                title={enabled ? label : `${label} coming soon`}
+              >
+                <span className="mode-tab-icon">
+                  {React.createElement(Icon, { size: 22, strokeWidth: 2.2 })}
+                </span>
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
 
-          <nav className={`nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+          <p className="booking-context">{bookingTitle}</p>
+
+          <div className="header-actions">
+            {/* Session Timer - Only show during booking flow, not on home page */}
+            {sessionStartTime && !sessionExpired && !isHomePage && (
+              <div className={`header-timer ${remainingTime.minutes < 2 ? 'warning' : ''} ${remainingTime.minutes < 1 ? 'critical' : ''}`}>
+                <Timer size={14} />
+                <span className="timer-time">
+                  {String(remainingTime.minutes).padStart(2, '0')}:{String(remainingTime.seconds).padStart(2, '0')}
+                </span>
+              </div>
+            )}
+
+            <a className="header-action-link" href="#offers">
+              <BadgePercent size={17} />
+              <span>Offers</span>
+            </a>
+            <a className="header-action-link" href="#bookings" onClick={handleMyBookingsClick}>
+              <TicketCheck size={18} />
+              <span>Track Ticket</span>
+            </a>
+            <a className="header-action-link" href="#help">
+              <Headphones size={18} />
+              <span>Need Help?</span>
+            </a>
+
+            <div className="auth-wrapper desktop-auth">
+              {isLoading ? (
+                <button className="login-btn" disabled>
+                  Loading...
+                </button>
+              ) : isAuthenticated ? (
+                <button 
+                  className="login-btn logged-in" 
+                  onClick={handleAuthClick}
+                >
+                  <span className="user-avatar-small">
+                    {user?.name ? user.name.charAt(0).toUpperCase() : <UserRound size={14} />}
+                  </span>
+                  <span>{getDisplayName()}</span>
+                  <ChevronDown size={14} className="dropdown-arrow" />
+                </button>
+              ) : (
+                <button 
+                  className="login-btn" 
+                  onClick={handleAuthClick}
+                >
+                  <UserRound size={16} />
+                  Login
+                </button>
+              )}
+            </div>
+
+            {showAccountDropdown && isAuthenticated && (
+              <div className="account-popover-anchor">
+                <MyAccount onClose={() => setShowAccountDropdown(false)} />
+              </div>
+            )}
+          </div>
+        </div>
+          
+        <nav className={`nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
             {/* Mobile drawer backdrop */}
             <div className="nav-backdrop" onClick={() => setMobileMenuOpen(false)} />
             
@@ -158,26 +254,23 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange = () => {
                 </button>
               </div>
               <div className="mobile-mode-tabs">
-                <button
-                  type="button"
-                  className={`mode-tab ${travelMode === 'bus' ? 'active' : ''}`}
-                  onClick={() => {
-                    onTravelModeChange('bus');
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  Bus
-                </button>
-                <button
-                  type="button"
-                  className={`mode-tab ${travelMode === 'flight' ? 'active' : ''}`}
-                  onClick={() => {
-                    onTravelModeChange('flight');
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  Flight
-                </button>
+                {travelTabs.map(({ key, label, icon: Icon, enabled }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`mode-tab ${travelMode === key ? 'active' : ''}`}
+                    onClick={() => {
+                      handleTravelModeClick(key, enabled);
+                      if (enabled) setMobileMenuOpen(false);
+                    }}
+                    disabled={!enabled}
+                  >
+                    <span className="mode-tab-icon">
+                      {React.createElement(Icon, { size: 21, strokeWidth: 2.2 })}
+                    </span>
+                    <span>{label}</span>
+                  </button>
+                ))}
               </div>
 
               {/* User profile section in drawer */}
@@ -220,42 +313,8 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange = () => {
                 </div>
               )}
             </div>
-            
-            <div className="auth-wrapper desktop-auth">
-              {isLoading ? (
-                <button className="login-btn" disabled>
-                  Loading...
-                </button>
-              ) : isAuthenticated ? (
-                <button 
-                  className="login-btn logged-in" 
-                  onClick={handleAuthClick}
-                >
-                  <span className="user-avatar-small">
-                    {user?.name ? user.name.charAt(0).toUpperCase() : '👤'}
-                  </span>
-                  {getDisplayName()}
-                  <svg className="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </button>
-              ) : (
-                <button 
-                  className="login-btn" 
-                  onClick={handleAuthClick}
-                >
-                  Login
-                </button>
-              )}
-            </div>
-          </nav>
+        </nav>
 
-          {showAccountDropdown && isAuthenticated && (
-            <div className="auth-wrapper">
-              <MyAccount onClose={() => setShowAccountDropdown(false)} />
-            </div>
-          )}
-        </div>
       </header>
 
       <AuthModal 

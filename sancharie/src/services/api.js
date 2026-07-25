@@ -894,6 +894,125 @@ export const bus = {
 };
 
 // ============================================
+// HOTEL API (BDSD/TTS via backend proxy)
+// ============================================
+
+const hotelRequest = async (endpoint, payload = {}) => {
+  const data = await apiRequest(`/api/hotels/${endpoint}`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if (data.apiStatus && !data.apiStatus.success) {
+    throw new Error(data.apiStatus.message || 'Hotel request failed');
+  }
+
+  return data;
+};
+
+export const hotels = {
+  getCities: async () => {
+    const data = await apiRequest('/api/hotels/cities');
+    return {
+      ...data,
+      cities: data.cities || [],
+      success: data.apiStatus?.success ?? data.success ?? false,
+    };
+  },
+
+  search: async (payload) => {
+    const data = await hotelRequest('search', payload);
+    return {
+      ...data,
+      hotels: data.hotels || [],
+      searchToken: data.searchToken || data.Search_Token || '',
+      success: data.apiStatus?.success ?? data.success ?? false,
+    };
+  },
+
+  getInfo: async ({ searchToken, resultIndex, hotelCode, ...rest }) => {
+    const data = await hotelRequest('info', {
+      ...rest,
+      Search_Token: searchToken,
+      ResultIndex: resultIndex,
+      HotelCode: hotelCode,
+    });
+    return { ...data, hotelInfo: data.hotelInfo || null };
+  },
+
+  getRooms: async ({ searchToken, resultIndex, hotelCode, ...rest }) => {
+    const data = await hotelRequest('rooms', {
+      ...rest,
+      Search_Token: searchToken,
+      ResultIndex: resultIndex,
+      HotelCode: hotelCode,
+    });
+    return { ...data, roomOptions: data.roomOptions || [] };
+  },
+
+  blockRoom: async ({ searchToken, resultIndex, hotelCode, hotelName, guestNationality, noOfRooms, hotelRoomDetails, ...rest }) => {
+    const data = await hotelRequest('block-room', {
+      ...rest,
+      Search_Token: searchToken,
+      ResultIndex: resultIndex,
+      HotelCode: hotelCode,
+      HotelName: hotelName,
+      GuestNationality: guestNationality,
+      NoOfRooms: noOfRooms,
+      HotelRoomDetails: hotelRoomDetails,
+    });
+    return {
+      ...data,
+      block: data.block || data.Result || null,
+      roomOptions: data.roomOptions || [],
+    };
+  },
+
+  book: async ({ searchToken, resultIndex, hotelCode, hotelName, guestNationality, noOfRooms, hotelRoomDetails, guests, contactDetails, paymentId, amount, ...rest }) => {
+    const data = await hotelRequest('book', {
+      ...rest,
+      Search_Token: searchToken,
+      ResultIndex: resultIndex,
+      HotelCode: hotelCode,
+      HotelName: hotelName,
+      GuestNationality: guestNationality,
+      NoOfRooms: noOfRooms,
+      HotelRoomDetails: hotelRoomDetails,
+      guests,
+      contactDetails,
+      paymentId,
+      amount,
+      IsVouchered: true,
+    });
+    return {
+      ...data,
+      booking: data.booking || data.Result || null,
+      bookingId: data.bookingId || data.BookingId || data.Result || '',
+      bookingRefNo: data.bookingRefNo || data.BookingRefNo || '',
+    };
+  },
+
+  getBookingDetail: async ({ searchToken, bookingId, ...rest }) => {
+    const data = await hotelRequest('booking-detail', {
+      ...rest,
+      Search_Token: searchToken,
+      BookingId: bookingId,
+    });
+    return { ...data, booking: data.booking || data.Result || null };
+  },
+
+  cancel: async ({ searchToken, bookingId, remarks = 'Cancel hotel booking', ...rest }) => {
+    const data = await hotelRequest('cancel', {
+      ...rest,
+      Search_Token: searchToken,
+      BookingId: bookingId,
+      Remarks: remarks,
+    });
+    return { ...data, cancellation: data.cancellation || data.Result || null };
+  },
+};
+
+// ============================================
 // PAYMENT API
 // ============================================
 
@@ -995,7 +1114,7 @@ export const payment = {
       amount,
       currency,
       name: 'Sancharie Travels',
-      description: bookingDetails.description || 'Bus Ticket Booking',
+      description: bookingDetails.description || 'Sancharie Booking',
       order_id: orderId,
       image: '/logo.png',
       prefill: {
@@ -1004,9 +1123,12 @@ export const payment = {
         contact: customerInfo.phone || '',
       },
       notes: {
+        service_type: bookingDetails.serviceType || bookingDetails.type || 'travel',
         bus_name: bookingDetails.busName || '',
+        hotel_name: bookingDetails.hotelName || '',
         travel_date: bookingDetails.travelDate || '',
         seats: bookingDetails.seats || '',
+        rooms: bookingDetails.rooms || '',
       },
       theme: { color: '#9c7635' },
       handler: (response) => onSuccess?.(response),
@@ -1088,6 +1210,7 @@ export default {
   user,
   bus,
   flights,
+  hotels,
   payment,
   API_BASE_URL,
 };

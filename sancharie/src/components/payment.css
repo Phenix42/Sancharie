@@ -1696,3 +1696,390 @@
   }
 }
 
+/* Professional, page-scoped checkout and confirmation layout */
+.payment-page {
+  --payment-navy: #002c3f;
+  --payment-navy-soft: #0a465d;
+  --payment-gold: #be951f;
+  --payment-border: #dfe7ea;
+  min-height: 100vh;
+  padding: 32px 24px 56px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(190, 149, 31, 0.1), transparent 30%),
+    #f4f7f8;
+}
+
+.payment-page::before {
+  display: none;
+}
+
+.payment-page .payment-container {
+  max-width: 1180px;
+  padding: 0;
+}
+
+.payment-page .payment-header {
+  padding: 20px 24px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--payment-navy), var(--payment-navy-soft));
+  box-shadow: 0 14px 36px rgba(0, 44, 63, 0.14);
+}
+
+.payment-page .header-content h1 {
+  color: #fff;
+  font-size: 22px;
+}
+
+.payment-page .header-subtitle {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.payment-page .back-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.payment-page .back-btn:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.payment-page .secure-indicator {
+  border: 1px solid rgba(135, 224, 187, 0.22);
+  background: rgba(26, 139, 96, 0.18);
+  color: #baf1d8;
+}
+
+.checkout-progress {
+  display: flex;
+  max-width: 680px;
+  align-items: center;
+  justify-content: center;
+  margin: 22px auto 26px;
+  padding: 13px 20px;
+  border: 1px solid var(--payment-border);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 44, 63, 0.05);
+}
+
+.checkout-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #819097;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.checkout-step.complete {
+  color: #16845b;
+}
+
+.checkout-step.active {
+  color: var(--payment-navy);
+}
+
+.checkout-line {
+  width: 64px;
+  height: 2px;
+  margin: 0 12px;
+  background: #dfe7ea;
+}
+
+.checkout-line.complete,
+.checkout-line.active {
+  background: linear-gradient(90deg, #16845b, var(--payment-gold));
+}
+
+.payment-page .payment-main {
+  padding-bottom: 0;
+}
+
+.payment-page .payment-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.75fr);
+  gap: 20px 24px;
+  align-items: start;
+}
+
+.payment-page .summary-section,
+.payment-page .passengers-section,
+.payment-page .fare-section,
+.payment-page .gst-invoice-section {
+  border: 1px solid var(--payment-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(0, 44, 63, 0.055);
+}
+
+.payment-page .summary-section {
+  grid-column: 1;
+  grid-row: 1;
+  padding: 22px;
+}
+
+.payment-page .passengers-section {
+  grid-column: 1;
+  grid-row: 2 / span 5;
+  padding: 22px;
+}
+
+.payment-page .fare-section {
+  position: sticky;
+  top: 88px;
+  grid-column: 2;
+  grid-row: 1;
+  padding: 22px;
+}
+
+.payment-page .gst-invoice-section {
+  grid-column: 2;
+  grid-row: 2;
+  padding: 20px;
+}
+
+.payment-page .trust-section,
+.payment-page .payment-error-banner,
+.payment-page .pay-button,
+.payment-page .footer-info {
+  grid-column: 2;
+}
+
+.payment-page .trust-section { grid-row: 3; }
+.payment-page .payment-error-banner { grid-row: 4; }
+.payment-page .pay-button { grid-row: 5; }
+.payment-page .footer-info { grid-row: 6; }
+
+.payment-page .section-header {
+  margin-bottom: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid #edf1f3;
+}
+
+.payment-page .section-header h2 {
+  color: #17262d;
+  font-size: 17px;
+}
+
+.payment-page .journey-summary-card {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.payment-page .bus-header {
+  position: relative;
+  padding: 4px 0 18px;
+}
+
+.payment-page .bus-icon-wrapper,
+.payment-page .passenger-avatar {
+  background: var(--payment-navy);
+}
+
+.payment-page .journey-date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #f4f7f8;
+  color: #61727a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.payment-page .timeline-marker {
+  background: var(--payment-gold);
+  box-shadow: 0 0 0 2px var(--payment-gold);
+}
+
+.payment-page .timeline-connector {
+  background: linear-gradient(180deg, var(--payment-gold), var(--payment-navy));
+}
+
+.payment-page .seat-tag,
+.payment-page .passenger-seat {
+  border-color: rgba(190, 149, 31, 0.3);
+  background: #fffaf0;
+  color: #8b6a10;
+}
+
+.payment-page .passenger-card {
+  border-color: #e3e9ec;
+  background: #f7f9fa;
+}
+
+.payment-page .fare-total {
+  margin-top: 8px;
+  padding: 16px 14px 0;
+  border-top-color: rgba(190, 149, 31, 0.45);
+  color: var(--payment-navy);
+  font-size: 20px;
+}
+
+.payment-page .gst-checkbox:checked + .gst-checkbox-custom {
+  border-color: var(--payment-gold);
+  background: var(--payment-gold);
+}
+
+.payment-page .trust-section {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.payment-page .trust-badge {
+  justify-content: center;
+  padding: 10px 8px;
+  border: 1px solid var(--payment-border);
+  border-radius: 10px;
+  box-shadow: none;
+  text-align: center;
+}
+
+.payment-page .payment-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px 14px;
+  border: 1px solid #f3b9b9;
+  border-radius: 10px;
+  background: #fff2f2;
+  color: #a72e2e;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.payment-page .payment-error-banner svg {
+  flex: 0 0 auto;
+}
+
+.payment-page .pay-button {
+  min-height: 56px;
+  background: var(--payment-gold);
+  box-shadow: 0 9px 22px rgba(190, 149, 31, 0.26);
+}
+
+.payment-page .pay-button:hover:not(:disabled) {
+  background: #a98218;
+}
+
+.payment-page .help-text,
+.payment-page .terms-text {
+  color: #6c7c84;
+}
+
+.payment-page .help-link,
+.payment-page .terms-text a {
+  color: #8b6a10;
+}
+
+.payment-page-success,
+.payment-page-processing {
+  padding: 36px 20px;
+}
+
+.payment-page .success-container,
+.payment-page .processing-container {
+  width: 100%;
+  min-height: calc(100vh - 72px);
+}
+
+.payment-page .success-card {
+  max-width: 780px;
+  padding: 42px;
+  border: 1px solid var(--payment-border);
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(0, 44, 63, 0.12);
+}
+
+.payment-page .success-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eaf8f1;
+  color: #16845b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.payment-page .ticket-card-redesigned {
+  border: 1px solid var(--payment-border);
+  box-shadow: 0 12px 36px rgba(0, 44, 63, 0.08);
+}
+
+.payment-page .ticket-top-strip,
+.payment-page .ticket-bottom-strip {
+  background: linear-gradient(90deg, var(--payment-navy), var(--payment-gold));
+}
+
+.payment-page .btn-primary {
+  background: var(--payment-gold);
+}
+
+@media (max-width: 900px) {
+  .payment-page {
+    padding: 20px 14px 90px;
+  }
+
+  .payment-page .payment-content {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-page .summary-section,
+  .payment-page .passengers-section,
+  .payment-page .fare-section,
+  .payment-page .gst-invoice-section,
+  .payment-page .trust-section,
+  .payment-page .payment-error-banner,
+  .payment-page .pay-button,
+  .payment-page .footer-info {
+    position: static;
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .payment-page .summary-section { order: 1; }
+  .payment-page .passengers-section { order: 2; }
+  .payment-page .fare-section { order: 3; }
+  .payment-page .gst-invoice-section { order: 4; }
+  .payment-page .trust-section { order: 5; }
+  .payment-page .payment-error-banner { order: 6; }
+  .payment-page .pay-button { order: 7; }
+  .payment-page .footer-info { order: 8; }
+}
+
+@media (max-width: 640px) {
+  .payment-page .payment-header {
+    align-items: stretch;
+  }
+
+  .checkout-progress {
+    justify-content: space-between;
+    border-radius: 14px;
+  }
+
+  .checkout-step span,
+  .checkout-line {
+    display: none;
+  }
+
+  .payment-page .journey-date-chip {
+    display: none;
+  }
+
+  .payment-page .success-card {
+    padding: 28px 18px;
+  }
+}

@@ -4,7 +4,6 @@ import './BusResults.css';
 // Import images from assets
 import whyChooseImage from '../assets/whychooseimage.png';
 import onlineBookingImage from '../assets/onlinebookingimage.png';
-import howToBookImage from '../assets/busimage.png';
 
 const BusResults = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -128,56 +127,7 @@ const BusResults = () => {
         </div>
       </section>
 
-      {/* Section 4: How to Book Bus Tickets Online on Sancharie */}
-      <section className="how-to-book-section">
-        <div className="how-to-book-content">
-          <div className="how-to-book-text">
-            <h2 className="section-title-underline">How to Book Bus Tickets Online on Sancharie</h2>
-            <p className="how-to-book-intro">Booking a bus ticket on Sancharie is simple and secure:</p>
-            <ol className="steps-list">
-              <li>Enter your origin city and destination city</li>
-              <li>Select your travel date</li>
-              <li>Browse available buses and compare options</li>
-              <li>Choose your seat, boarding, and drop points</li>
-              <li>Enter passenger and contact details</li>
-              <li>Complete payment using your preferred method</li>
-              <li>Receive your e-ticket instantly via SMS, WhatsApp, and email</li>
-            </ol>
-
-            <h3 className="subsection-title">Last-Minute & Same-Day Ticket Booking</h3>
-            <p>
-              A large percentage of Indian travellers book tickets at the last moment. Sancharie is designed to support this reality.
-            </p>
-            <ul className="feature-list">
-              <li>24/7 bus availability</li>
-              <li>Real-time route and price updates</li>
-              <li>Last-minute deals on select operators</li>
-              <li>Multiple pickup and drop locations</li>
-              <li>Sancharie helps travellers stay flexible without paying extra.</li>
-            </ul>
-
-            <h3 className="subsection-title">Live Bus Tracking for Stress-Free Boarding</h3>
-            <p>
-              Sancharie offers real-time bus tracking, helping passengers know exactly where their bus is.
-            </p>
-            <p className="tracking-intro">With live tracking, users can:</p>
-            <ul className="feature-list">
-              <li>Track bus location on the map</li>
-              <li>Check estimated arrival time</li>
-              <li>Avoid long waiting at boarding points</li>
-              <li>Plan travel more efficiently</li>
-            </ul>
-            <p>
-              This feature reduces uncertainty and improves the overall travel experience.
-            </p>
-          </div>
-          <div className="how-to-book-image">
-            <img src={howToBookImage} alt="How to Book Bus Tickets" className="section-image" loading="lazy" />
-          </div>
-        </div>
-      </section>
-
-      {/* Section 5: FAQs related to Bus Tickets Booking */}
+      {/* FAQs related to Bus Tickets Booking */}
       <section className="faq-section">
         <h2 className="section-title">FAQs related to Bus Tickets Booking</h2>
         <div className="faq-tabs">

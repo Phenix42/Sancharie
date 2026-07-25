@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./Details.css";
 import { 
@@ -68,6 +68,16 @@ export default function Details() {
   // Assurance state
   const [assurance, setAssurance] = useState("no"); // "yes" or "no"
   const assurancePrice = 24; // per passenger
+  const journeyDate = bus?.dateOfJourney || bus?.date || bus?.DepartureTime;
+  const parsedJourneyDate = journeyDate ? new Date(journeyDate) : null;
+  const journeyDateLabel = parsedJourneyDate && !Number.isNaN(parsedJourneyDate.getTime())
+    ? parsedJourneyDate.toLocaleDateString('en-IN', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : 'Travel date';
 
   // Validation errors state
   const [passengerErrors, setPassengerErrors] = useState(() => {
@@ -319,8 +329,9 @@ export default function Details() {
               <ArrowLeft size={20} />
             </button>
             <div className="header-info">
-              <h4>Complete Your Booking</h4>
-              <p>Fill in passenger details to proceed</p>
+              <span className="details-eyebrow">Passenger information</span>
+              <h4>Complete your booking</h4>
+              <p>Review the journey and enter traveller details</p>
             </div>
           </div>
           <div className="header-badge">
@@ -335,8 +346,8 @@ export default function Details() {
           {/* Bus Summary Card */}
           <div className="bus-summary-card">
             <div className="bus-summary-header">
-              <Bus size={20} />
-              <span>Journey Summary</span>
+              <div><Bus size={20} /><span>Journey Summary</span></div>
+              <span className="journey-date-pill"><Clock size={14} /> {journeyDateLabel}</span>
             </div>
             <div className="bus-summary-content">
               <div className="bus-operator">
@@ -347,8 +358,8 @@ export default function Details() {
                 <div className="route-point">
                   <div className="point-marker start"></div>
                   <div className="point-info">
-                    <span className="point-time">{boardingPoint?.time}</span>
-                    <span className="point-name">{boardingPoint?.name}</span>
+                    <span className="point-time">{boardingPoint?.time || boardingPoint?.Time || '—'}</span>
+                    <span className="point-name">{boardingPoint?.name || boardingPoint?.CityPointName || 'Boarding point'}</span>
                   </div>
                 </div>
                 <div className="route-line">
@@ -357,8 +368,8 @@ export default function Details() {
                 <div className="route-point">
                   <div className="point-marker end"></div>
                   <div className="point-info">
-                    <span className="point-time">{droppingPoint?.time}</span>
-                    <span className="point-name">{droppingPoint?.name}</span>
+                    <span className="point-time">{droppingPoint?.time || droppingPoint?.Time || '—'}</span>
+                    <span className="point-name">{droppingPoint?.name || droppingPoint?.CityPointName || 'Dropping point'}</span>
                   </div>
                 </div>
               </div>
@@ -725,6 +736,10 @@ export default function Details() {
             <div className="secure-info">
               <Lock size={14} />
               <span>Your payment is 100% secure with SSL encryption</span>
+            </div>
+            <div className="booking-trust-list">
+              <span><CheckCircle2 size={14} /> Seats held securely during payment</span>
+              <span><CheckCircle2 size={14} /> Instant ticket after confirmation</span>
             </div>
           </div>
         </div>

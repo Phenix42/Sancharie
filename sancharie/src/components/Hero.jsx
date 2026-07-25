@@ -20,10 +20,20 @@ function Hero() {
         {/* Overlay to reduce image dominance and improve focus on search bar */}
         <div className="hero-overlay"></div>
       </div>
-      {/* Clear heading for users to instantly know it's for bus booking */}
       <div className="hero-content">
-        <h1 className="hero-title">Book Bus Tickets Easily</h1>
-        <p className="hero-subtitle">Find and book the best bus routes across India with just a few clicks</p>
+        <div className="hero-kicker">Sancharie Bus Network</div>
+        <h1 className="hero-title">
+          <span>Business-class bus</span>
+          <span>booking for every route</span>
+        </h1>
+        <p className="hero-subtitle">
+          Compare verified operators, live fares, boarding points, and seat options in a calm booking workspace.
+        </p>
+        <div className="hero-proof-row" aria-label="Sancharie booking highlights">
+          <span><strong>500+</strong> routes covered</span>
+          <span><strong>24/7</strong> support</span>
+          <span><strong>100%</strong> secure payments</span>
+        </div>
       </div>
     </section>
   )
