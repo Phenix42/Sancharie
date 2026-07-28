@@ -20,14 +20,20 @@ test('all documented flight operations are exposed by the backend router', () =>
     .map((layer) => layer.route.path);
 
   [
+    '/health',
     '/search',
     '/calendar-fares',
+    '/getcalendarfare',
     '/fare-rule',
+    '/farerule',
     '/fare-confirmation',
+    '/fareconfirmation',
     '/ssr',
     '/book',
     '/booking-detail',
+    '/getbookingdetail',
     '/cancel-request',
+    '/cancelrequest',
   ].forEach((path) => assert.ok(paths.includes(path), `${path} route is missing`));
 });
 

@@ -216,7 +216,7 @@ export const user = {
 // ============================================
 
 const flightRequest = async (endpoint, payload) => {
-  const data = await apiRequest(`/api/flights/${endpoint}`, {
+  const data = await apiRequest(`/api/airservice/rest/${endpoint}`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -251,7 +251,7 @@ export const flights = {
     const payload = typeof originOrOptions === 'object'
       ? originOrOptions
       : { ...options, origin: originOrOptions, destination, date };
-    const data = await flightRequest('calendar-fares', payload);
+    const data = await flightRequest('getcalendarfare', payload);
     return {
       ...data,
       calendarFares: data.calendarFares || data.Result || [],
@@ -260,12 +260,12 @@ export const flights = {
   },
 
   getFareRules: async (searchTokenId, resultIndex) => {
-    const data = await flightRequest('fare-rule', { searchTokenId, resultIndex });
+    const data = await flightRequest('farerule', { searchTokenId, resultIndex });
     return { ...data, fareRules: data.Result || [] };
   },
 
   confirmFare: async (searchTokenId, resultIndex) => {
-    const data = await flightRequest('fare-confirmation', { searchTokenId, resultIndex });
+    const data = await flightRequest('fareconfirmation', { searchTokenId, resultIndex });
     return { ...data, fareConfirmation: data.Result || null };
   },
 
@@ -280,12 +280,12 @@ export const flights = {
   },
 
   getBookingDetail: async ({ searchTokenId, bookingId, pnr = '', ...rest }) => {
-    const data = await flightRequest('booking-detail', { ...rest, searchTokenId, bookingId, pnr });
+    const data = await flightRequest('getbookingdetail', { ...rest, searchTokenId, bookingId, pnr });
     return { ...data, booking: data.Result || null };
   },
 
   cancelBooking: async ({ searchTokenId, bookingId, requestType = 'FullCancellation', remark = 'Cancel Ticket', ...rest }) => {
-    const data = await flightRequest('cancel-request', {
+    const data = await flightRequest('cancelrequest', {
       ...rest,
       searchTokenId,
       bookingId,

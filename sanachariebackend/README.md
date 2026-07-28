@@ -122,14 +122,15 @@ npm run dev
 ### Flights (BDSD/TTS Proxy)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/flights/search` | Search flights |
-| POST | `/api/flights/calendar-fares` | Get calendar fares |
-| POST | `/api/flights/fare-rule` | Get rules for a selected fare |
-| POST | `/api/flights/fare-confirmation` | Revalidate price and flight details |
-| POST | `/api/flights/ssr` | Get meals, baggage, and seat inventory |
-| POST | `/api/flights/book` | Book selected flight (auth + captured payment required) |
-| POST | `/api/flights/booking-detail` | Get provider booking details (auth required) |
-| POST | `/api/flights/cancel-request` | Request full cancellation (auth required) |
+| GET | `/api/airservice/rest/health` | Verify flight routes are mounted |
+| POST | `/api/airservice/rest/search` | Search flights |
+| POST | `/api/airservice/rest/getcalendarfare` | Get calendar fares |
+| POST | `/api/airservice/rest/farerule` | Get rules for a selected fare |
+| POST | `/api/airservice/rest/fareconfirmation` | Revalidate price and flight details |
+| POST | `/api/airservice/rest/ssr` | Get meals, baggage, and seat inventory |
+| POST | `/api/airservice/rest/book` | Book selected flight (auth + captured payment required) |
+| POST | `/api/airservice/rest/getbookingdetail` | Get provider booking details (auth required) |
+| POST | `/api/airservice/rest/cancelrequest` | Request full cancellation (auth required) |
 
 ## 🔧 Environment Variables
 
@@ -169,6 +170,10 @@ FLIGHT_API_USERNAME=xxx
 FLIGHT_API_PASSWORD=xxx
 FLIGHT_API_TIMEOUT=30000
 ```
+
+Use `https://api.bdsd.technology/api` as the BDSD REST base. Browser calls go
+to Sancharie paths such as `/api/airservice/rest/getcalendarfare`; the backend
+then proxies to BDSD with server-side credentials.
 
 ## 🛡️ Security Notes
 

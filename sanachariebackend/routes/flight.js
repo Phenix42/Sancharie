@@ -381,6 +381,16 @@ const cancelRequestHandler = asyncRoute(async (req, res) => {
   return sendProviderResponse(res, providerPayload);
 });
 
+router.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    service: 'flights',
+    mounted: true,
+    providerBaseUrl: 'configured',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 router.post('/search', searchHandler);
 router.post('/calendar-fares', calendarFareHandler);
 router.post('/getcalendarfare', calendarFareHandler);
