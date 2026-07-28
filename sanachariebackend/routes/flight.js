@@ -382,6 +382,14 @@ const cancelRequestHandler = asyncRoute(async (req, res) => {
 });
 
 router.post('/search', searchHandler);
+router.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    service: 'flights',
+    mounted: true,
+    timestamp: new Date().toISOString(),
+  });
+});
 router.post('/calendar-fares', calendarFareHandler);
 router.post('/getcalendarfare', calendarFareHandler);
 router.post('/fare-rule', tokenEndpointHandler('farerule'));
