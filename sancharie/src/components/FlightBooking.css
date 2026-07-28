@@ -327,25 +327,209 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .flight-booking-page {
-    padding: 20px 12px;
+    width: 100vw;
+    max-width: 100%;
+    min-height: 100dvh;
+    padding: 0 0 calc(96px + env(safe-area-inset-bottom));
+    background: #eef4f6;
+    overflow-x: hidden;
+  }
+
+  .flight-back-button {
+    position: sticky;
+    top: calc(62px + env(safe-area-inset-top));
+    z-index: 12;
+    width: calc(100% - 24px);
+    min-height: 48px;
+    margin: 10px 12px 12px;
+    padding: 0 12px;
+    border: 1px solid #d7e2e7;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10px 24px rgba(0, 44, 63, 0.07);
+    backdrop-filter: blur(14px);
+  }
+
+  .flight-booking-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
   .flight-review-panel,
   .flight-passenger-form {
-    padding: 18px;
-    border-radius: 14px;
+    border-right: 0;
+    border-left: 0;
+    box-shadow: none;
+  }
+
+  .flight-review-panel {
+    margin: 0 12px;
+    padding: 16px;
+    border-radius: 20px;
+    box-shadow: 0 12px 28px rgba(0, 44, 63, 0.08);
+  }
+
+  .flight-review-heading {
+    gap: 10px;
+    padding-bottom: 14px;
+  }
+
+  .flight-review-heading h1 {
+    font-size: 19px;
+  }
+
+  .flight-review-heading p {
+    font-size: 12px;
+  }
+
+  .flight-review-route {
+    grid-template-columns: minmax(0, 1fr) 82px minmax(0, 1fr);
+    gap: 8px;
+    padding: 18px 0 10px;
   }
 
   .flight-form-grid,
   .flight-form-grid.three {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 14px;
   }
 
   .flight-review-route strong {
     font-size: 21px;
+  }
+
+  .flight-review-route span {
+    font-size: 11px;
+  }
+
+  .flight-review-line span {
+    font-size: 11px;
+  }
+
+  .flight-review-carrier {
+    gap: 10px;
+    padding-bottom: 16px;
+    font-size: 12px;
+  }
+
+  .flight-fare-summary {
+    border-radius: 16px;
+  }
+
+  .flight-rule-box {
+    border-radius: 16px;
+  }
+
+  .flight-passenger-form {
+    margin-top: 4px;
+    padding: 22px 16px 0;
+    border-radius: 28px 28px 0 0;
+    background: #ffffff;
+  }
+
+  .flight-form-heading {
+    position: sticky;
+    top: calc(120px + env(safe-area-inset-top));
+    z-index: 10;
+    margin: -22px -16px 20px;
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid #edf2f4;
+    border-radius: 28px 28px 0 0;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+  }
+
+  .flight-form-heading h2 {
+    font-size: 22px;
+  }
+
+  .flight-passenger-form label,
+  .flight-full-field {
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .flight-passenger-form input,
+  .flight-passenger-form select {
+    min-height: 54px;
+    padding: 13px 14px;
+    border-radius: 14px;
+    background: #f8fbfc;
+    font-size: 16px;
+  }
+
+  .flight-document-section {
+    margin: 18px -4px;
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .flight-signin-notice,
+  .flight-form-error,
+  .flight-ssr-note,
+  .flight-preparation-warning {
+    border-radius: 14px;
+  }
+
+  .flight-terms {
+    margin: 20px 0 88px;
+    padding: 13px;
+    border: 1px solid #e4edf1;
+    border-radius: 16px;
+    background: #fbfdfe;
+  }
+
+  .flight-pay-button {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 16px;
+    z-index: 80;
+    width: auto;
+    min-height: 58px;
+    border-radius: 18px;
+    box-shadow: 0 18px 34px rgba(181, 139, 37, 0.32);
+  }
+
+  .flight-booking-empty,
+  .flight-booking-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(330px, calc(100vw - 72px));
+    max-width: calc(100vw - 72px);
+    min-width: 0;
+    min-height: calc(100dvh - 120px);
+    margin: 12px auto;
+    padding: 28px 18px;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+
+  .flight-booking-empty > *,
+  .flight-booking-success > * {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .flight-booking-empty h1,
+  .flight-booking-success h1,
+  .flight-booking-empty p,
+  .flight-booking-success p {
+    max-width: min(100%, 310px);
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .flight-booking-empty button,
+  .flight-booking-success button {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding-inline: 14px;
   }
 
   .flight-success-actions {

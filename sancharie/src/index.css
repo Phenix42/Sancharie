@@ -21,6 +21,7 @@
   --primary-color: #002C3F;
   --gold-color: #CEB45F;
   --light-color: #EFF3F4;
+  --mobile-nav-height: 74px;
   
   font-family: 'Plus Jakarta Sans', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -40,6 +41,9 @@ body {
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
+  background: #f4f7f8;
+  overscroll-behavior-y: none;
 }
 
 html, body, #root {
@@ -112,6 +116,7 @@ body {
   
   body {
     font-size: 16px;
+    background: #f4f7f8;
   }
 }
 
@@ -190,10 +195,6 @@ html {
 }
 
 @media (max-width: 480px) {
-  html {
-    font-size: 13px;
-  }
-  
   /* More compact spacing on small screens */
   .container-fluid {
     padding-left: 12px;
@@ -203,10 +204,6 @@ html {
 
 /* Prevent content from being cut off on small screens */
 @media (max-width: 360px) {
-  html {
-    font-size: 12px;
-  }
-  
   .container-fluid {
     padding-left: 8px;
     padding-right: 8px;
@@ -221,7 +218,9 @@ html {
 @media (max-width: 768px) {
   /* Add bottom padding for bottom nav */
   .app {
-    padding-bottom: 64px;
+    min-height: 100dvh;
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+    background: #f4f7f8;
   }
 
   /* Full bleed sections */
@@ -232,6 +231,13 @@ html {
   /* Smooth momentum scrolling */
   .app, main, .page-content {
     -webkit-overflow-scrolling: touch;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    border-radius: 12px;
   }
 
   /* Disable text selection for UI elements (app-like) */

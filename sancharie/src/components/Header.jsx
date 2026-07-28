@@ -40,17 +40,11 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
   const travelTabs = [
+    { key: 'bus', label: 'Buses', icon: BusFront, enabled: true },
     { key: 'flight', label: 'Flights', icon: Plane, enabled: true },
     { key: 'hotel', label: 'Hotels', icon: Building2, enabled: true },
-    { key: 'train', label: 'Trains', icon: TrainFront, enabled: false },
-    { key: 'bus', label: 'Buses', icon: BusFront, enabled: true }
+    { key: 'train', label: 'Trains', icon: TrainFront, enabled: false }
   ]
-  const bookingTitle = travelMode === 'flight'
-    ? 'Flight Ticket Booking Online'
-    : travelMode === 'hotel'
-      ? 'Hotel Booking Online'
-      : 'Bus Ticket Booking Online'
-
   // Update remaining time every second
   useEffect(() => {
     if (!sessionStartTime || sessionExpired) return;
@@ -69,6 +63,26 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [sessionStartTime, sessionExpired, bookingActions]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
 
   // Get display name - use name if available, otherwise show phone last 4 digits
   const getDisplayName = () => {
@@ -145,7 +159,7 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
         <div className="header-container header-main-inner">
           <div className="brand-cluster">
             {!isHomePage && (
-              <button className="page-back-btn" onClick={() => navigate(-1)} title="Back">
+              <button className="page-back-btn" onClick={() => navigate(-1)} title="Back" type="button">
                 <ChevronLeft size={18} />
               </button>
             )}
@@ -157,9 +171,12 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
           <button 
             className="mobile-menu-btn" 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Open menu"
+            aria-controls="mobile-header-menu"
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            type="button"
           >
-            <Menu size={24} />
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={24} />}
           </button>
 
           <div className="mode-tabs-header" aria-label="Travel services">
@@ -180,11 +197,9 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
             ))}
           </div>
 
-          <p className="booking-context">{bookingTitle}</p>
-
           <div className="header-actions">
             {/* Session Timer - Only show during booking flow, not on home page */}
-            {sessionStartTime && !sessionExpired && !isHomePage && (
+            {sessionStartTime && !sessionExpired && !isHomePage && travelMode !== 'flight' && (
               <div className={`header-timer ${remainingTime.minutes < 2 ? 'warning' : ''} ${remainingTime.minutes < 1 ? 'critical' : ''}`}>
                 <Timer size={14} />
                 <span className="timer-time">
@@ -193,15 +208,15 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
               </div>
             )}
 
-            <a className="header-action-link" href="#offers">
+            <a className="header-action-link" href="#offers" aria-label="Offers" title="Offers">
               <BadgePercent size={17} />
               <span>Offers</span>
             </a>
-            <a className="header-action-link" href="#bookings" onClick={handleMyBookingsClick}>
+            <a className="header-action-link" href="#bookings" onClick={handleMyBookingsClick} aria-label="Track Ticket" title="Track Ticket">
               <TicketCheck size={18} />
               <span>Track Ticket</span>
             </a>
-            <a className="header-action-link" href="#help">
+            <a className="header-action-link" href="#help" aria-label="Need Help?" title="Need Help?">
               <Headphones size={18} />
               <span>Need Help?</span>
             </a>
@@ -241,7 +256,11 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
           </div>
         </div>
           
-        <nav className={`nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+        <nav
+          id="mobile-header-menu"
+          className={`nav ${mobileMenuOpen ? 'mobile-open' : ''}`}
+          aria-hidden={!mobileMenuOpen}
+        >
             {/* Mobile drawer backdrop */}
             <div className="nav-backdrop" onClick={() => setMobileMenuOpen(false)} />
             
@@ -249,7 +268,7 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
               {/* Drawer header */}
               <div className="nav-drawer-header">
                 <span className="nav-drawer-logo">Sancharie</span>
-                <button className="nav-close-btn" onClick={() => setMobileMenuOpen(false)}>
+                <button className="nav-close-btn" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" type="button">
                   <X size={20} />
                 </button>
               </div>
@@ -277,7 +296,7 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
               {isAuthenticated && (
                 <div className="nav-user-section" onClick={handleAuthClick}>
                   <div className="nav-user-avatar">
-                    {user?.name ? user.name.charAt(0).toUpperCase() : '👤'}
+                    {user?.name ? user.name.charAt(0).toUpperCase() : <UserRound size={18} />}
                   </div>
                   <div className="nav-user-info">
                     <span className="nav-user-name">{getDisplayName()}</span>
@@ -306,7 +325,7 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
               {/* Auth button at bottom for non-authenticated */}
               {!isAuthenticated && (
                 <div className="nav-auth-section">
-                  <button className="nav-login-btn" onClick={handleAuthClick}>
+                  <button className="nav-login-btn" onClick={handleAuthClick} type="button">
                     <LogIn size={18} />
                     Login / Sign Up
                   </button>

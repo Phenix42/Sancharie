@@ -4,6 +4,7 @@ const paymentService = require('../services/paymentService');
 const {
   FlightProviderError,
   getProviderError,
+  isNoResultProviderError,
   normalizeCalendarFares,
   normalizeSearchResults,
   requestFlightProvider,
@@ -114,17 +115,19 @@ const asyncRoute = (handler) => async (req, res) => {
   }
 };
 
-const sendProviderResponse = (res, payload, extra = {}) => {
+const sendProviderResponse = (res, payload, extra = {}, options = {}) => {
   const providerError = getProviderError(payload);
 
   if (providerError) {
-    return res.status(422).json({
+    const isNoResult = options.allowNoResult && isNoResultProviderError(providerError);
+
+    return res.status(isNoResult ? 200 : 422).json({
       ...payload,
       ...extra,
-      success: false,
+      success: isNoResult,
       message: providerError.message,
       apiStatus: {
-        success: false,
+        success: isNoResult,
         code: providerError.code,
         message: providerError.message,
       },
@@ -230,6 +233,8 @@ const searchHandler = asyncRoute(async (req, res) => {
     searchTokenId: providerPayload?.SearchTokenId || '',
     flights,
     source: 'provider',
+  }, {
+    allowNoResult: true,
   });
 });
 
@@ -395,5 +400,6 @@ module.exports = {
   buildAirSegments,
   buildSearchPayload,
   normalizeAirportCode,
+  sendProviderResponse,
   toProviderDate,
 };

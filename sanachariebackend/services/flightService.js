@@ -34,6 +34,11 @@ const getProviderError = (payload) => {
   };
 };
 
+const isNoResultProviderError = (error) => {
+  if (!error) return false;
+  return Number(error.code) === 1 && /no result found/i.test(String(error.message || ''));
+};
+
 const read = (object, ...keys) => {
   for (const key of keys) {
     if (object?.[key] !== undefined && object?.[key] !== null) return object[key];
@@ -287,6 +292,7 @@ module.exports = {
   formatDuration,
   getFlightConfig,
   getProviderError,
+  isNoResultProviderError,
   normalizeCalendarFares,
   normalizeFare,
   normalizeSearchResults,

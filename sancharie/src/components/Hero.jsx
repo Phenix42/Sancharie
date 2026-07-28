@@ -30,7 +30,7 @@ function Hero() {
           Compare verified operators, live fares, boarding points, and seat options in a calm booking workspace.
         </p>
         <div className="hero-proof-row" aria-label="Sancharie booking highlights">
-          <span><strong>500+</strong> routes covered</span>
+          <span><strong>5000+</strong> routes covered</span>
           <span><strong>24/7</strong> support</span>
           <span><strong>100%</strong> secure payments</span>
         </div>

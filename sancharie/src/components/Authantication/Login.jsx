@@ -1,8 +1,17 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./Login.css";
-import { IoClose } from "react-icons/io5";
-import { FaMobileAlt } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  KeyRound,
+  LockKeyhole,
+  RotateCcw,
+  ShieldCheck,
+  Smartphone,
+  X,
+} from "lucide-react";
 import Logo from "../../assets/logosan.svg";
 // Import our secure API service
 // SECURITY: This service calls our backend ONLY, never the SMS provider directly
@@ -17,7 +26,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [showGooglePopup, setShowGooglePopup] = useState(false);
   
   const otpRefs = useRef([]);
 
@@ -44,9 +52,25 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       setCanResend(false);
       setError("");
       setSuccessMessage("");
-      setShowGooglePopup(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (step === "otp") {
+      window.setTimeout(() => otpRefs.current[0]?.focus(), 0);
+    }
+  }, [step]);
 
   if (!isOpen) return null;
 
@@ -55,10 +79,13 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     if (value.length <= 10) {
       setPhoneNumber(value);
       setError("");
+      setSuccessMessage("");
     }
   };
 
-  const handleSendOtp = async () => {
+  const handleSendOtp = async (event) => {
+    event?.preventDefault();
+
     if (!phoneNumber) {
       setError("Please enter your mobile number");
       return;
@@ -70,38 +97,38 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
     setIsLoading(true);
     setError("");
+    setSuccessMessage("");
     
-    // SECURITY: Call our backend API, NOT the SMS provider directly
-    // The backend handles all SMS API credentials securely
-    const result = await auth.sendOTP(phoneNumber);
-    
-    setIsLoading(false);
-    
-    if (result.success) {
-      setStep("otp");
-      setTimer(30);
-      setCanResend(false);
-      setSuccessMessage(result.message);
-    } else {
-      // Handle rate limiting
-      if (result.retryAfter) {
-        setError(`${result.message}`);
+    try {
+      const result = await auth.sendOTP(phoneNumber);
+
+      if (result.success) {
+        setStep("otp");
+        setTimer(30);
+        setCanResend(false);
+        setSuccessMessage(result.message || "Verification code sent.");
       } else {
-        setError(result.message);
+        setError(result.message || "Unable to send OTP. Please try again.");
       }
+    } catch (requestError) {
+      setError(requestError.message || "Unable to send OTP. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleOtpChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
+    const nextValue = value.slice(-1);
 
     const newOtp = [...otp];
-    newOtp[index] = value;
+    newOtp[index] = nextValue;
     setOtp(newOtp);
     setError("");
+    setSuccessMessage("");
 
     // Auto focus next input
-    if (value && index < 5) {
+    if (nextValue && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
   };
@@ -122,13 +149,17 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         if (i < 6) newOtp[i] = char;
       });
       setOtp(newOtp);
+      setError("");
+      setSuccessMessage("");
       // Focus last filled input or last input
       const lastIndex = Math.min(pastedData.length, 5);
       otpRefs.current[lastIndex]?.focus();
     }
   };
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtp = async (event) => {
+    event?.preventDefault();
+
     const otpValue = otp.join("");
     if (otpValue.length !== 6) {
       setError("Please enter the complete 6-digit OTP");
@@ -137,31 +168,28 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
     setIsLoading(true);
     setError("");
+    setSuccessMessage("");
     
-    // SECURITY: OTP verification happens on the backend
-    // Backend validates, expires, and deletes used OTPs
-    const result = await auth.verifyOTP(phoneNumber, otpValue);
-    
-    if (result.success) {
-      // Login successful!
-      setSuccessMessage("Login successful!");
-      
-      // Call the success callback with phone number
-      // The parent component will handle the completeLogin via AuthContext
-      // Wait for it to complete before closing
-      if (onLoginSuccess) {
-        await onLoginSuccess(phoneNumber);
+    try {
+      const result = await auth.verifyOTP(phoneNumber, otpValue);
+
+      if (result.success) {
+        setSuccessMessage("Login successful.");
+
+        if (onLoginSuccess) {
+          await onLoginSuccess(phoneNumber);
+        }
+
+        setTimeout(() => {
+          onClose();
+        }, 500);
+      } else {
+        setError(result.message || "The OTP you entered is not valid.");
       }
-      
+    } catch (requestError) {
+      setError(requestError.message || "The OTP could not be verified. Please try again.");
+    } finally {
       setIsLoading(false);
-      
-      // Close modal after a short delay
-      setTimeout(() => {
-        onClose();
-      }, 500);
-    } else {
-      setIsLoading(false);
-      setError(result.message);
     }
   };
 
@@ -170,23 +198,23 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     
     setIsLoading(true);
     setError("");
+    setSuccessMessage("");
     setOtp(["", "", "", "", "", ""]);
     
-    // SECURITY: Resend OTP through our backend
-    const result = await auth.resendOTP(phoneNumber);
-    
-    setIsLoading(false);
-    
-    if (result.success) {
-      setTimer(30);
-      setCanResend(false);
-      setSuccessMessage("OTP resent successfully!");
-    } else {
-      if (result.retryAfter) {
-        setError(`${result.message}`);
+    try {
+      const result = await auth.resendOTP(phoneNumber);
+
+      if (result.success) {
+        setTimer(30);
+        setCanResend(false);
+        setSuccessMessage("OTP resent successfully.");
       } else {
-        setError(result.message);
+        setError(result.message || "Unable to resend OTP. Please try again.");
       }
+    } catch (requestError) {
+      setError(requestError.message || "Unable to resend OTP. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -200,156 +228,183 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     setStep("phone");
     setOtp(["", "", "", "", "", ""]);
     setError("");
+    setSuccessMessage("");
   };
+
+  const maskedPhone = `+91 ${phoneNumber.slice(0, 2)}****${phoneNumber.slice(-2)}`;
+  const isOtpStep = step === "otp";
 
   return (
     <div className="auth-modal-overlay" onClick={handleOverlayClick}>
-      <div className="auth-modal">
-        {/* Close Button */}
-        <button className="auth-close-btn" onClick={onClose} aria-label="Close">
-          ✕
+      <div className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <button className="auth-close-btn" onClick={onClose} type="button" aria-label="Close login">
+          <X size={19} />
         </button>
 
-        {/* Modal Header */}
-        <div className="auth-header">
-          <div className="auth-logo">
+        <aside className="auth-brand-panel">
+          <div className="auth-logo-mark">
             <img src={Logo} alt="Sancharie" className="auth-logo-img" />
           </div>
-          <p className="auth-subtitle">
-            {step === "phone" 
-              ? "Login or create account with your mobile number" 
-              : `Enter OTP sent to +91 ${phoneNumber.slice(0, 2)}****${phoneNumber.slice(-2)}`}
-          </p>
-        </div>
-
-        {/* Phone Number Step */}
-        {step === "phone" && (
-          <div className="auth-form">
-            <div className="phone-illustration">
-              <FaMobileAlt />
+          <div className="auth-brand-copy">
+            <span className="auth-kicker"><ShieldCheck size={16} /> Secure access</span>
+            <h2>Sancharie account portal</h2>
+            <p>Sign in once to continue bookings, manage travellers, and keep your trip records in sync.</p>
+          </div>
+          <div className="auth-assurance-list" aria-label="Account safeguards">
+            <div>
+              <LockKeyhole size={18} />
+              <span>
+                <strong>OTP verification</strong>
+                <small>Single-use code for every sign-in.</small>
+              </span>
             </div>
-
-            <div className={`form-group ${error ? 'error' : ''}`}>
-              <label>Mobile Number</label>
-              <div className="phone-input-wrapper">
-                <span className="country-code">+91</span>
-                <input
-                  type="tel"
-                  placeholder="Enter 10-digit mobile number"
-                  value={phoneNumber}
-                  onChange={handlePhoneChange}
-                  maxLength={10}
-                  autoFocus
-                />
-              </div>
-              {error && <span className="error-text">{error}</span>}
+            <div>
+              <CheckCircle2 size={18} />
+              <span>
+                <strong>Protected checkout</strong>
+                <small>Required before payment and booking.</small>
+              </span>
             </div>
+          </div>
+        </aside>
 
-            <button 
-              className={`auth-submit-btn ${isLoading ? 'loading' : ''}`} 
-              onClick={handleSendOtp}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="btn-loader"></span>
-              ) : (
-                "Get OTP"
-              )}
-            </button>
+        <section className="auth-content-panel">
+          <div className="auth-step-row" aria-label="Login progress">
+            <span className={step === "phone" ? "active" : "complete"}>1</span>
+            <i />
+            <span className={isOtpStep ? "active" : ""}>2</span>
+          </div>
 
-            <p className="auth-terms">
-              By continuing, you agree to our <a href="/privacy-policy">Terms of Service</a> and <a href="/privacy-policy">Privacy Policy</a>
+          <div className="auth-header">
+            <span className="auth-panel-eyebrow">{isOtpStep ? "Verification required" : "Login or create account"}</span>
+            <h1 id="auth-title">{isOtpStep ? "Verify your mobile" : "Welcome to Sancharie"}</h1>
+            <p className="auth-subtitle">
+              {isOtpStep
+                ? `Enter the 6-digit code sent to ${maskedPhone}.`
+                : "Use your Indian mobile number to securely access your account."}
             </p>
+          </div>
 
-            <div className="auth-divider">
-              <span>OR</span>
+          {(error || successMessage) && (
+            <div className={`auth-status-message ${error ? "error" : "success"}`} role="status">
+              {error ? <AlertCircle size={17} /> : <CheckCircle2 size={17} />}
+              <span>{error || successMessage}</span>
             </div>
+          )}
 
-            <button className="google-sign-in-btn" onClick={() => setShowGooglePopup(true)}>
-              <FcGoogle />
-              <span>Continue with Google</span>
-            </button>
-
-            {/* Google Configuration Popup */}
-            {showGooglePopup && (
-              <div className="google-popup-overlay" onClick={() => setShowGooglePopup(false)}>
-                <div className="google-popup" onClick={(e) => e.stopPropagation()}>
-                  <div className="google-popup-icon">
-                    <FcGoogle />
-                  </div>
-                  <h3>Coming Soon!</h3>
-                  <p>Google configuration is currently in progress. Please continue with your mobile number for now.</p>
-                  <button className="google-popup-btn" onClick={() => setShowGooglePopup(false)}>
-                    Got it, use Mobile Number
-                  </button>
+          {step === "phone" && (
+            <form className="auth-form" onSubmit={handleSendOtp}>
+              <div className={`auth-field ${error ? "error" : ""}`}>
+                <label htmlFor="auth-phone">Mobile number</label>
+                <div className="phone-input-wrapper">
+                  <span className="country-code">+91</span>
+                  <input
+                    id="auth-phone"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    placeholder="98765 43210"
+                    value={phoneNumber}
+                    onChange={handlePhoneChange}
+                    maxLength={10}
+                    aria-invalid={Boolean(error)}
+                    autoFocus
+                  />
+                  <Smartphone size={19} />
                 </div>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* OTP Step */}
-        {step === "otp" && (
-          <div className="auth-form otp-form">
-            <div className="otp-phone-display">
-              <span className="otp-phone-number">+91 {phoneNumber.slice(0, 2)}****{phoneNumber.slice(-2)}</span>
-              <button className="change-number-link" onClick={handleBack}>
-                Wrong number? Change
+              <button
+                className={`auth-submit-btn ${isLoading ? "loading" : ""}`}
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <span className="btn-loader" aria-hidden="true"></span>
+                    Sending code
+                  </>
+                ) : (
+                  <>
+                    Continue securely <ArrowRight size={18} />
+                  </>
+                )}
               </button>
-            </div>
 
-            <div className="otp-illustration">
-              <div className="otp-icon-wrapper">
-                <span className="otp-lock-icon">🔐</span>
+              <div className="auth-method-note">
+                <KeyRound size={16} />
+                <span>Mobile OTP is the active sign-in method for this account.</span>
               </div>
-            </div>
 
-            <div className={`form-group ${error ? 'error' : ''}`}>
-              <label>Enter 6-digit OTP</label>
-              <p className="otp-helper-text">We've sent a verification code to your mobile number</p>
-              <div className="otp-inputs" onPaste={handleOtpPaste}>
-                {otp.map((digit, index) => (
-                  <input
-                    key={index}
-                    ref={(el) => (otpRefs.current[index] = el)}
-                    type="text"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(index, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                    autoFocus={index === 0}
-                  />
-                ))}
+              <p className="auth-terms">
+                By continuing, you agree to our <a href="/privacy-policy">Terms</a> and <a href="/privacy-policy">Privacy Policy</a>.
+              </p>
+            </form>
+          )}
+
+          {step === "otp" && (
+            <form className="auth-form otp-form" onSubmit={handleVerifyOtp}>
+              <button className="change-number-link" onClick={handleBack} type="button">
+                <ArrowLeft size={16} />
+                Change mobile number
+              </button>
+
+              <div className="otp-phone-display">
+                <span>Code sent to</span>
+                <strong>{maskedPhone}</strong>
               </div>
-              {error && <span className="error-text">{error}</span>}
-              {successMessage && <span className="success-text">{successMessage}</span>}
-            </div>
 
-            <div className="otp-timer">
-              {canResend ? (
-                <button className="resend-btn" onClick={handleResendOtp}>
-                  Resend OTP
-                </button>
-              ) : (
-                <span>Resend OTP in <strong>{timer}s</strong></span>
-              )}
-            </div>
+              <div className={`auth-field ${error ? "error" : ""}`}>
+                <label>One-time password</label>
+                <div className="otp-inputs" onPaste={handleOtpPaste}>
+                  {otp.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(el) => (otpRefs.current[index] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                      aria-label={`OTP digit ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
 
-            <button 
-              className={`auth-submit-btn ${isLoading ? 'loading' : ''}`} 
-              onClick={handleVerifyOtp}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="btn-loader"></span>
-              ) : (
-                "Verify OTP"
-              )}
-            </button>
-          </div>
-        )}
+              <div className="otp-timer">
+                {canResend ? (
+                  <button className="resend-btn" onClick={handleResendOtp} disabled={isLoading} type="button">
+                    <RotateCcw size={16} />
+                    Resend code
+                  </button>
+                ) : (
+                  <span>Resend code in <strong>{timer}s</strong></span>
+                )}
+              </div>
+
+              <button
+                className={`auth-submit-btn ${isLoading ? "loading" : ""}`}
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <span className="btn-loader" aria-hidden="true"></span>
+                    Verifying
+                  </>
+                ) : (
+                  <>
+                    Verify and sign in <ShieldCheck size={18} />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+        </section>
       </div>
     </div>
   );
 }
-

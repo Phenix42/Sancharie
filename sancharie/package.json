@@ -29,5 +29,10 @@
     "globals": "^16.5.0",
     "terser": "^5.44.1",
     "vite": "^7.2.4"
-  }
+  },
+  "main": "eslint.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }

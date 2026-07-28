@@ -4,10 +4,12 @@ const {
   router,
   buildSearchPayload,
   normalizeAirportCode,
+  sendProviderResponse,
   toProviderDate,
 } = require('../routes/flight');
 const {
   getProviderError,
+  isNoResultProviderError,
   normalizeCalendarFares,
   normalizeSearchResults,
 } = require('../services/flightService');
@@ -138,4 +140,46 @@ test('provider errors are detected even when the upstream HTTP status is 200', (
     getProviderError({ Error: { ErrorCode: 5, ErrorMessage: 'Invalid token' } }),
     { code: 5, message: 'Invalid token' }
   );
+});
+
+test('no-result provider search responses are returned as empty successful searches', () => {
+  const providerError = getProviderError({
+    Error: { ErrorCode: 1, ErrorMessage: 'no result found' },
+  });
+  const response = {
+    statusCode: 200,
+    body: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      this.body = payload;
+      return this;
+    },
+  };
+
+  assert.equal(isNoResultProviderError(providerError), true);
+
+  sendProviderResponse(
+    response,
+    {
+      SearchTokenId: 'token-empty',
+      Error: { ErrorCode: 1, ErrorMessage: 'no result found' },
+      Result: [],
+    },
+    {
+      searchTokenId: 'token-empty',
+      flights: [],
+      source: 'provider',
+    },
+    { allowNoResult: true }
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.apiStatus.success, true);
+  assert.equal(response.body.apiStatus.code, 1);
+  assert.equal(response.body.message, 'no result found');
+  assert.deepEqual(response.body.flights, []);
 });

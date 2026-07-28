@@ -136,6 +136,11 @@
 
 /* Mobile first responsive utilities */
 @media (max-width: 768px) {
+  .app {
+    min-height: 100dvh;
+    background: #f4f7f8;
+  }
+
   .desktop-only {
     display: none !important;
   }
@@ -171,7 +176,7 @@
   /* Footer stays visible but add spacing for bottom nav */
   .app > footer,
   .app .footer {
-    padding-bottom: 64px;
+    padding-bottom: calc(var(--mobile-nav-height, 74px) + env(safe-area-inset-bottom));
   }
 }
 
