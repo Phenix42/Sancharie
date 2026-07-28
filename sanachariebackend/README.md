@@ -164,7 +164,7 @@ BUS_API_USERNAME=xxx
 BUS_API_PASSWORD=xxx
 
 # Flight API (Third-party - HIDDEN FROM FRONTEND)
-FLIGHT_API_BASE_URL=https://www.api.bdsd.technology/api
+FLIGHT_API_BASE_URL=https://api.bdsd.technology/api
 FLIGHT_API_USERNAME=xxx
 FLIGHT_API_PASSWORD=xxx
 FLIGHT_API_TIMEOUT=30000

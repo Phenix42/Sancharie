@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const DEFAULT_BASE_URL = 'https://www.api.bdsd.technology/api';
+const DEFAULT_BASE_URL = 'https://api.bdsd.technology/api';
 
 class FlightProviderError extends Error {
   constructor(message, status = 502, details = null) {

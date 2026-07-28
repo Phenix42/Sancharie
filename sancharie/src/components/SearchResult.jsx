@@ -191,49 +191,10 @@ function BusPriceDisplay({ price }) {
   );
 }
 
-const buildFlightSearchPayload = (params = {}) => ({
-  origin: params.fromId || params.from,
-  destination: params.toId || params.to,
-  date: params.date,
-  airSegments: Array.isArray(params.airSegments)
-    ? params.airSegments.map((segment) => ({
-        Origin: segment.Origin || segment.origin,
-        Destination: segment.Destination || segment.destination,
-        PreferredTime: segment.PreferredTime || segment.preferredTime || segment.date,
-      }))
-    : undefined,
-  adult: params.adult || 1,
-  child: params.child || 0,
-  infant: params.infant || 0,
-  cabinClass: params.cabinClass || 1,
-  journeyType: params.journeyType || 1,
-  preferredCarriers: params.preferredCarriers || [],
-  directFlight: Boolean(params.directFlight),
-});
-
-const getSearchRequestKey = (mode, params = {}) => {
-  if (!params) return `${mode}:empty`;
-
-  if (mode === 'flight') {
-    return JSON.stringify({
-      mode,
-      ...buildFlightSearchPayload(params),
-    });
-  }
-
-  return JSON.stringify({
-    mode,
-    from: params.fromSearchCity || params.fromCity || params.from,
-    to: params.toSearchCity || params.toCity || params.to,
-    date: params.date,
-  });
-};
-
 export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
   const { state, actions } = useBooking();
   const navigate = useNavigate();
   const bookingActionsRef = useRef(actions);
-  const activeSearchKeyRef = useRef('');
   
   // Get session state from context
   const { sessionExpired } = state;
@@ -314,19 +275,11 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
 
   /* ---------------- FETCH BUSES ON MOUNT ---------------- */
   useEffect(() => {
-    const requestKey = getSearchRequestKey(mode, searchParams);
-    if (activeSearchKeyRef.current === requestKey) return undefined;
-
-    activeSearchKeyRef.current = requestKey;
-    const isActiveSearch = () => activeSearchKeyRef.current === requestKey;
-
     const fetchBuses = async () => {
       const bookingActions = bookingActionsRef.current;
       if (!searchParams?.from || !searchParams?.to || !searchParams?.date) {
-        if (isActiveSearch()) {
-          setError("Invalid search parameters");
-          setLoading(false);
-        }
+        setError("Invalid search parameters");
+        setLoading(false);
         return;
       }
 
@@ -343,9 +296,19 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
         setExpandedFlightId(null);
 
         try {
-          const result = await flightApi.search(buildFlightSearchPayload(searchParams));
-          if (!isActiveSearch()) return;
-
+          const result = await flightApi.search({
+            origin: searchParams.fromId || searchParams.from,
+            destination: searchParams.toId || searchParams.to,
+            date: searchParams.date,
+            airSegments: searchParams.airSegments,
+            adult: searchParams.adult || 1,
+            child: searchParams.child || 0,
+            infant: searchParams.infant || 0,
+            cabinClass: searchParams.cabinClass || 1,
+            journeyType: searchParams.journeyType || 1,
+            preferredCarriers: searchParams.preferredCarriers || [],
+            directFlight: Boolean(searchParams.directFlight),
+          });
           const flightResults = result.flights || [];
           setFlights(flightResults);
           setSearchTokenId(result.searchTokenId);
@@ -354,11 +317,10 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
           bookingActions.setSearchResults(flightResults);
           bookingActions.startSession();
         } catch (err) {
-          if (!isActiveSearch()) return;
           console.error('Flight search error:', err);
           setError(err.message || 'Failed to search flights');
         } finally {
-          if (isActiveSearch()) setLoading(false);
+          setLoading(false);
         }
         return;
       }
@@ -380,7 +342,6 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
           searchParams.toSearchCity || searchParams.toCity || searchParams.to,
           searchParams.date
         );
-        if (!isActiveSearch()) return;
         
         console.log("Search API returned searchTokenId:", result.searchTokenId);
         
@@ -401,16 +362,14 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
           prefetchAllSeatLayouts(result.results);
         }
       } catch (err) {
-        if (!isActiveSearch()) return;
         console.error("Search error:", err);
         setError(err.message || "Failed to search buses");
       } finally {
-        if (isActiveSearch()) setLoading(false);
+        setLoading(false);
       }
     };
 
     fetchBuses();
-    return undefined;
   }, [searchParams, mode]);
 
   // Handle session expiration - go to home

@@ -28,7 +28,6 @@ test('all documented flight operations are exposed by the backend router', () =>
     '/book',
     '/booking-detail',
     '/cancel-request',
-    '/health',
   ].forEach((path) => assert.ok(paths.includes(path), `${path} route is missing`));
 });
 

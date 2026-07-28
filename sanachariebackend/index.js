@@ -153,7 +153,9 @@ app.use('/user', userRoutes);
 // Bus and flight API proxy routes (hide actual API URLs from browser)
 app.use('/api', busRoutes);
 app.use('/api/flights', flightRoutes);
+app.use('/api/flight', flightRoutes);
 app.use('/flights', flightRoutes);
+app.use('/flight', flightRoutes);
 app.use('/api/hotels', hotelRoutes);
 
 // ============================================
