@@ -30,6 +30,15 @@
 
 const express = require('express');
 const AxiosDigestAuth = require('@mhoc/axios-digest-auth').default;
+const paymentService = require('../services/paymentService');
+const {
+  PaymentSecurityError,
+  assertCapturedPaymentCovers,
+  assertOrderContextMatches,
+  assertPaymentNotConsumed,
+  markPaymentConsumed,
+  toAmount,
+} = require('../services/paymentSecurity');
 const router = express.Router();
 
 // ============================================
@@ -206,7 +215,7 @@ const rateLimit = (req, res, next) => {
 };
 
 // Clean up rate limit store periodically
-setInterval(() => {
+const rateLimitCleanup = setInterval(() => {
   const now = Date.now();
   for (const [ip, record] of rateLimitStore.entries()) {
     if (now > record.resetTime) {
@@ -214,6 +223,7 @@ setInterval(() => {
     }
   }
 }, 60000);
+rateLimitCleanup.unref?.();
 
 // ============================================
 // MIDDLEWARE
@@ -251,6 +261,7 @@ const requestLogger = (req, res, next) => {
   // Remove any potentially sensitive fields from logging
   delete sanitizedQuery.customerPhone;
   delete sanitizedQuery.customerEmail;
+  delete sanitizedQuery.paymentId;
   
   console.log(`[ETS API] ${req.method} ${req.path}`, {
     requestId: req.requestId,
@@ -307,6 +318,126 @@ const makeETSRequest = async (options) => {
   return response.data;
 };
 
+const read = (object, ...keys) => {
+  for (const key of keys) {
+    if (object?.[key] !== undefined && object?.[key] !== null) return object[key];
+  }
+  return undefined;
+};
+
+const BUS_BLOCK_TTL_MS = (Number.parseInt(process.env.BUS_BLOCK_TTL_MINUTES, 10) || 12) * 60 * 1000;
+const busBlockStore = new Map();
+
+const normalizeBlockTicketKey = (value) => String(value || '').trim();
+
+const pruneBusBlocks = () => {
+  const now = Date.now();
+  for (const [key, value] of busBlockStore.entries()) {
+    if (value.expiresAt <= now) busBlockStore.delete(key);
+  }
+};
+
+const getBusBlock = (blockTicketKey) => {
+  pruneBusBlocks();
+  const key = normalizeBlockTicketKey(blockTicketKey);
+  return busBlockStore.get(key) || busBlockStore.get(key.toUpperCase()) || null;
+};
+
+const storeBusBlock = (blockTicketKey, metadata) => {
+  const key = normalizeBlockTicketKey(blockTicketKey);
+  if (!key) return null;
+  pruneBusBlocks();
+  const record = {
+    ...metadata,
+    blockTicketKey: key,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + BUS_BLOCK_TTL_MS,
+  };
+  busBlockStore.set(key, record);
+  busBlockStore.set(key.toUpperCase(), record);
+  return record;
+};
+
+const getAssuranceFeePerSeat = () => toAmount(process.env.BUS_ASSURANCE_FEE_PER_SEAT || 24);
+
+const isTruthy = (value) => value === true || value === 'true' || value === 1 || value === '1';
+
+const getSeatKey = (seat) => String(
+  read(seat, 'id', 'seatNbr', 'seatNo', 'seatNumber', 'seatName', 'name') || ''
+).trim();
+
+const getSeatFareAmount = (seat) => {
+  const fare = toAmount(read(seat, 'fare', 'baseFare', 'price'));
+  const tax = toAmount(read(seat, 'serviceTaxAmount', 'tax'));
+  const operatorCharge = toAmount(read(seat, 'operatorServiceChargeAbsolute', 'operatorServiceCharge'));
+  const total = toAmount(read(seat, 'totalFareWithTaxes', 'totalFare', 'price'));
+  return total || fare + tax + operatorCharge;
+};
+
+const stampProviderSeatFares = (passengers, providerSeats) => {
+  const seatsByKey = new Map();
+  (providerSeats || []).forEach((seat) => {
+    const key = getSeatKey(seat);
+    if (key) seatsByKey.set(key, seat);
+  });
+
+  let requiredAmount = 0;
+  const stampedPassengers = passengers.map((passenger) => {
+    const seatNbr = String(passenger.seatNbr || '').trim();
+    const providerSeat = seatsByKey.get(seatNbr);
+
+    if (!providerSeat) {
+      const error = new Error(`Selected seat ${seatNbr || ''} is no longer available`);
+      error.status = 409;
+      throw error;
+    }
+
+    if (providerSeat.available === false || providerSeat.available === 'false') {
+      const error = new Error(`Selected seat ${seatNbr} is already booked`);
+      error.status = 409;
+      throw error;
+    }
+
+    const fare = toAmount(read(providerSeat, 'fare', 'baseFare', 'price'));
+    const serviceTaxAmount = toAmount(read(providerSeat, 'serviceTaxAmount', 'tax'));
+    const operatorServiceChargeAbsolute = toAmount(read(providerSeat, 'operatorServiceChargeAbsolute', 'operatorServiceCharge'));
+    const totalFareWithTaxes = getSeatFareAmount(providerSeat);
+
+    if (totalFareWithTaxes <= 0) {
+      const error = new Error(`Unable to verify fare for seat ${seatNbr}`);
+      error.status = 409;
+      throw error;
+    }
+
+    requiredAmount += totalFareWithTaxes;
+
+    return {
+      ...passenger,
+      seatNbr,
+      fare: Math.round(fare * 100) / 100,
+      serviceTaxAmount: Math.round(serviceTaxAmount * 100) / 100,
+      operatorServiceChargeAbsolute: Math.round(operatorServiceChargeAbsolute * 100) / 100,
+      totalFareWithTaxes: Math.round(totalFareWithTaxes * 100) / 100,
+      ladiesSeat: isTruthy(read(providerSeat, 'ladiesSeat', 'isLadiesSeat')) || passenger.ladiesSeat || false,
+      ac: isTruthy(read(providerSeat, 'ac')) || passenger.ac || false,
+      sleeper: isTruthy(read(providerSeat, 'sleeper')) || passenger.sleeper || false,
+    };
+  });
+
+  return {
+    passengers: stampedPassengers,
+    seatFareAmount: Math.round(requiredAmount * 100) / 100,
+  };
+};
+
+const getRtcFareAmount = (payload) => toAmount(
+  read(payload, 'updatedFare', 'totalFare', 'totalFareWithTaxes', 'fare', 'amount') ||
+  read(payload?.Result, 'updatedFare', 'totalFare', 'totalFareWithTaxes', 'fare', 'amount')
+);
+
+const cleanupBusBlocks = setInterval(pruneBusBlocks, 60000);
+cleanupBusBlocks.unref?.();
+
 /**
  * Determine boarding point source based on inventory type
  * Per ETS API Documentation:
@@ -358,6 +489,15 @@ const handleApiError = (error, operation, res) => {
     status: error.response?.status,
     data: error.response?.data?.apiStatus || 'No additional info',
   });
+
+  if (error instanceof PaymentSecurityError || (error.status && !error.response)) {
+    return res.status(error.status || 400).json({
+      apiStatus: {
+        success: false,
+        message: error.message || `Failed to ${operation.toLowerCase()}`,
+      },
+    });
+  }
 
   // Return ETS API error if available
   if (error.response?.data?.apiStatus) {
@@ -567,6 +707,8 @@ router.post('/ets/blockTicket', async (req, res) => {
       customerPhone,
       blockSeatPaxDetails,
       inventoryType,
+      assuranceOpted,
+      isRTC,
     } = req.body;
 
     // Validate required fields
@@ -600,6 +742,12 @@ router.post('/ets/blockTicket', async (req, res) => {
       });
     }
 
+    if (!isValidInventoryType(inventoryType) || !isValidRouteScheduleId(String(routeScheduleId))) {
+      return res.status(400).json({
+        apiStatus: { success: false, message: 'Invalid bus inventory or schedule details' }
+      });
+    }
+
     // Validate passenger details
     if (!Array.isArray(blockSeatPaxDetails) || blockSeatPaxDetails.length === 0) {
       return res.status(400).json({
@@ -625,11 +773,37 @@ router.post('/ets/blockTicket', async (req, res) => {
       console.warn('[ETS API] No boarding point provided');
     }
 
-    // Sanitize request body
+    const sanitizedSource = sanitizeString(sourceCity);
+    const sanitizedDest = sanitizeString(destinationCity);
+
+    if (!sanitizedSource || !sanitizedDest) {
+      return res.status(400).json({
+        apiStatus: { success: false, message: 'Invalid city names provided' }
+      });
+    }
+
+    const layoutData = await makeETSRequest({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/getBusLayout`,
+      params: {
+        sourceCity: sanitizedSource,
+        destinationCity: sanitizedDest,
+        doj,
+        inventoryType,
+        routeScheduleId,
+      },
+    });
+
+    const providerSeats = Array.isArray(layoutData.seats)
+      ? layoutData.seats
+      : Array.isArray(layoutData.Seats)
+        ? layoutData.Seats
+        : [];
+
     const sanitizedBody = {
       ...req.body,
-      sourceCity: sanitizeString(sourceCity),
-      destinationCity: sanitizeString(destinationCity),
+      sourceCity: sanitizedSource,
+      destinationCity: sanitizedDest,
       customerName: sanitizeString(customerName),
       customerLastName: sanitizeString(req.body.customerLastName || ''),
       customerEmail: customerEmail.toLowerCase().trim(),
@@ -648,13 +822,42 @@ router.post('/ets/blockTicket', async (req, res) => {
       })),
     };
 
+    const fareVerification = stampProviderSeatFares(sanitizedBody.blockSeatPaxDetails, providerSeats);
+    const assuranceAmount = isTruthy(assuranceOpted)
+      ? getAssuranceFeePerSeat() * fareVerification.passengers.length
+      : 0;
+    const requiredAmount = Math.round((fareVerification.seatFareAmount + assuranceAmount) * 100) / 100;
+    sanitizedBody.blockSeatPaxDetails = fareVerification.passengers;
+
     const data = await makeETSRequest({
       method: 'POST',
       url: `${ETS_API_CONFIG.baseUrl}/blockTicket`,
       data: sanitizedBody,
     });
 
-    res.json(data);
+    const blockTicketKey = read(data, 'blockTicketKey', 'BlockTicketKey', 'blockKey');
+    if (blockTicketKey && data.apiStatus?.success !== false) {
+      storeBusBlock(blockTicketKey, {
+        requiredAmount,
+        seatFareAmount: fareVerification.seatFareAmount,
+        assuranceAmount,
+        seatCount: fareVerification.passengers.length,
+        sourceCity: sanitizedSource,
+        destinationCity: sanitizedDest,
+        doj,
+        routeScheduleId,
+        inventoryType,
+        isRTC: isTruthy(isRTC),
+      });
+    }
+
+    res.json({
+      ...data,
+      requiredAmount,
+      requiredAmountPaise: Math.round(requiredAmount * 100),
+      seatFareAmount: fareVerification.seatFareAmount,
+      assuranceAmount,
+    });
   } catch (error) {
     handleApiError(error, 'Block ticket', res);
   }
@@ -690,8 +893,20 @@ router.get('/ets/getRtcUpdatedFare', async (req, res) => {
       url: `${ETS_API_CONFIG.baseUrl}/getRtcUpdatedFare`,
       params: { blockTicketKey: blockTicketKey.toUpperCase() },
     });
+
+    const block = getBusBlock(blockTicketKey);
+    const updatedFareAmount = getRtcFareAmount(data);
+    if (block && updatedFareAmount > 0) {
+      block.seatFareAmount = updatedFareAmount;
+      block.requiredAmount = Math.round((updatedFareAmount + toAmount(block.assuranceAmount)) * 100) / 100;
+      block.rtcFareUpdatedAt = Date.now();
+    }
     
-    res.json(data);
+    res.json({
+      ...data,
+      requiredAmount: block?.requiredAmount,
+      requiredAmountPaise: block ? Math.round(block.requiredAmount * 100) : undefined,
+    });
   } catch (error) {
     handleApiError(error, 'Get RTC updated fare', res);
   }
@@ -708,7 +923,7 @@ router.get('/ets/getRtcUpdatedFare', async (req, res) => {
  */
 router.get('/ets/seatBooking', async (req, res) => {
   try {
-    const { blockTicketKey } = req.query;
+    const { blockTicketKey, paymentId } = req.query;
     
     if (!blockTicketKey) {
       return res.status(400).json({
@@ -722,6 +937,46 @@ router.get('/ets/seatBooking', async (req, res) => {
       });
     }
 
+    if (process.env.BUS_REQUIRE_PAYMENT !== 'false') {
+      if (!paymentId) {
+        return res.status(402).json({
+          apiStatus: { success: false, message: 'Verified payment is required before bus booking' }
+        });
+      }
+
+      const block = getBusBlock(blockTicketKey);
+      if (!block) {
+        return res.status(409).json({
+          apiStatus: { success: false, message: 'Bus booking session expired. Please block the seats again.' }
+        });
+      }
+
+      if (block.isRTC && !block.rtcFareUpdatedAt) {
+        const rtcData = await makeETSRequest({
+          method: 'GET',
+          url: `${ETS_API_CONFIG.baseUrl}/getRtcUpdatedFare`,
+          params: { blockTicketKey: blockTicketKey.toUpperCase() },
+        });
+        const updatedFareAmount = getRtcFareAmount(rtcData);
+        if (updatedFareAmount > 0) {
+          block.seatFareAmount = updatedFareAmount;
+          block.requiredAmount = Math.round((updatedFareAmount + toAmount(block.assuranceAmount)) * 100) / 100;
+          block.rtcFareUpdatedAt = Date.now();
+        }
+      }
+
+      assertPaymentNotConsumed(String(paymentId));
+      const paymentDetails = await paymentService.fetchPaymentDetails(String(paymentId));
+      if (paymentDetails.order_id) {
+        const orderDetails = await paymentService.fetchOrderDetails(paymentDetails.order_id);
+        assertOrderContextMatches(orderDetails, {
+          serviceType: 'bus',
+          pricingRef: normalizeBlockTicketKey(blockTicketKey),
+        });
+      }
+      assertCapturedPaymentCovers(paymentDetails, block.requiredAmount, 'bus booking');
+    }
+
     const data = await makeETSRequest({
       method: 'GET',
       url: `${ETS_API_CONFIG.baseUrl}/seatBooking`,
@@ -730,6 +985,12 @@ router.get('/ets/seatBooking', async (req, res) => {
 
     // Log successful booking (for audit)
     if (data.apiStatus?.success) {
+      if (paymentId) {
+        markPaymentConsumed(String(paymentId), {
+          serviceType: 'bus',
+          blockTicketKey: normalizeBlockTicketKey(blockTicketKey),
+        });
+      }
       console.log('[ETS API] Booking confirmed:', {
         etstnumber: data.etstnumber,
         opPNR: data.opPNR,
@@ -1015,3 +1276,7 @@ router.get('/ets/boardingPointInfo', (req, res) => {
 });
 
 module.exports = router;
+module.exports._test = {
+  getSeatFareAmount,
+  stampProviderSeatFares,
+};

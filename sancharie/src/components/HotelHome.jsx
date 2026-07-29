@@ -247,13 +247,14 @@ export default function HotelHome() {
     setLoading(skipPayment ? 'book-test' : 'payment');
 
     try {
-      const blocked = blockData || (await blockSelectedRoom());
+      const blocked = await blockSelectedRoom();
       if (!blocked) return;
+      const paymentAmount = Number(blocked.requiredAmount || totalAmount);
 
       let paymentId = '';
       if (!skipPayment) {
         const verification = await payment.initiatePayment({
-          amount: totalAmount,
+          amount: paymentAmount,
           customerInfo: {
             name: `${contact.firstName} ${contact.lastName}`,
             email: contact.email,
@@ -261,6 +262,7 @@ export default function HotelHome() {
           },
           bookingDetails: {
             serviceType: 'hotel',
+            pricingRef: `${selectedHotel.searchToken || searchToken}:${selectedHotel.resultIndex}:${selectedHotel.hotelCode}`,
             description: `Hotel Booking - ${selectedHotel.name}`,
             hotelName: selectedHotel.name,
             travelDate: checkIn,
@@ -291,7 +293,6 @@ export default function HotelHome() {
         }],
         contactDetails: contact,
         paymentId,
-        amount: totalAmount,
       });
 
       const bookingData = {

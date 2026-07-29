@@ -2,6 +2,12 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const paymentService = require('../services/paymentService');
 const {
+  assertCapturedPaymentCovers,
+  assertOrderContextMatches,
+  assertPaymentNotConsumed,
+  markPaymentConsumed,
+} = require('../services/paymentSecurity');
+const {
   FlightProviderError,
   getProviderError,
   isNoResultProviderError,
@@ -185,6 +191,12 @@ const collectProviderOptions = (value, options = []) => {
   return options;
 };
 
+const getConfirmedFareAmount = (confirmation) => Number(
+  read(confirmation?.Result?.Fare, 'PublishedPriceRoundedOff', 'PublishedPrice', 'OfferedPriceRoundedOff', 'OfferedPrice') ||
+  read(confirmation?.Result, 'PublishedPriceRoundedOff', 'PublishedPrice', 'OfferedPriceRoundedOff', 'OfferedPrice') ||
+  0
+);
+
 const buildSearchPayload = (req) => {
   const body = req.body || {};
   const airSegments = buildAirSegments(body);
@@ -319,28 +331,33 @@ const bookHandler = asyncRoute(async (req, res) => {
       });
     }
 
-    const requiredAmount = Math.round(
-      (Number(confirmation?.Result?.Fare?.PublishedPrice || 0) + ancillaryAmount) * 100
+    assertPaymentNotConsumed(String(paymentId));
+    if (paymentDetails.order_id) {
+      const orderDetails = await paymentService.fetchOrderDetails(paymentDetails.order_id);
+      assertOrderContextMatches(orderDetails, {
+        serviceType: 'flight',
+        pricingRef: `${tokenPayload.SearchTokenId}:${tokenPayload.ResultIndex}`,
+      });
+    }
+    assertCapturedPaymentCovers(
+      paymentDetails,
+      getConfirmedFareAmount(confirmation) + ancillaryAmount,
+      'flight booking'
     );
-    const paidAmount = Number(paymentDetails?.amount || 0);
-    const paymentCaptured = paymentDetails?.captured || paymentDetails?.status === 'captured';
-
-    if (!paymentCaptured) {
-      const error = badRequest('Payment has not been captured');
-      error.status = 402;
-      throw error;
-    }
-    if (!requiredAmount || paidAmount < requiredAmount) {
-      const error = badRequest('Payment amount does not cover the latest airline fare');
-      error.status = 402;
-      throw error;
-    }
   }
 
   const providerPayload = await requestFlightProvider('book', {
     ...tokenPayload,
     Passengers: passengers,
   });
+
+  if (paymentId && !getProviderError(providerPayload)) {
+    markPaymentConsumed(String(paymentId), {
+      serviceType: 'flight',
+      searchTokenId: tokenPayload.SearchTokenId,
+      resultIndex: tokenPayload.ResultIndex,
+    });
+  }
 
   return sendProviderResponse(res, providerPayload);
 });
@@ -410,6 +427,7 @@ module.exports = {
   buildAirSegments,
   buildSearchPayload,
   normalizeAirportCode,
+  getConfirmedFareAmount,
   sendProviderResponse,
   toProviderDate,
 };

@@ -57,6 +57,7 @@ export default function Payment() {
   const [bookingError, setBookingError] = useState(null);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [paymentId, setPaymentId] = useState(null);
+  const [serverRequiredAmount, setServerRequiredAmount] = useState(null);
 
   // GST Invoice state
   const [requireGstInvoice, setRequireGstInvoice] = useState(false);
@@ -153,7 +154,8 @@ export default function Payment() {
   
   const seatNames = getSeatNames();
   const assuranceTotal = assurance === 'yes' ? 24 * selectedSeats.length : 0;
-  const grandTotal = (fareData?.totalFare || 0) + assuranceTotal;
+  const displayGrandTotal = (fareData?.totalFare || 0) + assuranceTotal;
+  const grandTotal = Number(serverRequiredAmount || blockSeatData?.requiredAmount || displayGrandTotal);
   const rawJourneyDate = busData?.dateOfJourney || busData?.date || busData?.DepartureTime;
   const parsedJourneyDate = rawJourneyDate ? new Date(rawJourneyDate) : null;
   const journeyDateLabel = parsedJourneyDate && !Number.isNaN(parsedJourneyDate.getTime())
@@ -187,8 +189,22 @@ export default function Payment() {
     setBookingError(null);
 
     try {
+      const blockTicketKey = blockSeatData?.blockTicketKey;
+      let payableAmount = grandTotal;
+
+      if (busData?.isRTC) {
+        console.log('[Booking Flow] Bus is RTC, refreshing fare before payment...');
+        const rtcFareData = await bus.getRtcUpdatedFare(blockTicketKey);
+        const refreshedAmount = Number(rtcFareData.requiredAmount || 0);
+        if (refreshedAmount > 0) {
+          payableAmount = refreshedAmount;
+          setServerRequiredAmount(refreshedAmount);
+        }
+      }
 
       const bookingDetails = {
+        serviceType: 'bus',
+        pricingRef: blockTicketKey,
         busName: busData?.name || busData?.TravelName || "Bus Service",
         travelDate: busData?.departureDate || new Date().toISOString().split('T')[0],
         seats: seatNames.join(", "),
@@ -203,7 +219,7 @@ export default function Payment() {
       };
 
       const paymentResult = await payment.initiatePayment({
-        amount: grandTotal,
+        amount: payableAmount,
         customerInfo,
         bookingDetails,
         onStart: () => {
@@ -222,32 +238,11 @@ export default function Payment() {
       });
 
       if (paymentResult.verified) {
-        // Use blockTicketKey from blockSeat response for final booking
-        const blockTicketKey = blockSeatData?.blockTicketKey;
-
-        if (!blockTicketKey) {
-          throw new Error('Block ticket key not found. Please select seats and complete details again.');
-        }
-
         console.log('[Booking Flow] Starting seatBooking with blockTicketKey:', blockTicketKey.substring(0, 20) + '...');
-
-        let rtcFareData = null;
-        
-        // For RTC services, get updated fare FIRST before seatBooking
-        if (busData?.isRTC) {
-          try {
-            console.log('[Booking Flow] Bus is RTC, calling getRtcUpdatedFare...');
-            rtcFareData = await bus.getRtcUpdatedFare(blockTicketKey);
-            console.log('[Booking Flow] RTC fare update received:', rtcFareData);
-          } catch (rtcError) {
-            console.warn('[Booking Flow] RTC fare update failed (continuing anyway):', rtcError.message);
-            // Continue with booking even if RTC fare update fails
-          }
-        }
         
         // Call seatBooking to complete reservation
         console.log('[Booking Flow] Calling seatBooking...');
-        const bookingResult = await bus.bookTicket(blockTicketKey);
+        const bookingResult = await bus.bookTicket(blockTicketKey, paymentResult.data?.payment_id);
         console.log('[Booking Flow] Booking successful:', bookingResult);
         
         setBookingResponse({
@@ -280,9 +275,9 @@ export default function Payment() {
                 gender: p.gender,
                 seatNumber: p.seatName || p.seatNumber
               })),
-              baseFare: fareData?.baseFare || fareData?.totalFare || grandTotal,
+              baseFare: fareData?.baseFare || fareData?.totalFare || payableAmount,
               serviceTax: fareData?.serviceTax || 0,
-              totalFare: grandTotal,
+              totalFare: payableAmount,
               paymentId: paymentResult.data?.payment_id,
               paymentStatus: 'completed',
               paymentMethod: 'razorpay',
@@ -311,7 +306,7 @@ export default function Payment() {
           arrivalTime: droppingPoint?.time || droppingPoint?.Time,
           seats: seatNames,
           passengers: passengers,
-          totalFare: grandTotal,
+          totalFare: payableAmount,
           paymentId: paymentResult.data?.payment_id,
           contactPhone: contactDetails?.phone,
           contactEmail: contactDetails?.email

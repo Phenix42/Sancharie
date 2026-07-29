@@ -50,6 +50,22 @@ const findDeepValue = (value, names, visited = new Set()) => {
   return '';
 };
 
+const getFlightFareAmount = (value) => {
+  const result = value?.fareConfirmation || value?.Result || value || {};
+  const fare = result?.Fare || {};
+  return Number(
+    fare.PublishedPriceRoundedOff ||
+    fare.PublishedPrice ||
+    fare.OfferedPriceRoundedOff ||
+    fare.OfferedPrice ||
+    result.PublishedPriceRoundedOff ||
+    result.PublishedPrice ||
+    result.OfferedPriceRoundedOff ||
+    result.OfferedPrice ||
+    0
+  );
+};
+
 const countSeatOptions = (value, visited = new Set()) => {
   if (!value || typeof value !== 'object' || visited.has(value)) return 0;
   visited.add(value);
@@ -112,7 +128,7 @@ export default function FlightBooking() {
     [draft]
   );
   const selectedMeal = mealOptions.find((meal) => (meal.Key || meal.Code) === selectedMealKey);
-  const basePrice = Number(confirmedFare?.Fare?.PublishedPrice || flight?.price || 0);
+  const basePrice = getFlightFareAmount(confirmedFare) || Number(flight?.price || 0);
   const totalPrice = basePrice + Number(selectedMeal?.Price || 0);
   const originCountry = flight?.segments?.[0]?.Origin?.CountryCode;
   const destinationCountry = flight?.segments?.at(-1)?.Destination?.CountryCode;
@@ -190,7 +206,7 @@ export default function FlightBooking() {
       setStatus('checking');
       const latestConfirmation = await flightApi.confirmFare(flight.searchTokenId, flight.resultIndex);
       const latestFare = latestConfirmation.fareConfirmation || latestConfirmation.Result;
-      const latestPrice = Number(latestFare?.Fare?.PublishedPrice || 0);
+      const latestPrice = getFlightFareAmount(latestFare);
 
       if (latestConfirmation.IsPriceChanged && latestPrice && latestPrice !== basePrice) {
         setConfirmation(latestConfirmation);
@@ -210,6 +226,8 @@ export default function FlightBooking() {
           phone: passenger.contactNo,
         },
         bookingDetails: {
+          serviceType: 'flight',
+          pricingRef: `${flight.searchTokenId}:${flight.resultIndex}`,
           description: `Flight ${flight.flightNumber} booking`,
           busName: `${flight.carrier} ${flight.flightNumber}`,
           travelDate: flight.departureTime,

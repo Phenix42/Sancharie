@@ -268,6 +268,7 @@ export default function Details() {
         passengers: passengersWithContact,
         contactDetails,
         fareData,
+        assurance,
       });
       
       // Store block seat response in context

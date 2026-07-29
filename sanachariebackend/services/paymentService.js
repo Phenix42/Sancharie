@@ -225,7 +225,10 @@ const fetchOrderDetails = async (orderId) => {
     return {
       id: order.id,
       amount: order.amount,
+      amount_paid: order.amount_paid,
+      amount_due: order.amount_due,
       currency: order.currency,
+      notes: order.notes || {},
       status: order.status,
       receipt: order.receipt,
       created_at: order.created_at,

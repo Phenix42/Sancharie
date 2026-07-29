@@ -1,6 +1,12 @@
 const express = require('express');
 const paymentService = require('../services/paymentService');
 const {
+  assertCapturedPaymentCovers,
+  assertOrderContextMatches,
+  assertPaymentNotConsumed,
+  markPaymentConsumed,
+} = require('../services/paymentSecurity');
+const {
   HotelProviderError,
   getHotelCities,
   getProviderError,
@@ -271,6 +277,7 @@ const getTotalSelectedPrice = (rooms) => rooms.reduce((sum, room) => {
   const price = Array.isArray(room?.Price) ? room.Price[0] : room?.Price || {};
   return sum + Number(
     price.PublishedPriceRoundedOff ||
+    price.PublishedPriceRoundedO ||
     price.PublishedPrice ||
     price.OfferedPriceRoundedOff ||
     price.OfferedPrice ||
@@ -278,7 +285,19 @@ const getTotalSelectedPrice = (rooms) => rooms.reduce((sum, room) => {
   );
 }, 0);
 
-const verifyPaymentIfRequired = async (paymentId, amount) => {
+const getBlockedRoomDetails = (providerPayload) => {
+  const result = Array.isArray(providerPayload?.Result) ? providerPayload.Result[0] : providerPayload?.Result;
+  return Array.isArray(result?.HotelRoomDetails) ? result.HotelRoomDetails : [];
+};
+
+const attachPassengersToRooms = (rooms, previousRooms, passengers) => rooms.map((room, index) => ({
+  ...room,
+  HotelPassenger: room.HotelPassenger ||
+    previousRooms?.[index]?.HotelPassenger ||
+    passengers.filter((guest) => index === 0 || guest.PaxType === 1),
+}));
+
+const verifyPaymentIfRequired = async (paymentId, amount, pricingRef) => {
   if (process.env.HOTEL_REQUIRE_PAYMENT === 'false' || shouldUseHotelMock()) return;
   if (!paymentId) {
     const error = badRequest('Verified payment is required before hotel booking');
@@ -287,20 +306,15 @@ const verifyPaymentIfRequired = async (paymentId, amount) => {
   }
 
   const paymentDetails = await paymentService.fetchPaymentDetails(String(paymentId));
-  const paymentCaptured = paymentDetails?.captured || paymentDetails?.status === 'captured';
-  const paidAmount = Number(paymentDetails?.amount || 0);
-  const requiredAmount = Math.round(Number(amount || 0) * 100);
-
-  if (!paymentCaptured) {
-    const error = badRequest('Payment has not been captured');
-    error.status = 402;
-    throw error;
+  assertPaymentNotConsumed(String(paymentId));
+  if (paymentDetails.order_id) {
+    const orderDetails = await paymentService.fetchOrderDetails(paymentDetails.order_id);
+    assertOrderContextMatches(orderDetails, {
+      serviceType: 'hotel',
+      pricingRef,
+    });
   }
-  if (requiredAmount > 0 && paidAmount < requiredAmount) {
-    const error = badRequest('Payment amount does not cover the selected hotel room');
-    error.status = 402;
-    throw error;
-  }
+  assertCapturedPaymentCovers(paymentDetails, amount, 'hotel booking');
 };
 
 router.get('/cities', (req, res) => {
@@ -338,22 +352,53 @@ router.post('/rooms', asyncRoute(async (req, res) => {
 
 router.post('/block-room', asyncRoute(async (req, res) => {
   const providerPayload = await requestHotelProvider('blockroom', buildSelectedRoomPayload(req));
+  const blockedRooms = getBlockedRoomDetails(providerPayload);
+  const requiredAmount = getTotalSelectedPrice(blockedRooms);
   return sendProviderResponse(res, providerPayload, {
     roomOptions: normalizeRoomOptions(providerPayload),
     block: providerPayload?.Result || null,
+    requiredAmount,
+    requiredAmountPaise: Math.round(requiredAmount * 100),
   });
 }));
 
 router.post('/book', asyncRoute(async (req, res) => {
+  const selectedPayload = buildSelectedRoomPayload(req);
+  const blockPayload = await requestHotelProvider('blockroom', selectedPayload);
+  const blockError = getProviderError(blockPayload);
+  if (blockError) throw new HotelProviderError(blockError.message, 422);
+
+  const blockedRooms = getBlockedRoomDetails(blockPayload);
+  const requiredAmount = getTotalSelectedPrice(blockedRooms);
+  if (!blockedRooms.length || requiredAmount <= 0) {
+    const error = badRequest('Unable to verify the latest hotel room price');
+    error.status = 409;
+    throw error;
+  }
+
   const payload = buildBookPayload(req);
+  payload.HotelRoomDetails = attachPassengersToRooms(blockedRooms, payload.HotelRoomDetails, payload.HotelPassenger);
   const paymentId = read(req.body, 'PaymentId', 'paymentId');
-  await verifyPaymentIfRequired(paymentId, read(req.body, 'amount', 'totalAmount') || getTotalSelectedPrice(payload.HotelRoomDetails));
+  await verifyPaymentIfRequired(
+    paymentId,
+    requiredAmount,
+    `${payload.Search_Token}:${payload.ResultIndex}:${payload.HotelCode}`
+  );
 
   const providerPayload = await requestHotelProvider('book', payload);
+  if (paymentId && !getProviderError(providerPayload)) {
+    markPaymentConsumed(String(paymentId), {
+      serviceType: 'hotel',
+      searchToken: payload.Search_Token,
+      resultIndex: payload.ResultIndex,
+      hotelCode: payload.HotelCode,
+    });
+  }
   return sendProviderResponse(res, providerPayload, {
     booking: providerPayload?.Result || null,
     bookingId: providerPayload?.BookingId || providerPayload?.Result || '',
     bookingRefNo: providerPayload?.BookingRefNo || '',
+    chargedAmount: requiredAmount,
   });
 }));
 
@@ -414,5 +459,7 @@ router.post('/cancel', asyncRoute(async (req, res) => {
 module.exports = {
   router,
   buildSearchPayload,
+  getBlockedRoomDetails,
+  getTotalSelectedPrice,
   toProviderDate,
 };

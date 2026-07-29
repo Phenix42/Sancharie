@@ -19,6 +19,7 @@
 const express = require('express');
 const router = express.Router();
 const paymentService = require('../services/paymentService');
+const { hashReference } = require('../services/paymentSecurity');
 
 // ============================================
 // INPUT VALIDATION MIDDLEWARE
@@ -48,11 +49,11 @@ const validateCreateOrder = (req, res, next) => {
     });
   }
 
-  // Currency validation (if provided)
-  if (currency && typeof currency !== 'string') {
+  // Currency validation (Sancharie booking prices are INR)
+  if (currency && (typeof currency !== 'string' || currency.toUpperCase() !== 'INR')) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid currency format',
+      message: 'Only INR payments are supported',
     });
   }
 
@@ -82,6 +83,11 @@ const validateVerifyPayment = (req, res, next) => {
 
   next();
 };
+
+const sanitizeNoteValue = (value) => String(value || '')
+  .trim()
+  .replace(/[<>]/g, '')
+  .slice(0, 250);
 
 // ============================================
 // ROUTES
@@ -164,11 +170,16 @@ router.post('/create-order', validateCreateOrder, async (req, res) => {
 
     // Add booking details to notes if provided
     if (bookingDetails) {
+      orderNotes.service_type = sanitizeNoteValue(bookingDetails.serviceType || bookingDetails.type || 'travel').toLowerCase();
+      const pricingRef = bookingDetails.pricingRef || bookingDetails.blockTicketKey || bookingDetails.searchTokenId || '';
+      if (pricingRef) orderNotes.pricing_ref_hash = hashReference(pricingRef);
       orderNotes.bus_name = bookingDetails.busName || '';
+      orderNotes.hotel_name = bookingDetails.hotelName || '';
       orderNotes.travel_date = bookingDetails.travelDate || '';
       orderNotes.seats = Array.isArray(bookingDetails.seats) 
         ? bookingDetails.seats.join(', ') 
         : bookingDetails.seats || '';
+      orderNotes.rooms = bookingDetails.rooms || '';
       orderNotes.passenger_count = bookingDetails.passengerCount || '';
     }
 

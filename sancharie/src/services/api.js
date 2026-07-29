@@ -532,6 +532,8 @@ export const bus = {
     passengers,
     contactDetails,
     fareData,
+    assurance,
+    assuranceOpted,
   }) => {
     // Validate required parameters
     if (!bus) throw new Error('Bus information is required');
@@ -577,6 +579,8 @@ export const bus = {
       doj: bus?.dateOfJourney || bus?.doj,
       routeScheduleId: bus?.routeScheduleId,
       inventoryType: bus?.inventoryType ?? 0,
+      isRTC: Boolean(bus?.isRTC),
+      assuranceOpted: assuranceOpted ?? assurance === 'yes',
       boardingPoint: {
         id: boardingPoint?.CityPointId || boardingPoint?.id,
         location: boardingPoint?.CityPointLocation || boardingPoint?.location || boardingPoint?.CityPointName,
@@ -637,8 +641,12 @@ export const bus = {
     console.log('[BlockSeat] Success:', data.blockTicketKey);
 
     return {
-      blockTicketKey: data.blockTicketKey,
+      blockTicketKey: data.blockTicketKey || data.BlockTicketKey || data.blockKey,
       inventoryType: data.inventoryType,
+      requiredAmount: data.requiredAmount,
+      requiredAmountPaise: data.requiredAmountPaise,
+      seatFareAmount: data.seatFareAmount,
+      assuranceAmount: data.assuranceAmount,
       success: data.apiStatus?.success || false,
       message: data.apiStatus?.message,
     };
@@ -659,8 +667,12 @@ export const bus = {
     }
 
     return {
-      blockTicketKey: data.blockTicketKey,
+      blockTicketKey: data.blockTicketKey || data.BlockTicketKey || data.blockKey,
       inventoryType: data.inventoryType,
+      requiredAmount: data.requiredAmount,
+      requiredAmountPaise: data.requiredAmountPaise,
+      seatFareAmount: data.seatFareAmount,
+      assuranceAmount: data.assuranceAmount,
       success: data.apiStatus?.success || false,
       message: data.apiStatus?.message,
     };
@@ -687,6 +699,8 @@ export const bus = {
       otherCharges: data.otherCharges,
       previousFare: data.previousFare,
       updatedFare: data.updatedFare,
+      requiredAmount: data.requiredAmount,
+      requiredAmountPaise: data.requiredAmountPaise,
       success: data.apiStatus?.success || false,
     };
   },
@@ -695,8 +709,9 @@ export const bus = {
    * Book seat (confirm booking after payment)
    * @param {string} blockTicketKey - Block ticket key from blockTicket response
    */
-  bookTicket: async (blockTicketKey) => {
+  bookTicket: async (blockTicketKey, paymentId) => {
     const params = new URLSearchParams({ blockTicketKey });
+    if (paymentId) params.set('paymentId', paymentId);
     const data = await apiRequest(`/api/ets/seatBooking?${params}`);
 
     if (data.apiStatus && !data.apiStatus.success) {
@@ -968,7 +983,7 @@ export const hotels = {
     };
   },
 
-  book: async ({ searchToken, resultIndex, hotelCode, hotelName, guestNationality, noOfRooms, hotelRoomDetails, guests, contactDetails, paymentId, amount, ...rest }) => {
+  book: async ({ searchToken, resultIndex, hotelCode, hotelName, guestNationality, noOfRooms, hotelRoomDetails, guests, contactDetails, paymentId, ...rest }) => {
     const data = await hotelRequest('book', {
       ...rest,
       Search_Token: searchToken,
@@ -981,7 +996,6 @@ export const hotels = {
       guests,
       contactDetails,
       paymentId,
-      amount,
       IsVouchered: true,
     });
     return {
