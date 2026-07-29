@@ -27,7 +27,7 @@ const { router: flightRoutes } = require('./routes/flight');
 const { router: hotelRoutes } = require('./routes/hotel');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 
 // ============================================
 // SECURITY: Validate Required Environment Variables
@@ -85,11 +85,25 @@ app.use(securityHeaders);
 
 // CORS - Allow frontend origin
 // SECURITY: Restrict to specific domains only
-const allowedOrigins = [
+const defaultAllowedOrigins = [
   'https://sancharie.com',
   'https://www.sancharie.com',
   'https://api.sancharie.com'
 ];
+
+const configuredOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.CORS_ORIGINS,
+]
+  .filter(Boolean)
+  .flatMap((value) => value.split(','))
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(new Set([
+  ...defaultAllowedOrigins,
+  ...configuredOrigins,
+]));
 
 // Add localhost only in development
 if (process.env.NODE_ENV !== 'production') {
