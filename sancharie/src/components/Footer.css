@@ -1,11 +1,12 @@
 .footer {
   background: #012433;
   color: white;
-  margin-top: 4rem;
+  margin-top: 0;
+  border-top: 1px solid rgba(206, 180, 95, 0.18);
 }
 
 .footer-main {
-  padding: 3rem 2rem;
+  padding: 4.5rem 2rem 4rem;
 }
 
 .footer-content {
@@ -35,6 +36,48 @@
   padding-right: 2rem;
 }
 
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 18px;
+}
+
+.footer-brand > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: #ceb45f;
+  color: #012433;
+}
+
+.footer-brand > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-brand strong {
+  color: #ffffff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.footer-brand small {
+  color: rgba(255, 255, 255, 0.56);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .company-tagline {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
@@ -47,11 +90,11 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  background-color: #012433 !important;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  border: 2px solid #d4a017;
+  background-color: rgba(255, 255, 255, 0.035) !important;
+  padding: 1.25rem;
+  border-radius: 14px;
+  box-shadow: none;
+  border: 1px solid rgba(206, 180, 95, 0.28);
 }
 
 .contact-item {
@@ -119,7 +162,7 @@
   width: 40px;
   height: 40px;
   border: 1px solid rgba(206, 180, 95, 0.5);
-  border-radius: 50%;
+  border-radius: 12px;
   color: #CEB45F;
   text-decoration: none;
   transition: all 0.3s ease;
@@ -139,7 +182,7 @@
   padding: 10px 16px;
   background: transparent;
   border: 1px solid rgba(206, 180, 95, 0.5);
-  border-radius: 8px;
+  border-radius: 10px;
   color: #CEB45F;
   font-family: 'Montserrat', sans-serif;
   font-size: 13px;

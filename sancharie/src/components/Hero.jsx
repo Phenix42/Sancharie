@@ -2,6 +2,7 @@ import React from 'react'
 import './Hero.css'
 import bgImage from '../assets/bgimage2.webp'
 import mobileBgImage from '../assets/mobilebg.webp'
+import { BadgeCheck, IndianRupee, TicketCheck } from 'lucide-react'
 
 function Hero() {
   return (
@@ -11,28 +12,30 @@ function Hero() {
           <source media="(max-width: 768px)" srcSet={mobileBgImage} type="image/webp" />
           <img 
             src={bgImage}
-            alt="Mountain landscape" 
+            alt="Travellers beginning a bus journey across India"
             className="hero-bg-image"
-            fetchpriority="high"
+            fetchPriority="high"
             decoding="async"
           />
         </picture>
-        {/* Overlay to reduce image dominance and improve focus on search bar */}
         <div className="hero-overlay"></div>
       </div>
       <div className="hero-content">
-        <div className="hero-kicker">Sancharie Bus Booking</div>
+        <div className="hero-kicker">
+          <span className="hero-kicker-dot" />
+          Bus journeys across India
+        </div>
         <h1 className="hero-title">
-          <span>Bus ticket booking</span>
-          <span>made simple</span>
+          <span>Wherever you’re going,</span>
+          <span>go with confidence.</span>
         </h1>
         <p className="hero-subtitle">
-          Compare verified operators, live fares, boarding points, and seats before checkout.
+          Compare buses, choose your seat, and book in minutes—with clear fares and support whenever you need it.
         </p>
         <div className="hero-proof-row" aria-label="Sancharie booking highlights">
-          <span><strong>5000+</strong> routes covered</span>
-          <span><strong>24/7</strong> support</span>
-          <span><strong>100%</strong> secure payments</span>
+          <span><BadgeCheck size={17} /> Verified operators</span>
+          <span><IndianRupee size={17} /> Transparent fares</span>
+          <span><TicketCheck size={17} /> Instant e-tickets</span>
         </div>
       </div>
     </section>

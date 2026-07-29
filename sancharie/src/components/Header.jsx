@@ -7,7 +7,6 @@ import ProfileCompletion from './ProfileCompletion'
 import { useAuth } from '../context/AuthContext'
 import { useBooking } from '../context/BookingContext'
 import {
-  BadgePercent,
   BookOpen,
   Building2,
   BusFront,
@@ -154,11 +153,17 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
 
   return (
     <>
-      <header className="header">
+      <header className={`header ${mobileMenuOpen ? 'menu-open' : ''}`}>
         <div className="header-container header-main-inner">
           <div className="brand-cluster">
-            <button className="logo" onClick={handleLogoClick} type="button">
-              <span className="logo-text">Sancharie</span>
+            <button className="logo" onClick={handleLogoClick} type="button" aria-label="Sancharie home">
+              <span className="logo-mark" aria-hidden="true">
+                <BusFront size={22} strokeWidth={2.4} />
+              </span>
+              <span className="logo-copy">
+                <span className="logo-text">Sancharie</span>
+                <span className="logo-tagline">Travel made simple</span>
+              </span>
             </button>
           </div>
 
@@ -202,9 +207,9 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
               </div>
             )}
 
-            <a className="header-action-link" href="#offers" aria-label="Offers" title="Offers">
-              <BadgePercent size={17} />
-              <span>Offers</span>
+            <a className="header-action-link" href="#popular-routes" aria-label="Popular routes" title="Popular routes">
+              <BusFront size={17} />
+              <span>Routes</span>
             </a>
             <a className="header-action-link" href="#bookings" onClick={handleMyBookingsClick} aria-label="Track Ticket" title="Track Ticket">
               <TicketCheck size={18} />
@@ -261,9 +266,12 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
             <div className="nav-drawer">
               {/* Drawer header */}
               <div className="nav-drawer-header">
-                <span className="nav-drawer-logo">Sancharie</span>
+                <span className="nav-drawer-logo">
+                  <BusFront size={19} strokeWidth={2.4} />
+                  Sancharie
+                </span>
                 <button className="nav-close-btn" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" type="button">
-                  <X size={20} />
+                  <span aria-hidden="true">×</span>
                 </button>
               </div>
               <div className="mobile-mode-tabs">

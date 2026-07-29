@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import './Footer.css'
-import { MapPin, Phone, Mail, Clock } from 'lucide-react'
+import { BusFront, MapPin, Phone, Mail, Clock } from 'lucide-react'
 
 function Footer({ className = '' }) {
   const scrollToTop = () => {
@@ -15,8 +15,14 @@ function Footer({ className = '' }) {
         <div className="footer-content">
           {/* Company Info Section */}
           <div className="footer-section company-section">
-            <h4 className="footer-title">Sancharie</h4>
-            <p className="company-tagline">Your trusted partner for safe and comfortable bus travel across India.</p>
+            <div className="footer-brand">
+              <span><BusFront size={21} /></span>
+              <div>
+                <strong>Sancharie</strong>
+                <small>Travel made simple</small>
+              </div>
+            </div>
+            <p className="company-tagline">A simpler, clearer way to discover and book bus journeys across India.</p>
             
             {/* Contact Info */}
             <div className="contact-info">
@@ -99,7 +105,7 @@ function Footer({ className = '' }) {
       {/* Footer Bottom */}
       <div className="footer-bottom">
         <div className="footer-bottom-content">
-          <p>© 2025 Sancharie. All Rights Reserved.</p>
+          <p>© 2026 Sancharie. All rights reserved.</p>
           <p className="footer-bottom-links">
             <Link to="/privacy-policy" onClick={scrollToTop}>Privacy</Link>
             <span>•</span>

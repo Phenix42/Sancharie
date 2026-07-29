@@ -1,179 +1,228 @@
-import React, { useState } from 'react';
-import './BusResults.css';
+import React, { useState } from 'react'
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BusFront,
+  ChevronDown,
+  CircleCheck,
+  ShieldCheck,
+  Sparkles
+} from 'lucide-react'
+import whyChooseImage from '../assets/whychooseimage.png'
+import './BusResults.css'
 
-// Import images from assets
-import whyChooseImage from '../assets/whychooseimage.png';
-import onlineBookingImage from '../assets/onlinebookingimage.png';
+const popularRoutes = [
+  { from: 'Hyderabad', to: 'Bengaluru', note: 'Popular overnight journey', region: 'Telangana → Karnataka' },
+  { from: 'Hyderabad', to: 'Vijayawada', note: 'Frequent city connection', region: 'Telangana → Andhra Pradesh' },
+  { from: 'Hyderabad', to: 'Visakhapatnam', note: 'Coastal travel favourite', region: 'Telangana → Andhra Pradesh' },
+  { from: 'Hyderabad', to: 'Chennai', note: 'Comfortable intercity route', region: 'Telangana → Tamil Nadu' }
+]
 
-const BusResults = () => {
-  const [activeTab, setActiveTab] = useState('general');
+const faqGroups = {
+  general: {
+    label: 'General',
+    items: [
+      {
+        question: 'How do I book a bus ticket on Sancharie?',
+        answer: 'Enter your origin, destination, and date. Compare the available buses, select your preferred seat and boarding point, then complete payment to receive your ticket.'
+      },
+      {
+        question: 'Can I book a ticket for someone else?',
+        answer: 'Yes. Use the traveller’s correct details during checkout so the ticket and journey information match the passenger.'
+      },
+      {
+        question: 'Where can I find my confirmed booking?',
+        answer: 'Open My Bookings from the header or bottom navigation. Your confirmation also contains the key journey and ticket details.'
+      }
+    ]
+  },
+  ticket: {
+    label: 'Tickets',
+    items: [
+      {
+        question: 'When will I receive my e-ticket?',
+        answer: 'Your e-ticket is generated after a successful payment and booking confirmation. You can also access it later from My Bookings.'
+      },
+      {
+        question: 'Can I change my boarding point?',
+        answer: 'Boarding-point changes depend on the operator and the ticket conditions. Check your booking details or contact support for the available options.'
+      },
+      {
+        question: 'Do I need a printed ticket?',
+        answer: 'Most operators accept a digital ticket with valid identification, though you should always review the instructions shown on your confirmed booking.'
+      }
+    ]
+  },
+  payment: {
+    label: 'Payments',
+    items: [
+      {
+        question: 'Which payment methods can I use?',
+        answer: 'Available methods are shown securely at checkout and may include UPI, cards, net banking, and supported wallets.'
+      },
+      {
+        question: 'What happens if payment succeeds but booking fails?',
+        answer: 'First check My Bookings for a confirmation. If no ticket was created, contact support with your payment reference so the transaction can be reviewed.'
+      },
+      {
+        question: 'Is checkout secure?',
+        answer: 'Sancharie uses a secure payment flow and does not ask you to share sensitive payment credentials with an operator.'
+      }
+    ]
+  },
+  cancellation: {
+    label: 'Cancellations',
+    items: [
+      {
+        question: 'Can I cancel my bus ticket?',
+        answer: 'Cancellation availability and charges depend on the bus operator, fare, and time remaining before departure. Review the policy attached to your booking.'
+      },
+      {
+        question: 'How will I receive an eligible refund?',
+        answer: 'Eligible refunds are returned through the applicable payment channel. Processing time can vary by the payment provider and operator policy.'
+      },
+      {
+        question: 'Can I reschedule instead of cancelling?',
+        answer: 'Rescheduling is available only for supported tickets. Check the options in your booking details or contact support before cancelling.'
+      }
+    ]
+  }
+}
 
-  const faqData = {
-    general: [
-      { question: 'Can I cancel my bus ticket online?', answer: 'Yes, you can cancel your bus ticket online through our platform. Visit your booking history, select the ticket you want to cancel, and follow the cancellation process.' },
-      { question: 'How can I cancel my bus ticket?', answer: 'To cancel your bus ticket, log in to your account, go to My Bookings, select the ticket, and click on Cancel. The refund will be processed based on the cancellation policy.' },
-      { question: 'I missed my bus. Will I get a refund?', answer: 'Unfortunately, if you miss your bus, a refund is not typically available. We recommend arriving at the boarding point at least 15 minutes before departure.' },
-      { question: 'How will I receive my refund after cancellation?', answer: 'Refunds are processed to the original payment method within 5-7 business days after cancellation approval.' },
-      { question: 'What if the bus is delayed or canceled by the operator?', answer: 'If the bus is delayed or canceled by the operator, you will receive a full refund or the option to reschedule your journey.' },
-      { question: 'Can I reschedule my bus ticket?', answer: 'Yes, rescheduling is available for most tickets. Check the operator\'s policy and reschedule through your booking dashboard.' },
-    ],
-    ticketRelated: [
-      { question: 'How do I book a bus ticket?', answer: 'Enter your origin and destination, select travel date, choose a bus, pick your seat, and complete payment.' },
-      { question: 'Can I book tickets for someone else?', answer: 'Yes, you can book tickets for others by entering their details during the booking process.' },
-      { question: 'Is there a limit on tickets I can book?', answer: 'You can book up to 6 tickets in a single transaction.' },
-    ],
-    payment: [
-      { question: 'What payment methods are accepted?', answer: 'We accept credit/debit cards, UPI, net banking, and wallet payments.' },
-      { question: 'Is my payment information secure?', answer: 'Yes, all transactions are secured with SSL encryption and comply with PCI DSS standards.' },
-      { question: 'Can I pay in installments?', answer: 'Currently, we do not offer installment payment options.' },
-    ],
-    cancellation: [
-      { question: 'What is the cancellation policy?', answer: 'Cancellation charges vary by operator and timing. Earlier cancellations typically have lower charges.' },
-      { question: 'How long does refund processing take?', answer: 'Refunds are processed within 5-7 business days to your original payment method.' },
-      { question: 'Can I get a full refund?', answer: 'Full refunds are available only if you cancel within the free cancellation window or if the operator cancels the trip.' },
-    ],
-  };
+function BusResults() {
+  const [activeTab, setActiveTab] = useState('general')
+  const [expandedFaq, setExpandedFaq] = useState(0)
+  const activeItems = faqGroups[activeTab].items
 
-  const [expandedFaq, setExpandedFaq] = useState(null);
-
-  const toggleFaq = (index) => {
-    setExpandedFaq(expandedFaq === index ? null : index);
-  };
-
-  const getCurrentFaqs = () => {
-    switch (activeTab) {
-      case 'general':
-        return faqData.general;
-      case 'ticketRelated':
-        return faqData.ticketRelated;
-      case 'payment':
-        return faqData.payment;
-      case 'cancellation':
-        return faqData.cancellation;
-      default:
-        return faqData.general;
-    }
-  };
+  const selectTab = (key) => {
+    setActiveTab(key)
+    setExpandedFaq(0)
+  }
 
   return (
     <div className="bus-results">
-      {/* Section 1: Bus Booking Discount Offers - HIDDEN */}
-      {/* <section className="discount-offers-section">
-        <h2 className="section-title">Bus Booking Discount Offers</h2>
-        <div className="discount-offers-wrapper">
-          <div className="discount-offers-track">
-            {discountOffers.map((offer) => (
-              <div key={offer.id} className="discount-offer-card">
-                <img src={offer.image} alt={offer.alt} className="discount-offer-image" />
-              </div>
-            ))}
-            {discountOffers.map((offer) => (
-              <div key={`duplicate-${offer.id}`} className="discount-offer-card">
-                <img src={offer.image} alt={offer.alt} className="discount-offer-image" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section> */}
-
-      {/* Section 2: Why Choose Sancharie for Bus Booking? */}
-      <section className="why-choose-section">
-        <div className="why-choose-content">
-          <div className="why-choose-text">
-            <h2 className="section-title-underline">Why Choose Sancharie for Bus Booking?</h2>
-            <p className="why-choose-intro">
-              At Sancharie, we help travellers find the best travel options with complete transparency and value. Our platform brings together thousands of verified bus operators across India so you get:
-            </p>
-            <h3 className="key-benefits-title">Key Benefits:</h3>
-            <ol className="benefits-list">
-              <li>Transparent ticket prices with no hidden fees</li>
-              <li>Extensive route coverage across cities and towns</li>
-              <li>Verified bus services with reliable timings</li>
-              <li>Multiple bus types (Budget, Premium, Luxury, AC & Sleeper)</li>
-              <li>Easy seat selection and boarding point options</li>
-            </ol>
-            <p className="why-choose-conclusion">
-              Sancharie uses the latest technology to ensure your booking experience is simple, secure, and tailor-made to your needs.
-            </p>
-          </div>
-          <div className="why-choose-image">
-            <img src={whyChooseImage} alt="Why Choose Sancharie" className="section-image" loading="lazy" />
-          </div>
-        </div>
-      </section>
-
-      {/* Section 3: Online Bus & Travel Booking Services – Sancharie */}
-      <section className="online-booking-section">
-        <div className="online-booking-content">
-          <div className="online-booking-text">
-            <h2 className="section-title-underline">Online Bus & Travel Booking Services – Sancharie</h2>
-            <p>
-              Sancharie is India's next-generation digital travel platform designed to make bus and travel bookings simple, transparent, and rewarding. With Sancharie, travellers can search routes, compare operators, check live availability, and book tickets securely — all in just a few clicks.
-            </p>
-            <p>
-              Sancharie focuses on real customer problems in Indian travel and solves them with smart technology, fair pricing, and instant value. From budget-friendly trips to premium journeys, Sancharie helps you travel better, smarter, and with confidence.
-            </p>
-            <p>
-              Sancharie simplifies the entire bus booking experience by bringing verified operators, real-time pricing, and live journey updates onto one platform. Travellers can instantly compare bus schedules, fares, amenities, and boarding points to choose the option that best fits their travel plan.
-            </p>
-            <h3 className="subsection-title">Smart & Easy Online Bus Ticket Booking</h3>
-            <p>
-              Whether you are planning in advance or booking at the last minute, Sancharie ensures a smooth, reliable, and hassle-free booking experience.
-            </p>
-          </div>
-          <div className="online-booking-image">
-            <img src={onlineBookingImage} alt="Online Bus Booking" className="section-image" loading="lazy" />
-          </div>
-        </div>
-      </section>
-
-      {/* FAQs related to Bus Tickets Booking */}
-      <section className="faq-section">
-        <h2 className="section-title">FAQs related to Bus Tickets Booking</h2>
-        <div className="faq-tabs">
-          <button
-            className={`faq-tab ${activeTab === 'general' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('general'); setExpandedFaq(null); }}
-          >
-            General
-          </button>
-          <button
-            className={`faq-tab ${activeTab === 'ticketRelated' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('ticketRelated'); setExpandedFaq(null); }}
-          >
-            Ticket-related
-          </button>
-          <button
-            className={`faq-tab ${activeTab === 'payment' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('payment'); setExpandedFaq(null); }}
-          >
-            Payment
-          </button>
-          <button
-            className={`faq-tab ${activeTab === 'cancellation' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('cancellation'); setExpandedFaq(null); }}
-          >
-            Cancellation & Refund
-          </button>
-        </div>
-        <div className="faq-list">
-          {getCurrentFaqs().map((faq, index) => (
-            <div key={index} className="faq-item">
-              <button className="faq-question" onClick={() => toggleFaq(index)}>
-                <span>{faq.question}</span>
-                <span className="faq-icon">{expandedFaq === index ? '−' : '+'}</span>
-              </button>
-              {expandedFaq === index && (
-                <div className="faq-answer">
-                  <p>{faq.answer}</p>
-                </div>
-              )}
+      <section className="popular-routes-section" id="popular-routes">
+        <div className="popular-routes-shell">
+          <div className="routes-header">
+            <div>
+              <span className="section-eyebrow">Popular journeys</span>
+              <h2>Routes travellers keep coming back to</h2>
             </div>
-          ))}
+            <a className="routes-view-link" href="#book-bus">
+              Search any route <ArrowRight size={17} />
+            </a>
+          </div>
+
+          <div className="popular-routes-grid">
+            {popularRoutes.map((route, index) => (
+              <a className="route-card" href="#book-bus" key={`${route.from}-${route.to}`}>
+                <div className="route-card-top">
+                  <span className="route-index">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="route-arrow"><ArrowUpRight size={18} /></span>
+                </div>
+                <div className="route-code">{route.region}</div>
+                <div className="route-cities">
+                  <span>{route.from}</span>
+                  <span className="route-line"><BusFront size={15} /></span>
+                  <span>{route.to}</span>
+                </div>
+                <p>{route.note}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="travel-story-section">
+        <div className="travel-story-shell">
+          <div className="travel-story-visual">
+            <div className="travel-image-frame">
+              <img src={whyChooseImage} alt="Simple digital bus ticket booking" loading="lazy" />
+            </div>
+            <div className="travel-visual-card">
+              <span><ShieldCheck size={19} /></span>
+              <div>
+                <strong>Travel with clarity</strong>
+                <small>Know what you’re booking before you pay</small>
+              </div>
+            </div>
+          </div>
+
+          <div className="travel-story-copy">
+            <span className="section-eyebrow">Built around real journeys</span>
+            <h2>Thoughtful booking for the way India travels</h2>
+            <p className="travel-story-lead">
+              From quick city connections to overnight family trips, Sancharie keeps the information that matters clear and easy to compare.
+            </p>
+            <div className="travel-benefits">
+              <div><CircleCheck size={19} /><span>Transparent fare and amenity details</span></div>
+              <div><CircleCheck size={19} /><span>Boarding points shown before checkout</span></div>
+              <div><CircleCheck size={19} /><span>Seat selection for supported buses</span></div>
+              <div><CircleCheck size={19} /><span>Booking details in one accessible place</span></div>
+            </div>
+            <div className="travel-story-note">
+              <Sparkles size={19} />
+              <span>Less time figuring out the booking. More time looking forward to the journey.</span>
+            </div>
+            <a className="travel-story-cta" href="#book-bus">
+              Find your next bus <ArrowRight size={17} />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section className="faq-section" id="help">
+        <div className="faq-shell">
+          <div className="faq-heading">
+            <span className="section-eyebrow">Need a little help?</span>
+            <h2>Frequently asked questions</h2>
+            <p>Quick answers for a smoother booking experience.</p>
+          </div>
+
+          <div className="faq-content">
+            <div className="faq-tabs" role="tablist" aria-label="FAQ categories">
+              {Object.entries(faqGroups).map(([key, group]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === key}
+                  className={`faq-tab ${activeTab === key ? 'active' : ''}`}
+                  onClick={() => selectTab(key)}
+                >
+                  {group.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="faq-list">
+              {activeItems.map((faq, index) => {
+                const isOpen = expandedFaq === index
+                return (
+                  <article className={`faq-item ${isOpen ? 'open' : ''}`} key={faq.question}>
+                    <button
+                      className="faq-question"
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() => setExpandedFaq(isOpen ? null : index)}
+                    >
+                      <span>{faq.question}</span>
+                      <ChevronDown className="faq-icon" size={20} />
+                    </button>
+                    {isOpen && (
+                      <div className="faq-answer">
+                        <p>{faq.answer}</p>
+                      </div>
+                    )}
+                  </article>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </section>
     </div>
-  );
-};
+  )
+}
 
-export default BusResults;
+export default BusResults

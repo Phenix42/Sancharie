@@ -1,67 +1,77 @@
 import React from 'react'
 import './OurService.css'
-import { Shield, Gift, Users, Zap, Clock, Headphones } from 'lucide-react'
+import {
+  Armchair,
+  BadgeIndianRupee,
+  Headphones,
+  ListFilter,
+  ShieldCheck,
+  TicketCheck
+} from 'lucide-react'
 
-const leftServices = [
-  { id: '1A', title: 'Safety Guarantee', description: 'Verified Operators & Secure Payments.', Icon: Shield },
-  { id: '2A', title: 'Smart Deals', description: 'Exclusive Offers And Rewards.', Icon: Gift },
-  { id: '3A', title: 'Professional Staff', description: 'Trained Staff For Your Comfort.', Icon: Users },
+const services = [
+  {
+    id: '01',
+    title: 'Compare without the guesswork',
+    description: 'See timings, boarding points, amenities, and available seats together before you decide.',
+    Icon: ListFilter
+  },
+  {
+    id: '02',
+    title: 'Choose comfort your way',
+    description: 'Filter for AC, seater, or sleeper buses and pick the seat that works for your journey.',
+    Icon: Armchair
+  },
+  {
+    id: '03',
+    title: 'Get help when it matters',
+    description: 'Access booking details quickly and reach support whenever your travel plans need attention.',
+    Icon: Headphones
+  }
 ]
-
-const rightServices = [
-  { id: '1B', title: 'Faster Booking', description: 'Quick Decisions With Less Clicks.', Icon: Zap },
-  { id: '2B', title: 'On-Time Scheduling', description: 'Punctual Departures Always.', Icon: Clock },
-  { id: '3B', title: '24/7 Support', description: 'Round-The-Clock Assistance.', Icon: Headphones },
-]
-
-const services = [...leftServices, ...rightServices]
-
-function ServiceCard({ service }) {
-  const { title, description, Icon } = service
-  return (
-    <div className="svc-card">
-      <div className="svc-card-icon">
-        <Icon size={20} strokeWidth={1.8} />
-      </div>
-      <h3 className="svc-card-title">{title}</h3>
-      <p className="svc-card-desc">{description}</p>
-    </div>
-  )
-}
 
 function OurService() {
   return (
-    <section className="our-service">
+    <section className="our-service" id="about">
       <div className="service-container">
         <div className="service-header">
           <div>
-            <span className="service-badge-text">Platform Capabilities</span>
-            <h2 className="service-title">
-              Built for reliable bus ticket operations
-            </h2>
+            <span className="service-badge-text">The Sancharie promise</span>
+            <h2 className="service-title">A better way to book every bus journey</h2>
           </div>
           <p className="service-summary">
-            A cleaner booking workflow with verified supply, secure payments, support coverage, and faster decisions for every route.
+            Everything you need to make a confident choice, brought together in one calm, transparent booking experience.
           </p>
         </div>
 
-        <div className="svc-metrics">
-          <div>
-            <strong>2 min</strong>
-            <span>Average booking flow</span>
+        <div className="service-trust-bar">
+          <div className="service-trust-lead">
+            <span className="service-trust-icon"><ShieldCheck size={23} /></span>
+            <div>
+              <strong>Book with confidence</strong>
+              <span>Designed around safer, simpler travel</span>
+            </div>
           </div>
-          <div>
-            <strong>24/7</strong>
-            <span>Customer support desk</span>
-          </div>
-          <div>
-            <strong>PCI</strong>
-            <span>Secure payment handling</span>
+          <div className="service-trust-points">
+            <span><BadgeIndianRupee size={17} /> Clear fare details</span>
+            <span><TicketCheck size={17} /> Instant booking confirmation</span>
+            <span><ShieldCheck size={17} /> Secure checkout</span>
           </div>
         </div>
 
         <div className="svc-grid">
-          {services.map(s => <ServiceCard key={s.id} service={s} />)}
+          {services.map(({ id, title, description, Icon }) => (
+            <article className="svc-card" key={id}>
+              <div className="svc-card-top">
+                <div className="svc-card-icon">
+                  {React.createElement(Icon, { size: 23, strokeWidth: 1.9 })}
+                </div>
+                <span className="svc-card-number">{id}</span>
+              </div>
+              <h3 className="svc-card-title">{title}</h3>
+              <p className="svc-card-desc">{description}</p>
+            </article>
+          ))}
         </div>
       </div>
     </section>

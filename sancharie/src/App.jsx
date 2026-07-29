@@ -4,7 +4,6 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import SearchBus from "./components/SearchBus";
-import Features from "./components/Features";
 import OurService from "./components/OurService";
 import BookingSteps from "./components/BookingSteps";
 import BusResults from "./components/BusResults";

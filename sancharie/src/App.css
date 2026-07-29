@@ -11,6 +11,13 @@
   padding: 0;
 }
 
+#book-bus,
+#about,
+#popular-routes,
+#help {
+  scroll-margin-top: 100px;
+}
+
 /* ==========================================
    GLOBAL ANIMATION KEYFRAMES
    ========================================== */
@@ -124,7 +131,7 @@
 
 /* Ensure no horizontal overflow */
 .app {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Add safe area padding for iOS devices */
@@ -139,6 +146,13 @@
   .app {
     min-height: 100dvh;
     background: #f4f7f8;
+  }
+
+  #book-bus,
+  #about,
+  #popular-routes,
+  #help {
+    scroll-margin-top: 72px;
   }
 
   .desktop-only {

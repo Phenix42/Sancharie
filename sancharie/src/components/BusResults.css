@@ -1,432 +1,388 @@
-/* BusResults - Main Container */
 .bus-results {
   width: 100%;
   background: #ffffff;
 }
 
-/* ==========================================
-   Section 1: Bus Booking Discount Offers
-   ========================================== */
-.discount-offers-section {
-  padding: 60px 80px;
-  background: #ffffff;
-  overflow: hidden;
-}
-
-.section-title {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 36px;
-  font-weight: 700;
-  color: #002c3f;
-  margin-bottom: 40px;
-  text-align: left;
-  animation: slideInLeft 0.6s ease-out;
-}
-
-.discount-offers-wrapper {
-  overflow: hidden;
-  width: 100%;
-}
-
-.discount-offers-track {
-  display: flex;
-  gap: 24px;
-  animation: scroll-infinite 20s linear infinite;
-  width: fit-content;
-}
-
-.discount-offers-track:hover {
-  animation-play-state: paused;
-}
-
-@keyframes scroll-infinite {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(calc(-50% - 12px));
-  }
-}
-
-.discount-offer-card {
-  flex: 0 0 480px;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #f5f5f5;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.discount-offer-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-.discount-offer-placeholder {
-  width: 100%;
-  height: 300px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%);
-  color: #666;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.discount-offer-placeholder .placeholder-hint {
-  font-size: 14px;
-  font-weight: 400;
-  color: #999;
-  margin-top: 8px;
-}
-
-.discount-offer-image {
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-}
-
-/* Section Images - Common Styles */
-.section-image {
-  width: 100%;
-  max-width: 500px;
-  height: 450px;
-  border-radius: 20px;
-  object-fit: contain;
+.section-eyebrow {
   display: block;
+  margin-bottom: 12px;
+  color: #94702f;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.popular-routes-section {
+  padding: 92px 24px;
+  background:
+    radial-gradient(circle at 12% 100%, rgba(226, 197, 101, 0.13), transparent 25rem),
+    #ffffff;
+}
+
+.popular-routes-shell,
+.travel-story-shell,
+.faq-shell {
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
-/* ==========================================
-   Section 2: Why Choose Sancharie
-   ========================================== */
-.why-choose-section {
-  padding: 80px;
-  background: #ffffff url('../assets/sec1.svg') no-repeat right center;
-  background-size: contain;
-  position: relative;
+.routes-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 30px;
+  margin-bottom: 34px;
 }
 
-.why-choose-section::before {
+.routes-header h2,
+.travel-story-copy h2,
+.faq-heading h2 {
+  margin: 0;
+  color: #052f41;
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(30px, 3vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.routes-header h2 {
+  max-width: 720px;
+}
+
+.routes-view-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #6f5425;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.routes-view-link:hover {
+  color: #002c3f;
+}
+
+.popular-routes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.route-card {
+  position: relative;
+  min-height: 240px;
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 44, 63, 0.1);
+  border-radius: 18px;
+  background: #f8faf9;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.route-card::after {
   content: '';
   position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 150px;
-  height: 300px;
-  background: linear-gradient(135deg, rgba(206, 180, 95, 0.2), rgba(163, 114, 38, 0.1));
-  border-radius: 0 150px 150px 0;
+  right: -34px;
+  bottom: -34px;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: rgba(226, 197, 101, 0.16);
 }
 
-.why-choose-content {
+.route-card:hover {
+  border-color: rgba(148, 112, 47, 0.35);
+  box-shadow: 0 20px 45px rgba(0, 44, 63, 0.09);
+  transform: translateY(-4px);
+}
+
+.route-card-top {
   display: flex;
-  align-items: flex-start;
-  gap: 60px;
-  max-width: 1400px;
-  margin: 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 34px;
+}
+
+.route-index {
+  color: #9a772f;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.route-arrow {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(0, 44, 63, 0.1);
+  border-radius: 50%;
+  background: #ffffff;
+  color: #002c3f;
+}
+
+.route-code {
+  margin-bottom: 10px;
+  color: #80909a;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.route-cities {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #052f41;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.route-line {
+  display: inline-flex;
+  align-items: center;
+  color: #9a772f;
+}
+
+.route-card p {
   position: relative;
   z-index: 1;
+  margin: 12px 0 0;
+  color: #71818a;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
-.why-choose-text {
-  flex: 1;
+.travel-story-section {
+  padding: 92px 24px;
+  background: #f4f7f6;
 }
 
-.section-title-underline {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 28px;
-  font-weight: 700;
-  color: #002c3f;
-  margin-bottom: 24px;
+.travel-story-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+  gap: clamp(54px, 7vw, 92px);
+  align-items: center;
+}
+
+.travel-story-visual {
   position: relative;
-  display: inline-block;
+  min-height: 480px;
+  padding: 26px 26px 56px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 74% 18%, rgba(226, 197, 101, 0.24), transparent 15rem),
+    #002c3f;
 }
 
-.section-title-underline::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, #a37226 0%, #ceb45f 100%);
-}
-
-.why-choose-intro {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 400;
-  color: #333;
-  line-height: 1.6;
-  margin-bottom: 24px;
-}
-
-.key-benefits-title {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: #002c3f;
-  margin-bottom: 16px;
-}
-
-.benefits-list {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  color: #333;
-  line-height: 2;
-  padding-left: 24px;
-  margin-bottom: 24px;
-}
-
-.benefits-list li {
-  margin-bottom: 8px;
-}
-
-.why-choose-conclusion {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 400;
-  color: #333;
-  line-height: 1.6;
-}
-
-.why-choose-image {
-  flex: 0 0 500px;
-  position: sticky;
-  top: 120px;
-  align-self: flex-start;
+.travel-image-frame {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: fit-content;
+  width: 100%;
+  min-height: 385px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #ffffff;
 }
 
-.image-placeholder {
-  width: 100%;
+.travel-image-frame img {
+  display: block;
+  width: 92%;
   height: 350px;
+  object-fit: contain;
+}
+
+.travel-visual-card {
+  position: absolute;
+  right: -24px;
+  bottom: 24px;
   display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(300px, calc(100% - 34px));
+  padding: 16px;
+  border: 1px solid rgba(0, 44, 63, 0.08);
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(0, 31, 45, 0.18);
+}
+
+.travel-visual-card > span {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: #f2e2ac;
+  color: #002c3f;
+}
+
+.travel-visual-card div {
+  display: flex;
+  min-width: 0;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #e8f4f8 0%, #d0e8ef 100%);
-  border-radius: 20px;
-  color: #666;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 16px;
-  text-align: center;
-  padding: 20px;
+  gap: 3px;
 }
 
-.image-placeholder .placeholder-hint {
-  font-size: 14px;
-  color: #999;
-  margin-top: 8px;
-}
-
-/* ==========================================
-   Section 3: Online Bus & Travel Booking
-   ========================================== */
-.online-booking-section {
-  padding: 80px;
-  background: #f2f2f8 url('../assets/sec2.svg') no-repeat left center;
-  background-size: contain;
-}
-
-.online-booking-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 60px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.online-booking-text {
-  flex: 1;
-}
-
-.online-booking-text p {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 400;
-  color: #333;
-  line-height: 1.6;
-  margin-bottom: 24px;
-}
-
-.subsection-title {
+.travel-visual-card strong {
+  color: #052f41;
   font-family: 'Montserrat', sans-serif;
-  font-size: 20px;
-  font-weight: 700;
-  color: #002c3f;
-  margin-top: 32px;
-  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
-.online-booking-image {
-  flex: 0 0 500px;
-  position: sticky;
-  top: 120px;
-  align-self: flex-start;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: fit-content;
-}
-
-.image-placeholder.purple-bg {
-  background: linear-gradient(135deg, #f0e8ff 0%, #e8d8ff 100%);
-}
-
-/* ==========================================
-   Section 4: How to Book Bus Tickets
-   ========================================== */
-.how-to-book-section {
-  padding: 80px;
-  background: linear-gradient(180deg, #fff0f5 0%, #e8f4ff 50%, #fff0f5 100%);
-  background-image: url('../assets/sec3.svg');
-  background-repeat: no-repeat;
-  background-position: right center;
-  background-size: contain;
-  position: relative;
-}
-
-.how-to-book-section::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 20%;
-  width: 100px;
-  height: 200px;
-  background: linear-gradient(135deg, rgba(206, 180, 95, 0.3), transparent);
-  border-radius: 0 100px 100px 0;
-}
-
-.how-to-book-section::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 20%;
-  width: 100px;
-  height: 200px;
-  background: linear-gradient(135deg, transparent, rgba(206, 180, 95, 0.3));
-  border-radius: 100px 0 0 100px;
-}
-
-.how-to-book-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 60px;
-  max-width: 1400px;
-  margin: 0 auto;
-  position: relative;
-  z-index: 1;
-}
-
-.how-to-book-text {
-  flex: 1;
-}
-
-.how-to-book-intro {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  color: #002c3f;
-  margin-bottom: 24px;
-}
-
-.steps-list {
+.travel-visual-card small {
+  color: #72838c;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  color: #333;
-  line-height: 2;
-  padding-left: 28px;
-  margin-bottom: 40px;
+  font-size: 10px;
 }
 
-.steps-list li {
-  margin-bottom: 8px;
-}
-
-.steps-list li::marker {
-  font-weight: 700;
-  color: #002c3f;
-}
-
-.how-to-book-text p {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  color: #333;
-  line-height: 1.6;
+.travel-story-copy h2 {
+  max-width: 620px;
   margin-bottom: 20px;
 }
 
-.feature-list {
+.travel-story-lead {
+  margin: 0 0 26px;
+  color: #5f737e;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 15px;
-  color: #333;
-  line-height: 2;
-  padding-left: 24px;
-  margin-bottom: 32px;
-  list-style-type: disc;
+  line-height: 1.75;
 }
 
-.feature-list li {
-  margin-bottom: 4px;
+.travel-benefits {
+  display: grid;
+  gap: 13px;
+  margin-bottom: 25px;
 }
 
-.tracking-intro {
-  font-weight: 600;
-}
-
-.how-to-book-image {
-  flex: 0 0 500px;
-  position: sticky;
-  top: 120px;
-  align-self: flex-start;
+.travel-benefits div {
   display: flex;
   align-items: center;
+  gap: 10px;
+  color: #284653;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.travel-benefits svg {
+  flex: 0 0 auto;
+  color: #9a772f;
+}
+
+.travel-story-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 28px;
+  padding: 15px 17px;
+  border-left: 3px solid #d7bd6d;
+  border-radius: 0 12px 12px 0;
+  background: #fffdf7;
+  color: #546b76;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.travel-story-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #9a772f;
+}
+
+.travel-story-cta {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  height: fit-content;
+  gap: 9px;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 11px;
+  background: #002c3f;
+  color: #ffffff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 12px 24px rgba(0, 44, 63, 0.16);
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
-/* ==========================================
-   Section 5: FAQs
-   ========================================== */
+.travel-story-cta:hover {
+  background: #07435a;
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
 .faq-section {
-  padding: 80px;
+  padding: 92px 24px 104px;
   background: #ffffff;
-  max-width: 1000px;
-  margin: 0 auto;
 }
 
-.faq-section .section-title {
-  text-align: center;
-  margin-bottom: 40px;
+.faq-shell {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.55fr) minmax(0, 1fr);
+  gap: clamp(50px, 8vw, 100px);
+  align-items: start;
+}
+
+.faq-heading {
+  position: sticky;
+  top: 120px;
+}
+
+.faq-heading h2 {
+  margin-bottom: 16px;
+}
+
+.faq-heading p {
+  margin: 0;
+  color: #6b7d86;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .faq-tabs {
   display: flex;
-  justify-content: center;
-  gap: 40px;
-  margin-bottom: 40px;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 5px;
+  border: 1px solid rgba(0, 44, 63, 0.1);
+  border-radius: 13px;
+  background: #f5f8f7;
 }
 
 .faq-tab {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #617580;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 18px;
-  font-weight: 500;
-  color: #666;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px 0;
-  position: relative;
-  transition: color 0.3s ease;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .faq-tab:hover {
@@ -434,86 +390,77 @@
 }
 
 .faq-tab.active {
-  color: #a37226;
-  font-weight: 600;
-}
-
-.faq-tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: -17px;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: #a37226;
+  background: #ffffff;
+  color: #002c3f;
+  box-shadow: 0 5px 14px rgba(0, 44, 63, 0.08);
 }
 
 .faq-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  gap: 10px;
 }
 
 .faq-item {
-  background: #ffffff;
-  border: 1px solid #e8e8e8;
-  border-radius: 12px;
   overflow: hidden;
-  transition: box-shadow 0.3s ease;
+  border: 1px solid rgba(0, 44, 63, 0.1);
+  border-radius: 14px;
+  background: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.faq-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+.faq-item.open {
+  border-color: rgba(148, 112, 47, 0.32);
+  box-shadow: 0 12px 28px rgba(0, 44, 63, 0.06);
 }
 
 .faq-question {
-  width: 100%;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 24px 28px;
-  background: none;
-  border: none;
-  cursor: pointer;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  min-height: 72px;
+  padding: 17px 20px;
+  border: 0;
+  background: transparent;
+  color: #052f41;
   text-align: left;
 }
 
-.faq-question span:first-child {
+.faq-question > span {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 18px;
-  font-weight: 500;
-  color: #002c3f;
-  flex: 1;
-  padding-right: 20px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
 }
 
 .faq-icon {
-  font-size: 24px;
-  font-weight: 300;
-  color: #666;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  flex: 0 0 auto;
+  color: #9a772f;
+  transition: transform 0.2s ease;
+}
+
+.faq-item.open .faq-icon {
+  transform: rotate(180deg);
 }
 
 .faq-answer {
-  padding: 0 28px 24px;
-  animation: fadeIn 0.3s ease;
+  padding: 0 54px 20px 20px;
+  animation: faqReveal 0.2s ease;
 }
 
 .faq-answer p {
+  margin: 0;
+  color: #657983;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 16px;
-  color: #555;
+  font-size: 13px;
   line-height: 1.7;
 }
 
-@keyframes fadeIn {
+@keyframes faqReveal {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
@@ -521,226 +468,117 @@
   }
 }
 
-/* ==========================================
-   Responsive Styles
-   ========================================== */
-@media (max-width: 1200px) {
-  .discount-offers-track {
-    animation-duration: 15s;
-  }
-  
-  .section-title-underline {
-    font-size: 26px;
-  }
-  
-  .why-choose-intro,
-  .online-booking-text p {
-    font-size: 15px;
-  }
-}
-
-@media (max-width: 992px) {
-  .discount-offers-section,
-  .why-choose-section,
-  .online-booking-section,
-  .how-to-book-section,
+@media (max-width: 980px) {
+  .popular-routes-section,
+  .travel-story-section,
   .faq-section {
-    padding: 60px 40px;
+    padding: 72px 20px;
   }
-  
-  .why-choose-content,
-  .online-booking-content,
-  .how-to-book-content {
-    flex-direction: column;
+
+  .popular-routes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  
-  .why-choose-image,
-  .online-booking-image,
-  .how-to-book-image {
-    flex: none;
-    width: 100%;
-    max-width: 400px;
+
+  .travel-story-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .travel-story-visual {
+    width: min(100%, 620px);
     margin: 0 auto;
   }
-  
-  .faq-tabs {
-    flex-wrap: wrap;
-    gap: 20px;
+
+  .faq-shell {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .faq-heading {
+    position: static;
   }
 }
 
-@media (max-width: 768px) {
-  .section-title {
-    font-size: 28px;
-  }
-  
-  .section-title-underline {
-    font-size: 22px;
-  }
-  
-  .discount-offers-track {
-    animation: none;
-    gap: 16px;
-  }
-  
-  .discount-offer-card {
-    flex: 0 0 320px;
-  }
-  
-  .why-choose-intro,
-  .online-booking-text p {
-    font-size: 14px;
-  }
-  
-  .benefits-list,
-  .steps-list {
-    font-size: 14px;
-  }
-  
-  .subsection-title {
-    font-size: 18px;
-  }
-  
-  .how-to-book-text p,
-  .feature-list {
-    font-size: 14px;
-  }
-  
-  .faq-tabs {
-    gap: 12px;
-  }
-  
-  .faq-tab {
-    font-size: 14px;
-  }
-  
-  .faq-question span:first-child {
-    font-size: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .discount-offers-section,
-  .why-choose-section,
-  .online-booking-section,
-  .how-to-book-section,
+@media (max-width: 600px) {
+  .popular-routes-section,
+  .travel-story-section,
   .faq-section {
-    padding: 40px 20px;
+    padding: 56px 16px;
   }
-  
-  .section-title {
-    font-size: 24px;
-  }
-  
-  .section-title-underline {
-    font-size: 18px;
-  }
-  
-  .discount-offer-placeholder {
-    height: 200px;
-  }
-  
-  .image-placeholder {
-    height: 250px;
-  }
-  
-  .faq-question {
-    padding: 16px 20px;
-  }
-  
-  .why-choose-intro,
-  .online-booking-text p {
-    font-size: 13px;
-  }
-  
-  .benefits-list,
-  .steps-list {
-    font-size: 13px;
-    padding-left: 16px;
-  }
-  
-  .how-to-book-intro {
-    font-size: 16px;
-  }
-  
-  .key-benefits-title,
-  .subsection-title {
-    font-size: 16px;
-  }
-  
-  .faq-tabs {
+
+  .routes-header {
+    align-items: flex-start;
     flex-direction: column;
-    gap: 8px;
+    margin-bottom: 24px;
   }
-  
-  .faq-tab {
-    width: 100%;
-    text-align: center;
-    padding: 12px;
-    border-radius: 8px;
-    background: #f5f5f5;
-  }
-  
-  .faq-tab.active {
-    background: #fff8ed;
-  }
-  
-  .faq-tab.active::after {
-    display: none;
-  }
-  
-  .faq-question span:first-child {
-    font-size: 14px;
-  }
-  
-  .faq-answer p {
-    font-size: 14px;
-  }
-  
-  .why-choose-section,
-  .online-booking-section,
-  .how-to-book-section {
-    background-size: auto 200px;
-    background-position: center top;
-  }
-  
-  .why-choose-section::before {
-    display: none;
-  }
-  
-  .discount-offer-card {
-    flex: 0 0 280px;
-  }
-  
-  .discount-offer-image {
-    height: 180px;
-  }
-}
 
-@media (max-width: 360px) {
-  .discount-offers-section,
-  .why-choose-section,
-  .online-booking-section,
-  .how-to-book-section,
-  .faq-section {
-    padding: 30px 12px;
+  .routes-header h2,
+  .travel-story-copy h2,
+  .faq-heading h2 {
+    font-size: 27px;
   }
-  
-  .section-title {
-    font-size: 20px;
+
+  .popular-routes-grid {
+    display: flex;
+    margin-right: -16px;
+    padding-right: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
   }
-  
-  .section-title-underline {
-    font-size: 16px;
+
+  .popular-routes-grid::-webkit-scrollbar {
+    display: none;
   }
-  
+
+  .route-card {
+    min-width: min(82vw, 310px);
+    min-height: 220px;
+    scroll-snap-align: start;
+  }
+
+  .travel-story-visual {
+    min-height: 390px;
+    padding: 18px 18px 48px;
+    border-radius: 20px;
+  }
+
+  .travel-image-frame {
+    min-height: 310px;
+  }
+
+  .travel-image-frame img {
+    height: 280px;
+  }
+
+  .travel-visual-card {
+    right: 12px;
+    bottom: 18px;
+  }
+
+  .travel-story-lead {
+    font-size: 14px;
+  }
+
+  .travel-benefits div {
+    align-items: flex-start;
+    font-size: 13px;
+  }
+
+  .faq-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .faq-question {
-    padding: 12px 14px;
+    min-height: 66px;
+    padding: 15px 16px;
   }
-  
-  .faq-icon {
-    font-size: 20px;
-    width: 24px;
-    height: 24px;
+
+  .faq-question > span {
+    font-size: 13px;
+  }
+
+  .faq-answer {
+    padding: 0 42px 17px 16px;
   }
 }

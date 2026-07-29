@@ -607,13 +607,13 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
   };
 
   return (
-    <div className={`search-bus-wrapper ${compact ? 'compact' : ''}`}>
+    <div id={compact ? undefined : 'book-bus'} className={`search-bus-wrapper ${compact ? 'compact' : ''}`}>
       <div className="search-container-figma">
         {!compact && (
           <div className="search-module-header">
             <div className="search-heading-copy">
-              <span className="search-eyebrow">Bus Ticket Booking</span>
-              <h2>Search bus tickets</h2>
+              <span className="search-eyebrow">Plan your journey</span>
+              <h2>Where would you like to go?</h2>
             </div>
             <div className={`search-module-status ${stationNotice ? 'is-notice' : ''}`} aria-label="Live booking assurance">
               <span className="status-dot" />
@@ -787,7 +787,7 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
             {/* Search Button - Audit Fix: Made more prominent */}
             <button className="search-btn-figma search-btn-prominent" onClick={handleSearch} type="button" disabled={stationsLoading}>
               <Search size={20} strokeWidth={2.7} aria-hidden="true" />
-              <span>{stationsLoading ? 'Loading stations…' : mode === 'flight' ? 'Search Flights' : 'Search Buses'}</span>
+              <span>{stationsLoading && !compact ? 'Loading stations…' : mode === 'flight' ? 'Search Flights' : 'Search Buses'}</span>
             </button>
           </div>
 
@@ -802,7 +802,7 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
                     className={`seat-preference-chip ${seatPreference === key ? 'active' : ''}`}
                     onClick={() => setSeatPreference((current) => current === key ? '' : key)}
                   >
-                    <Icon size={17} aria-hidden="true" />
+                    {React.createElement(Icon, { size: 17, 'aria-hidden': true })}
                     <span>{label}</span>
                   </button>
                 ))}

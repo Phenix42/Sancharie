@@ -6,6 +6,10 @@ import { SiGooglemaps } from "react-icons/si";
 import { 
   MapPin, 
   Bus, 
+  Armchair,
+  ArrowLeft,
+  ArrowRight,
+  BadgeIndianRupee,
   Clock, 
   Shield, 
   Star, 
@@ -36,6 +40,8 @@ import {
   Search,
   Briefcase,
   CircleCheck,
+  Route,
+  Sparkles,
 } from "lucide-react";
 import SelectSeat from "./selectseat";
 import NoResult from "./noresult";
@@ -137,6 +143,10 @@ const formatFlightPrice = (value) => {
 };
 
 const formatBusPrice = (value) => Math.round(Number(value || 0)).toLocaleString("en-IN");
+
+const cleanLocationLabel = (value) => String(value || "")
+  .replace(/\s*\(All boarding points\)\s*/gi, "")
+  .trim();
 
 const getSearchBaseFare = (bus) => Number(
   bus?.BusPrice?.BasePrice ?? bus?.BusPrice?.PublishedPrice ?? 0
@@ -552,6 +562,14 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
       return baseFare(a) - baseFare(b) || availabilityDifference;
     });
   }, [filteredBuses, baseFaresByBus, busSort]);
+
+  const activeBusFilterCount =
+    selectedBusTypes.length +
+    selectedTimes.length +
+    selectedOperators.length +
+    selectedBoarding.length +
+    selectedDropping.length +
+    (maxPrice < 5000 ? 1 : 0);
 
   const flightPriceRange = useMemo(() => {
     const prices = flights.map((flight) => Number(flight.price || 0)).filter((price) => price > 0);
@@ -1236,16 +1254,40 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
 
   return (
     <div className="sr-page">
-      <button className="page-back-btn-inline" onClick={() => window.history.back()} title="Back">← Back</button>
+      <button className="page-back-btn-inline" onClick={() => window.history.back()} title="Back">
+        <ArrowLeft size={16} />
+        Back to home
+      </button>
       <div className="sr-layout">
         {/* BUS SUMMARY & FILTERS */}
         <aside className="filters-panel">
-          {/* BUS SUMMARY PANEL - Similar to flight summary */}
+          {/* BUS SUMMARY PANEL */}
           <div className="flight-summary-card bus-summary-card">
-            <h3>Search summary</h3>
-            <p>{searchParams?.from} to {searchParams?.to}</p>
+            <div className="bus-summary-kicker">
+              <span className="bus-summary-icon"><Route size={19} /></span>
+              <span>Your journey</span>
+            </div>
+            <div className="bus-summary-route">
+              <div>
+                <small>From</small>
+                <strong>{cleanLocationLabel(searchParams?.from)}</strong>
+              </div>
+              <span className="bus-summary-route-line" aria-hidden="true">
+                <span />
+                <Bus size={15} />
+                <span />
+              </span>
+              <div>
+                <small>To</small>
+                <strong>{cleanLocationLabel(searchParams?.to)}</strong>
+              </div>
+            </div>
+            <div className="bus-summary-date">
+              <CalendarDays size={14} />
+              {formatFlightDate(searchParams?.date)}
+            </div>
             <button type="button" onClick={() => setSummaryOpen((open) => !open)}>
-              <Star size={17} /> {summaryOpen ? 'Hide summary' : 'View summary'}
+              <Info size={16} /> {summaryOpen ? 'Hide trip details' : 'View trip details'}
             </button>
             {summaryOpen && (
               <div className="bus-summary-breakdown">
@@ -1258,7 +1300,10 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
           </div>
 
           <div className="filters-header">
-            <h4>Filters</h4>
+            <h4>
+              Smart filters
+              {activeBusFilterCount > 0 && <span className="desktop-filter-count">{activeBusFilterCount}</span>}
+            </h4>
             <span
               className="clear-all"
               onClick={() => {
@@ -1464,17 +1509,31 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
 
           <div className="bus-route-overview">
             <div className="bus-route-copy">
-              <span className="bus-route-eyebrow">Bus results</span>
+              <span className="bus-route-eyebrow"><Sparkles size={13} /> Your best route options</span>
               <h1>
-                <span>{searchParams?.from}</span>
+                <span>{cleanLocationLabel(searchParams?.from)}</span>
                 <ArrowLeftRight size={20} />
-                <span>{searchParams?.to}</span>
+                <span>{cleanLocationLabel(searchParams?.to)}</span>
               </h1>
-              <p><CalendarDays size={15} /> {formatFlightDate(searchParams?.date)} · Base fares shown, taxes added at checkout</p>
+              <div className="bus-route-meta">
+                <span><CalendarDays size={15} /> {formatFlightDate(searchParams?.date)}</span>
+                <span><CircleCheck size={15} /> Live seat availability</span>
+                <span><Shield size={15} /> Secure checkout</span>
+              </div>
             </div>
-            <div className="bus-route-stat">
-              <Bus size={21} />
-              <span><strong>{filteredBuses.length}</strong> buses</span>
+            <div className="bus-route-stats">
+              <div className="bus-route-stat">
+                <Bus size={19} />
+                <span><strong>{filteredBuses.length}</strong> buses</span>
+              </div>
+              <div className="bus-route-stat">
+                <Users size={19} />
+                <span><strong>{uniqueOperators.length}</strong> operators</span>
+              </div>
+              <div className="bus-route-stat">
+                <BadgeIndianRupee size={19} />
+                <span><strong>{busPriceRange.min ? `₹${formatBusPrice(busPriceRange.min)}` : '—'}</strong> from</span>
+              </div>
             </div>
           </div>
 
@@ -1506,38 +1565,45 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
 
           <div className="bus-results-toolbar">
             <div>
-              <strong>{filteredBuses.length} buses found</strong>
-              <span>Choose the timing and seat that work best for you</span>
+              <span className="results-toolbar-icon"><Sparkles size={16} /></span>
+              <span className="results-toolbar-copy">
+                <strong>{filteredBuses.length} buses match your journey</strong>
+                <span>Compare comfort, timing, seats, and fare in one place</span>
+              </span>
             </div>
             <div className="bus-sort-tabs" role="group" aria-label="Sort buses">
               {[
-                ['recommended', 'Recommended'],
-                ['price', 'Lowest fare'],
-                ['departure', 'Departure'],
-                ['seats', 'Seats'],
-              ].map(([value, label]) => (
+                ['recommended', 'Recommended', Sparkles],
+                ['price', 'Lowest fare', BadgeIndianRupee],
+                ['departure', 'Departure', Clock],
+                ['seats', 'Most seats', Armchair],
+              ].map(([value, label, Icon]) => (
                 <button
                   key={value}
                   type="button"
                   className={busSort === value ? 'active' : ''}
                   onClick={() => setBusSort(value)}
                 >
+                  {React.createElement(Icon, { size: 14 })}
                   {label}
                 </button>
               ))}
             </div>
           </div>
 
-          {sortedBuses.slice(0, visibleCount).map((bus) => {
+          {sortedBuses.slice(0, visibleCount).map((bus, busIndex) => {
             // Get boarding points for route display
             const boardingPoints = bus.BoardingPointsDetails || [];
             const droppingPoints = bus.DroppingPointsDetails || [];
-            const firstBoardingPoint = boardingPoints[0]?.CityPointName || searchParams?.from;
-            const lastDroppingPoint = droppingPoints[droppingPoints.length - 1]?.CityPointName || searchParams?.to;
+            const firstBoardingPoint = boardingPoints[0]?.CityPointName || cleanLocationLabel(searchParams?.from);
+            const lastDroppingPoint = droppingPoints[droppingPoints.length - 1]?.CityPointName || cleanLocationLabel(searchParams?.to);
             
             // Check if this is the cheapest bus
             const busPrice = baseFaresByBus[bus.ResultIndex] ?? getSearchBaseFare(bus);
             const isCheapest = busPrice > 0 && busPrice === busPriceRange.min;
+            const seatsAvailable = Number(bus.AvailableSeats || 0);
+            const operatorName = bus.TravelName || 'Bus Operator';
+            const operatorInitial = operatorName.trim().charAt(0).toUpperCase() || 'S';
             
             return (
             <React.Fragment key={bus.ResultIndex}>
@@ -1545,36 +1611,48 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
                 {/* Header Row - Operator and Route */}
                 <div className="card-header-row">
                   <div className="operator-route">
-                    <h3 className="operator-name">{bus.TravelName || 'Bus Operator'}</h3>
-                    <div className="route-breadcrumb">
-                      <span className="route-point">{firstBoardingPoint}</span>
-                      <MdKeyboardArrowRight className="route-arrow" />
-                      <span className="route-point">{lastDroppingPoint}</span>
+                    <span className="operator-avatar" aria-hidden="true">{operatorInitial}</span>
+                    <div className="operator-copy">
+                      <div className="operator-title-line">
+                        <span className="result-rank">#{String(busIndex + 1).padStart(2, '0')}</span>
+                        <h3 className="operator-name">{operatorName}</h3>
+                      </div>
+                      <div className="operator-meta">
+                        <span><Bus size={13} /> {bus.BusType || 'Comfort coach'}</span>
+                        {bus.BusNumber && <span>Service {bus.BusNumber}</span>}
+                      </div>
                     </div>
                   </div>
-                  {isCheapest && (
-                    <div className="cheapest-badge">
-                      <Star size={14} /> Cheapest
-                    </div>
-                  )}
+                  <div className="card-header-badges">
+                    <span className={`availability-badge ${seatsAvailable <= 5 ? 'urgent' : ''}`}>
+                      <Armchair size={14} /> {seatsAvailable} seats
+                    </span>
+                    {isCheapest && (
+                      <span className="cheapest-badge">
+                        <Star size={14} /> Best fare
+                      </span>
+                    )}
+                  </div>
                 </div>
                 
                 {/* Main Content Row */}
                 <div className="card-main-content">
                   {/* Left Section - Bus Info */}
                   <div className="sr-info">
-                    {/* Bus Type */}
-                    <p className="bus-type">{bus.BusType || 'A/C Sleeper ( 2 + 1 )'}</p>
+                    <div className="journey-column-labels">
+                      <span>Departure</span>
+                      <span>Arrival</span>
+                    </div>
                     
                     {/* Time Row - Times with connector */}
                     <div className="time-row">
-                      <span className="time">{formatTime(bus.departureTimeRaw || bus.DepartureTime)}</span>
+                      <span className="time"><i />{formatTime(bus.departureTimeRaw || bus.DepartureTime)}</span>
                       <div className="duration-connector">
                         <span className="duration-line-left"></span>
                         <span className="duration-badge">{calculateDuration(bus.DepartureTime, bus.ArrivalTime, bus.durationInMins)}</span>
                         <span className="duration-line-right"></span>
                       </div>
-                      <span className="time">{formatTime(bus.arrivalTimeRaw || bus.ArrivalTime)}</span>
+                      <span className="time">{formatTime(bus.arrivalTimeRaw || bus.ArrivalTime)}<i /></span>
                     </div>
                     
                     {/* Location Names Row */}
@@ -1582,11 +1660,22 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
                       <span className="location-name">{firstBoardingPoint}</span>
                       <span className="location-name location-end">{lastDroppingPoint}</span>
                     </div>
+
+                    <div className="journey-insights">
+                      <span><MapPin size={14} /> {boardingPoints.length || 1} boarding points</span>
+                      <span><MapPin size={14} /> {droppingPoints.length || 1} drop points</span>
+                    </div>
                   </div>
 
-                  {/* Center Section - Seat Layout Preview (Real-time from API) */}
+                  {/* Compact real-time seat layout; full layout opens on selection */}
                   <div className="seat-preview">
-                    <MiniSeatPreview bus={bus} searchTokenId={searchTokenId} />
+                    <div className="seat-preview-heading">
+                      <span><Armchair size={15} /> Seat availability</span>
+                      <small>{seatsAvailable} available</small>
+                    </div>
+                    <div className="seat-preview-map-viewport">
+                      <MiniSeatPreview bus={bus} searchTokenId={searchTokenId} />
+                    </div>
                   </div>
 
                   {/* Vertical Divider */}
@@ -1594,24 +1683,31 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
 
                   {/* Right Section - Price */}
                   <div className="price-section">
-                    <p className="starts-from-label">Base fare from</p>
+                    <span className="fare-kicker"><BadgeIndianRupee size={13} /> Best available base fare</span>
+                    <p className="starts-from-label">Starting from</p>
                     <BusPriceDisplay price={busPrice} />
                     <span className="base-fare-note">per seat · excludes taxes</span>
                     <button 
                       className="select-seat-btn" 
                       onClick={() => handleBusSelect(bus)}
                     >
-                      {selectedBus === bus.ResultIndex ? "HIDE DETAILS" : "SELECT SEAT"}
+                      <span>{selectedBus === bus.ResultIndex ? "Hide seats" : "Choose seats"}</span>
+                      <ArrowRight size={16} />
                     </button>
-                    {/* Seats Left Indicator - AbhiBus Style */}
-                    <div className="seats-left-indicator">
-                      <span className="seats-count">{bus.AvailableSeats || 0} Seats Left</span>
+                    <div className="fare-assurance">
+                      <CircleCheck size={13} />
+                      Secure booking
                     </div>
                   </div>
                 </div>
 
-                {/* Bus Details Chips Row - AbhiBus Style */}
+                {/* Bus Details Chips Row */}
                 <div className="bus-details-chips">
+                  <div className="route-breadcrumb">
+                    <span className="route-point">{firstBoardingPoint}</span>
+                    <MdKeyboardArrowRight className="route-arrow" />
+                    <span className="route-point">{lastDroppingPoint}</span>
+                  </div>
                   <button 
                     className="detail-chip"
                     onClick={() => openBusDetailsModal(bus, 'boarding')}
@@ -1689,15 +1785,11 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
       </div>
 
       {/* MOBILE FILTER FAB */}
-      {(() => {
-        const activeFilterCount = selectedBusTypes.length + selectedTimes.length + selectedOperators.length + selectedBoarding.length + selectedDropping.length + (maxPrice < 5000 ? 1 : 0);
-        return (
-          <button className="mobile-filter-fab" onClick={() => setMobileFilterOpen(true)}>
-            <SlidersHorizontal size={22} />
-            {activeFilterCount > 0 && <span className="filter-count-badge">{activeFilterCount}</span>}
-          </button>
-        );
-      })()}
+      <button className="mobile-filter-fab" onClick={() => setMobileFilterOpen(true)}>
+        <SlidersHorizontal size={19} />
+        <span>Filters</span>
+        {activeBusFilterCount > 0 && <span className="filter-count-badge">{activeBusFilterCount}</span>}
+      </button>
 
       {/* MOBILE FILTER BOTTOM SHEET */}
       <div className={`mobile-filter-overlay ${mobileFilterOpen ? 'open' : ''}`} onClick={() => setMobileFilterOpen(false)}>

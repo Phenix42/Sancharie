@@ -1,205 +1,220 @@
-/* Hero Section - Full screen background */
-
 .hero {
   position: relative;
   width: 100%;
-  height: 560px;
-  min-height: 520px;
-  overflow: visible;
+  min-height: 575px;
+  overflow: hidden;
+  background: #002c3f;
 }
 
-/* ================= BACKGROUND ================= */
-
-.hero-background {
+.hero-background,
+.hero-background picture {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
+  inset: 0;
+  display: block;
 }
 
 .hero-bg-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center center;
+  object-position: center 47%;
+  transform: scale(1.015);
 }
 
-/* Desktop bg visible by default, mobile bg hidden */
-
-/* Overlay to reduce image dominance - Audit Fix */
 .hero-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    linear-gradient(90deg, rgba(0, 44, 63, 0.86) 0%, rgba(0, 44, 63, 0.64) 46%, rgba(0, 44, 63, 0.22) 100%),
-    linear-gradient(180deg, rgba(0, 44, 63, 0.08) 0%, rgba(0, 44, 63, 0.4) 100%);
+  inset: 0;
   z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(0, 35, 50, 0.96) 0%, rgba(0, 35, 50, 0.79) 37%, rgba(0, 35, 50, 0.28) 74%, rgba(0, 35, 50, 0.14) 100%),
+    linear-gradient(180deg, rgba(0, 27, 39, 0.06) 0%, rgba(0, 27, 39, 0.12) 55%, rgba(0, 27, 39, 0.72) 100%);
 }
 
-/* Hero Content - Clear heading for bus booking - Audit Fix */
 .hero-content {
-  position: absolute;
-  top: 78px;
-  left: max(32px, calc((100vw - 1200px) / 2));
-  max-width: 600px;
-  text-align: left;
+  position: relative;
   z-index: 2;
-  padding: 0 24px;
+  width: min(100%, 1248px);
+  margin: 0 auto;
+  padding: 88px 24px 160px;
 }
 
 .hero-kicker {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
-  margin-bottom: 16px;
-  border: 1px solid rgba(206, 180, 95, 0.38);
+  gap: 9px;
+  min-height: 34px;
+  padding: 0 14px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(229, 203, 116, 0.42);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #CEB45F;
+  background: rgba(0, 27, 39, 0.34);
+  color: #efd77f;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  backdrop-filter: blur(12px);
+}
+
+.hero-kicker-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #efd77f;
+  box-shadow: 0 0 0 5px rgba(239, 215, 127, 0.12);
 }
 
 .hero-title {
+  max-width: 760px;
+  margin: 0 0 20px;
+  color: #ffffff;
   font-family: 'Montserrat', sans-serif;
-  font-size: 46px;
+  font-size: clamp(42px, 4vw, 61px);
   font-weight: 800;
-  color: #FFFFFF;
-  margin: 0 0 16px;
-  text-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
-  letter-spacing: 0;
-  line-height: 1.08;
-  animation: fadeInDown 0.8s ease-out;
+  letter-spacing: -0.045em;
+  line-height: 1.03;
+  text-wrap: balance;
+  text-shadow: 0 14px 36px rgba(0, 18, 26, 0.24);
+  animation: fadeInDown 0.7s ease-out;
 }
 
 .hero-title span {
   display: block;
 }
 
+.hero-title span:last-child {
+  color: #f2d87c;
+}
+
 .hero-subtitle {
+  max-width: 620px;
+  margin: 0 0 28px;
+  color: rgba(247, 252, 253, 0.88);
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 18px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.84);
-  margin: 0 0 22px;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
-  max-width: 620px;
-  animation: fadeInUp 0.8s ease-out 0.2s both;
+  line-height: 1.65;
+  text-shadow: 0 4px 16px rgba(0, 18, 26, 0.24);
+  animation: fadeInUp 0.7s ease-out 0.12s both;
 }
 
 .hero-proof-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  animation: fadeInUp 0.8s ease-out 0.28s both;
+  animation: fadeInUp 0.7s ease-out 0.2s both;
 }
 
 .hero-proof-row span {
   display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
   padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(0, 27, 39, 0.3);
+  color: rgba(255, 255, 255, 0.9);
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 12px;
   font-weight: 700;
   backdrop-filter: blur(12px);
 }
 
-.hero-proof-row strong {
-  color: #CEB45F;
-  font-size: 16px;
-  font-weight: 900;
+.hero-proof-row svg {
+  flex: 0 0 auto;
+  color: #efd77f;
 }
-
-/* ================= RESPONSIVE ================= */
 
 @media (max-width: 1024px) {
   .hero {
-    height: 540px;
-    min-height: 510px;
+    min-height: 540px;
   }
 
   .hero-content {
-    top: 72px;
-  }
-  
-  .hero-title {
-    font-size: 42px;
-  }
-  
-  .hero-subtitle {
-    font-size: 18px;
+    padding-top: 72px;
   }
 }
 
 @media (max-width: 768px) {
   .hero {
-    height: 530px;
-    min-height: 500px;
+    min-height: 392px;
   }
-  
-  /* Switch to mobile background handled by <picture> */
-  
+
+  .hero-bg-image {
+    object-position: center 32%;
+    transform: none;
+  }
+
+  .hero-overlay {
+    background:
+      linear-gradient(90deg, rgba(0, 35, 50, 0.88) 0%, rgba(0, 35, 50, 0.58) 76%, rgba(0, 35, 50, 0.36) 100%),
+      linear-gradient(180deg, rgba(0, 27, 39, 0.22) 0%, rgba(0, 27, 39, 0.34) 58%, rgba(0, 27, 39, 0.9) 100%);
+  }
+
   .hero-content {
-    top: 64px;
-    left: 0;
-    width: 100%;
-    max-width: none;
-    padding: 0 20px;
+    padding: 52px 20px 72px;
   }
-  
+
+  .hero-kicker {
+    min-height: 30px;
+    margin-bottom: 14px;
+    padding: 0 11px;
+    font-size: 10px;
+  }
+
   .hero-title {
-    max-width: 520px;
-    font-size: 28px;
-    line-height: 1.14;
-    margin-bottom: 12px;
+    max-width: 360px;
+    margin-bottom: 13px;
+    font-size: 30px;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
   }
-  
+
   .hero-subtitle {
-    font-size: 16px;
+    max-width: 360px;
+    margin-bottom: 18px;
+    font-size: 14px;
+    line-height: 1.55;
   }
 
   .hero-proof-row {
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    max-width: 360px;
+    gap: 7px;
   }
 
   .hero-proof-row span {
-    min-height: 38px;
-    padding: 0 12px;
-    font-size: 12px;
+    min-height: 34px;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 5px;
+    border-radius: 8px;
+    font-size: 8.5px;
+    white-space: nowrap;
+  }
+
+  .hero-proof-row svg {
+    width: 14px;
+    height: 14px;
   }
 }
 
-@media (max-width: 480px) {
-  .hero {
-    height: 510px;
-    min-height: 480px;
-  }
-  
-  .hero-title {
-    max-width: 340px;
-    font-size: 24px;
-  }
-  
-  .hero-subtitle {
-    font-size: 14px;
+@media (max-width: 420px) {
+  .hero-content {
+    padding-top: 42px;
   }
 
-  .hero-proof-row span {
-    width: 100%;
+  .hero-title {
+    max-width: 330px;
+    font-size: 27px;
+  }
+
+  .hero-subtitle {
+    max-width: 330px;
+    font-size: 13px;
   }
 }
