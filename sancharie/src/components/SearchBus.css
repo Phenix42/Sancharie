@@ -8,27 +8,28 @@
   --booking-gold: #9c7635;
   --booking-gold-dark: #7a5c2a;
   --booking-gold-light: #CEB45F;
+  --booking-border-accent: #d4b861;
   --booking-gold-soft: #faf7f0;
   --booking-border: #d9e2e7;
   --booking-border-strong: #c7d6de;
   --booking-muted: #647481;
   --booking-text: #082f42;
-  --booking-surface: #fbfcfd;
-  --booking-shadow: 0 24px 58px rgba(0, 44, 63, 0.16);
-  --booking-shadow-hover: 0 28px 66px rgba(0, 44, 63, 0.2);
+  --booking-surface: #ffffff;
+  --booking-shadow: 0 18px 42px rgba(10, 36, 50, 0.12);
+  --booking-shadow-hover: 0 20px 46px rgba(10, 36, 50, 0.14);
   width: 100%;
   display: flex;
   justify-content: center;
   padding: 0 24px;
-  margin-top: -150px;
-  margin-bottom: 56px;
+  margin-top: -118px;
+  margin-bottom: 52px;
   position: relative;
   z-index: 30;
 }
 
 .search-container-figma {
   width: 100%;
-  max-width: 1240px;
+  max-width: 1180px;
   position: relative;
   isolation: isolate;
 }
@@ -37,25 +38,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
   position: relative;
   overflow: hidden;
-  padding: 24px 26px 20px;
-  border: 1px solid var(--booking-border);
-  border-bottom: 0;
+  padding: 20px 24px 18px;
+  border: 0;
+  border-top: 4px solid var(--booking-border-accent);
   border-radius: 8px 8px 0 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 252, 0.98) 100%);
-  box-shadow: 0 18px 40px rgba(0, 44, 63, 0.12);
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(10, 36, 50, 0.08);
   z-index: 2;
 }
 
 .search-module-header::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  background: linear-gradient(90deg, var(--booking-primary) 0%, #1f6c7f 58%, var(--booking-gold-light) 100%);
+  content: none;
 }
 
 .search-heading-copy {
@@ -68,8 +64,8 @@
   margin-bottom: 7px;
   color: var(--booking-gold);
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 900;
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -78,7 +74,7 @@
   margin: 0;
   color: var(--booking-text);
   font-family: 'Montserrat', sans-serif;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.18;
@@ -88,11 +84,11 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 13px;
   border: 1px solid #dfe9e4;
   border-radius: 999px;
-  background: linear-gradient(180deg, #f7fcf8 0%, #eff8f2 100%);
+  background: #f5fbf7;
   color: #20583d;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 12px;
@@ -123,16 +119,22 @@
 /* Search Card */
 .search-card-figma {
   position: relative;
-  background: linear-gradient(180deg, #ffffff 0%, var(--booking-surface) 100%);
+  background: #ffffff;
   border-radius: 0 0 8px 8px;
   padding: 18px;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns:
+    minmax(170px, 1fr)
+    42px
+    minmax(170px, 1fr)
+    minmax(350px, 1.35fr)
+    minmax(196px, 220px);
+  grid-template-rows: auto auto;
+  align-items: stretch;
   gap: 12px;
   box-shadow: var(--booking-shadow);
   animation: none;
-  border: 1px solid var(--booking-border);
-  border-top-color: #eef3f6;
+  border: 0;
   transition: box-shadow 0.3s ease;
   z-index: 1;
 }
@@ -141,12 +143,16 @@
   box-shadow: var(--booking-shadow-hover);
 }
 
+.search-main-row {
+  display: contents;
+}
+
 .search-assurance-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 18px;
-  padding: 14px 26px 0;
+  gap: 16px;
+  padding: 14px 24px 0;
   color: var(--booking-primary);
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 13px;
@@ -167,17 +173,17 @@
 .search-field-figma {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 11px;
   position: relative;
   flex: 1 1 250px;
   min-width: 0;
-  min-height: 74px;
-  padding: 12px 14px;
+  min-height: 54px;
+  padding: 10px 12px;
   border: 1px solid var(--booking-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.76);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 5px 14px rgba(10, 36, 50, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .search-field-figma:hover {
@@ -192,35 +198,34 @@
 }
 
 .search-field-figma.route-field {
-  flex-basis: 286px;
+  flex-basis: 274px;
 }
 
 .search-field-figma.date-field {
   cursor: pointer;
-  flex: 0 0 188px;
-  gap: 12px;
+  flex: 0 0 158px;
+  gap: 10px;
 }
 
 /* Field Icon Images */
 .field-icon-img {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
-  border-radius: 10px;
-  filter: drop-shadow(0 6px 10px rgba(4, 26, 43, 0.14));
+  border-radius: 8px;
+  filter: drop-shadow(0 4px 8px rgba(4, 26, 43, 0.12));
 }
 
-.field-icon-img.cal-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+.calendar-field-icon {
+  flex: 0 0 auto;
+  color: var(--booking-gold-dark);
 }
 
 /* Field Content */
 .field-content-figma {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
@@ -228,7 +233,7 @@
 /* Field Label - Figma: Inter Regular, 20px */
 .field-label-figma {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   color: var(--booking-muted);
   line-height: 1.2;
@@ -240,8 +245,8 @@
   border: none;
   background: transparent;
   font-family: 'Montserrat', sans-serif;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--booking-text);
   padding: 0;
   outline: none;
@@ -250,14 +255,14 @@
 }
 
 .field-input-figma::placeholder {
-  color: #9aa6ae;
-  font-weight: 700;
+  color: #6f7d87;
+  font-weight: 600;
 }
 
 /* Field Value Display (for date) */
 .field-value-figma {
   font-family: 'Montserrat', sans-serif;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--booking-text);
   line-height: 1.2;
@@ -265,12 +270,13 @@
 
 /* Swap Button - Audit Fix: Added tooltip support */
 .swap-btn-figma {
+  align-self: center;
   width: 42px;
   height: 42px;
   border: 1px solid #eadcc2;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fffdf8 0%, #f8efe1 100%);
-  color: var(--booking-primary);
+  background: var(--booking-gold);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -279,12 +285,12 @@
   flex-shrink: 0;
   padding: 0;
   position: relative;
-  box-shadow: 0 8px 18px rgba(156, 118, 53, 0.12);
+  box-shadow: 0 8px 18px rgba(156, 118, 53, 0.22);
 }
 
 .swap-btn-figma:hover {
   transform: scale(1.05);
-  border-color: var(--booking-gold);
+  border-color: var(--booking-gold-dark);
   box-shadow: 0 10px 22px rgba(156, 118, 53, 0.18);
 }
 
@@ -321,36 +327,45 @@
 .date-section-wrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex: 0 0 auto;
+  min-width: 0;
+  width: 100%;
 }
 
 /* Quick Date Buttons */
 .quick-dates-figma {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   flex-shrink: 0;
-  min-height: 44px;
-  padding: 4px;
-  border: 1px solid var(--booking-border);
-  border-radius: 8px;
-  background: #f6f9fa;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  min-height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .quick-date-btn-figma {
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 0;
-  background: transparent;
+  display: flex;
+  min-width: 56px;
+  min-height: 54px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--booking-border);
+  background: #ffffff;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   color: var(--booking-muted);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  line-height: 1.1;
+  box-shadow: 0 5px 14px rgba(10, 36, 50, 0.04);
 }
 
 .quick-date-btn-figma:hover {
@@ -358,18 +373,31 @@
 }
 
 .quick-date-btn-figma.active {
-  background: #ffffff;
-  color: var(--booking-gold-dark);
-  box-shadow: 0 4px 12px rgba(156, 118, 53, 0.12);
+  border-color: var(--booking-gold);
+  background: var(--booking-gold);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(156, 118, 53, 0.22);
+}
+
+.quick-date-btn-figma strong {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.quick-date-btn-figma span {
+  margin-top: 4px;
+  font-size: 10px;
 }
 
 .search-btn-figma {
-  min-height: 74px;
+  align-self: stretch;
+  width: 100%;
+  min-height: 54px;
   background: var(--booking-gold);
   color: #FFFFFF;
   border: none;
-  border-radius: 8px;
-  padding: 0 24px;
+  border-radius: 14px;
+  padding: 0 18px;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 15px;
   font-weight: 900;
@@ -379,8 +407,10 @@
   gap: 10px;
   transition: all 0.3s ease;
   flex-shrink: 0;
-  min-width: 182px;
+  min-width: 0;
   justify-content: center;
+  grid-row: 1;
+  grid-column: 5;
 }
 
 .search-btn-figma:hover {
@@ -391,14 +421,14 @@
 
 /* Audit Fix: More prominent search button */
 .search-btn-figma.search-btn-prominent {
-  padding: 0 28px;
+  padding: 0 20px;
   font-size: 15px;
-  background: linear-gradient(135deg, var(--booking-primary) 0%, #004d6d 100%);
+  background: #002c3f;
   box-shadow: 0 14px 26px rgba(0, 44, 63, 0.26);
 }
 
 .search-btn-figma.search-btn-prominent:hover {
-  background: linear-gradient(135deg, #003d57 0%, #005a82 100%);
+  background: #073c52;
   transform: translateY(-2px);
   box-shadow: 0 14px 28px rgba(0, 44, 63, 0.28);
 }
@@ -414,51 +444,114 @@
   transform: none;
 }
 
+.seat-preference-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 54px;
+}
+
+.seat-preference-label {
+  flex: 0 0 auto;
+  color: #87949d;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.seat-preference-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.seat-preference-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--booking-border);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #5d6973;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.seat-preference-chip svg {
+  color: var(--booking-gold-dark);
+}
+
+.seat-preference-chip:hover {
+  border-color: #d6c4a4;
+  background: #fffaf2;
+}
+
+.seat-preference-chip.active {
+  border-color: var(--booking-gold);
+  background: var(--booking-primary);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(0, 44, 63, 0.18);
+}
+
+.seat-preference-chip.active svg {
+  color: #CEB45F;
+}
+
 /* City Dropdown */
 .city-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 10px);
   left: 0;
-  width: min(420px, calc(100vw - 32px));
+  width: min(440px, calc(100vw - 32px));
   min-width: 100%;
-  background: white;
+  background: #ffffff;
+  border: 1px solid #dce5ea;
   border-radius: 8px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  max-height: 250px;
+  box-shadow: 0 18px 42px rgba(10, 36, 50, 0.16);
+  max-height: 340px;
   overflow-y: auto;
-  z-index: 100;
+  overscroll-behavior: contain;
+  z-index: 120;
   list-style: none;
-  padding: 8px 0;
-  margin: 8px 0 0 0;
+  padding: 6px;
+  margin: 0;
 }
 
 .city-dropdown li {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 11px;
+  min-height: 56px;
+  padding: 10px 12px;
+  border-radius: 7px;
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
-  color: #333;
-  transition: background 0.2s ease;
+  color: var(--booking-text);
+  transition: background 0.16s ease, color 0.16s ease;
 }
 
 .suggestion-icon {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 8px;
-  background: #f7f9fb;
-  color: #6b7280;
+  border-radius: 7px;
+  background: #eef5f7;
+  color: var(--booking-primary);
   font-size: 15px;
 }
 
 .suggestion-icon.city {
-  background: var(--booking-gold-soft);
-  color: var(--booking-gold);
+  background: #fbf6ea;
+  color: var(--booking-gold-dark);
   font-size: 18px;
 }
 
@@ -472,8 +565,8 @@
 }
 
 .suggestion-copy b {
-  color: #1f2933;
-  font-size: 15px;
+  color: #172733;
+  font-size: 14px;
   font-weight: 700;
   word-break: break-word;
   line-height: 1.3;
@@ -481,7 +574,7 @@
 }
 
 .suggestion-copy small {
-  color: #8b95a1;
+  color: #71808b;
   font-size: 12px;
   word-break: break-word;
   line-height: 1.3;
@@ -498,14 +591,30 @@
   color: #0b6178;
 }
 
-.suggestion-arrow {
-  color: #8b95a1;
-  font-size: 17px;
+.suggestion-kind {
+  flex: 0 0 auto;
+  min-width: 42px;
+  padding: 4px 8px;
+  border: 1px solid #dce5ea;
+  border-radius: 999px;
+  color: #5e6f7b;
+  background: #f7fafb;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
 }
 
 .city-dropdown li:hover {
-  background: var(--booking-gold-soft);
-  color: var(--booking-gold);
+  background: #f5f8fa;
+  color: var(--booking-text);
+}
+
+.city-dropdown li:hover .suggestion-kind {
+  border-color: #d7c6a8;
+  background: #fffaf0;
+  color: var(--booking-gold-dark);
 }
 
 /* Custom Scrollbar for Dropdown */
@@ -514,41 +623,37 @@
 }
 
 .city-dropdown::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #f2f6f8;
   border-radius: 3px;
 }
 
 .city-dropdown::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background: #c7d4dc;
   border-radius: 3px;
 }
 
 .city-dropdown::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
+  background: #9fb1bd;
 }
 
 /* Recent Searches Section */
 .recent-searches-section {
-  border-bottom: 1px solid #eaeaea;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
+  border-bottom: 1px solid #edf2f4;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
 }
 
 .dropdown-section-header {
-  padding: 8px 16px 6px;
+  padding: 8px 10px 7px;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--booking-gold);
+  font-size: 11px;
+  font-weight: 800;
+  color: #667786;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.section-icon {
-  font-size: 14px;
 }
 
 .recent-list,
@@ -562,29 +667,37 @@
 .suggestions-list li {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 11px;
+  min-height: 56px;
+  padding: 10px 12px;
+  border-radius: 7px;
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
-  color: #333;
-  transition: background 0.2s ease;
+  color: var(--booking-text);
+  transition: background 0.16s ease, color 0.16s ease;
 }
 
 .recent-list li:hover,
 .suggestions-list li:hover {
-  background: var(--booking-gold-soft);
-  color: var(--booking-gold);
+  background: #f5f8fa;
+  color: var(--booking-text);
 }
 
 .recent-route {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  color: #203644;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .suggestions-section {
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
 /* Popup Styles */
@@ -660,6 +773,12 @@
   .search-card-figma {
     padding: 16px;
     gap: 12px;
+    grid-template-columns:
+      minmax(160px, 1fr)
+      40px
+      minmax(160px, 1fr)
+      minmax(350px, 1.25fr)
+      minmax(180px, 210px);
   }
 
   .search-field-figma.route-field {
@@ -669,11 +788,6 @@
   .field-icon-img {
     width: 32px;
     height: 32px;
-  }
-  
-  .field-icon-img.cal-icon {
-    width: 28px;
-    height: 28px;
   }
   
   .swap-btn-figma {
@@ -688,7 +802,7 @@
   }
   
   .search-btn-figma {
-    min-height: 68px;
+    min-height: 54px;
     padding: 0 18px;
     font-size: 14px;
   }
@@ -707,7 +821,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .search-module-header {
     align-items: flex-start;
     flex-direction: column;
@@ -720,10 +834,20 @@
   }
 
   .search-card-figma {
-    flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     border-radius: 0 0 8px 8px;
     padding: 16px;
     gap: 16px;
+  }
+
+  .search-main-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
   }
   
   .search-field-figma {
@@ -759,8 +883,17 @@
   }
   
   .search-btn-figma {
+    grid-row: auto;
+    grid-column: auto;
     flex: 1 1 100%;
     justify-content: center;
+    min-height: 56px;
+    border-radius: 8px;
+  }
+
+  .seat-preference-row {
+    width: 100%;
+    grid-column: auto;
   }
 }
 
@@ -789,13 +922,20 @@
   }
 
   .search-card-figma {
+    display: flex;
     flex-direction: column;
-    background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+    background: #ffffff;
     border-radius: 0 0 8px 8px;
     padding: 12px;
     gap: 10px;
-    border: 1px solid var(--booking-border);
+    border: 0;
     box-shadow: 0 12px 26px rgba(0, 44, 63, 0.14);
+  }
+
+  .search-main-row {
+    flex-direction: column;
+    gap: 10px;
+    max-width: 100%;
   }
 
   .search-card-figma:hover {
@@ -815,11 +955,6 @@
   .field-icon-img {
     width: 36px;
     height: 36px;
-  }
-
-  .field-icon-img.cal-icon {
-    width: 30px;
-    height: 30px;
   }
 
   .field-content-figma {
@@ -877,13 +1012,16 @@
 
   /* Quick-date pills */
   .quick-dates-figma {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     width: 100%;
     padding: 4px;
     gap: 4px;
   }
 
   .quick-date-btn-figma {
-    flex: 1;
+    min-width: 0;
+    width: 100%;
     text-align: center;
     padding: 0 12px;
     border-radius: 6px;
@@ -932,6 +1070,25 @@
     color: var(--booking-primary);
     font-size: 12px;
   }
+
+  .seat-preference-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+    min-height: 0;
+  }
+
+  .seat-preference-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .seat-preference-chip {
+    min-width: 0;
+    justify-content: center;
+    padding: 0 10px;
+  }
 }
 
 /* Smaller phones */
@@ -953,11 +1110,6 @@
   .field-icon-img {
     width: 32px;
     height: 32px;
-  }
-
-  .field-icon-img.cal-icon {
-    width: 28px;
-    height: 28px;
   }
 
   .swap-btn-figma {
@@ -1077,12 +1229,18 @@
 }
 
 .search-bus-wrapper.compact .search-card-figma {
+  display: flex;
+  align-items: center;
   border-radius: 8px;
   padding: 14px 20px;
   border-width: 0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   animation: none;
   background: #1a3c4d;
+}
+
+.search-bus-wrapper.compact .search-main-row {
+  display: contents;
 }
 
 .search-bus-wrapper.compact .search-field-figma {
@@ -1125,11 +1283,6 @@
   filter: none;
 }
 
-.search-bus-wrapper.compact .field-icon-img.cal-icon {
-  width: 30px;
-  height: 30px;
-}
-
 .search-bus-wrapper.compact .swap-btn-figma {
   width: 32px;
   height: 32px;
@@ -1158,11 +1311,21 @@
 }
 
 .search-bus-wrapper.compact .quick-date-btn-figma {
+  min-width: 46px;
   min-height: 30px;
-  padding: 0 12px;
+  padding: 4px 9px;
   font-size: 11px;
   background: transparent;
   color: rgba(255, 255, 255, 0.8);
+}
+
+.search-bus-wrapper.compact .quick-date-btn-figma strong {
+  font-size: 13px;
+}
+
+.search-bus-wrapper.compact .quick-date-btn-figma span {
+  margin-top: 2px;
+  font-size: 9px;
 }
 
 .search-bus-wrapper.compact .quick-date-btn-figma:hover {
@@ -1177,6 +1340,9 @@
 }
 
 .search-bus-wrapper.compact .search-btn-figma {
+  grid-row: auto;
+  grid-column: auto;
+  border-radius: 8px;
   min-height: 52px;
   min-width: 0;
   padding: 0 22px;

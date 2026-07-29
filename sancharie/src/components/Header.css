@@ -35,8 +35,7 @@
 .mode-tabs-header,
 .header-action-link,
 .login-btn,
-.header-timer,
-.page-back-btn {
+.header-timer {
   display: flex;
   align-items: center;
 }
@@ -68,24 +67,6 @@
   letter-spacing: 0;
   line-height: 1;
   box-shadow: 0 10px 22px rgba(156, 118, 53, 0.18);
-}
-
-.page-back-btn {
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid #e6e8ef;
-  border-radius: 50%;
-  background: #ffffff;
-  color: #3f4658;
-  cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-}
-
-.page-back-btn:hover {
-  border-color: var(--header-gold);
-  color: var(--header-gold);
-  background: var(--header-gold-soft);
 }
 
 .header-actions {
@@ -488,11 +469,6 @@
     white-space: nowrap;
   }
 
-  .page-back-btn {
-    width: 34px;
-    height: 34px;
-  }
-
   .header-timer {
     padding: 6px 9px;
     font-size: 11px;
@@ -819,12 +795,6 @@
   .logo-text {
     max-width: 48vw;
     font-size: 17px;
-  }
-
-  .page-back-btn {
-    width: 32px;
-    height: 32px;
-    flex: 0 0 32px;
   }
 
   .mobile-menu-btn {

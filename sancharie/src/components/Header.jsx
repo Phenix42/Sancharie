@@ -12,7 +12,6 @@ import {
   Building2,
   BusFront,
   ChevronDown,
-  ChevronLeft,
   Headphones,
   HelpCircle,
   Home,
@@ -158,11 +157,6 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
       <header className="header">
         <div className="header-container header-main-inner">
           <div className="brand-cluster">
-            {!isHomePage && (
-              <button className="page-back-btn" onClick={() => navigate(-1)} title="Back" type="button">
-                <ChevronLeft size={18} />
-              </button>
-            )}
             <button className="logo" onClick={handleLogoClick} type="button">
               <span className="logo-text">Sancharie</span>
             </button>

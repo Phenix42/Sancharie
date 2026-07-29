@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./SearchBus.css";
 import { busApi } from "../services";
-import { ArrowLeftRight, BadgeCheck, Building2, Clock3, MapPin, Search, ShieldCheck } from "lucide-react";
+import { ArrowLeftRight, Armchair, BadgeCheck, BedSingle, Building2, CalendarDays, Clock3, MapPin, Search, ShieldCheck, Snowflake } from "lucide-react";
 
 // Import custom icons from assets
 import fromIcon from "../assets/searchbar/from.svg";
 import toIcon from "../assets/searchbar/to.svg";
-import calIcon from "../assets/searchbar/cal.svg";
 
 const MAX_RECENT_SEARCHES = 5;
 const STATION_CACHE_KEY = 'sancharie_bus_stations_cache_v2';
@@ -14,6 +13,17 @@ const STATION_CACHE_TTL_MS = 15 * 60 * 1000;
 
 const normalizeText = (value) => String(value || '').trim().replace(/\s+/g, ' ');
 const normalizeKey = (value) => normalizeText(value).toLowerCase();
+const toDateInputValue = (date) => {
+  const localDate = new Date(date);
+  localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+  return localDate.toISOString().split('T')[0];
+};
+
+const addDays = (date, days) => {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+};
 
 const cityCorrections = {
   hydrabad: 'Hyderabad',
@@ -202,13 +212,12 @@ const loadRecentSearches = (mode) => {
 };
 
 const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) => {
-  const [{ today, tomorrow }] = useState(() => {
+  const [{ today, tomorrow, dayAfterTomorrow }] = useState(() => {
     const currentDate = new Date();
-    const nextDate = new Date(currentDate);
-    nextDate.setDate(currentDate.getDate() + 1);
     return {
-      today: currentDate.toISOString().split('T')[0],
-      tomorrow: nextDate.toISOString().split('T')[0],
+      today: toDateInputValue(currentDate),
+      tomorrow: toDateInputValue(addDays(currentDate, 1)),
+      dayAfterTomorrow: toDateInputValue(addDays(currentDate, 2)),
     };
   });
   
@@ -243,6 +252,7 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
     toSearchCity: initialValues?.toSearchCity || initialValues?.toCity || "",
     date: initialValues?.date || today,
   });
+  const [seatPreference, setSeatPreference] = useState(initialValues?.seatPreference || '');
 
   const [fromSuggestions, setFromSuggestions] = useState([]);
   const [toSuggestions, setToSuggestions] = useState([]);
@@ -250,11 +260,16 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [stationNotice, setStationNotice] = useState("");
   const [popup, setPopup] = useState({ show: false, message: "" });
-  const quickDate = formData.date === today
-    ? 'today'
-    : formData.date === tomorrow
-      ? 'tomorrow'
-      : '';
+  const dateOptions = [
+    { key: 'today', value: today, helper: 'Today' },
+    { key: 'tomorrow', value: tomorrow },
+    { key: 'day-after', value: dayAfterTomorrow },
+  ];
+  const seatPreferenceOptions = [
+    { key: 'Seating', label: 'Seater', icon: Armchair },
+    { key: 'Sleeper', label: 'Sleeper', icon: BedSingle },
+    { key: 'AC', label: 'AC', icon: Snowflake },
+  ];
 
   const dateRef = useRef(null);
   const fromRef = useRef(null);
@@ -405,6 +420,17 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
     });
   };
 
+  const formatDateTile = (date, fallback = '') => {
+    if (!date) return { day: '', label: fallback };
+    const [year, month, day] = date.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    if (Number.isNaN(d.getTime())) return { day: '', label: fallback };
+    return {
+      day: String(day),
+      label: fallback || d.toLocaleDateString('en-IN', { weekday: 'short' }),
+    };
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     const idField = name === 'from' ? 'fromId' : name === 'to' ? 'toId' : null;
@@ -504,11 +530,8 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
   };
 
   const handleQuickDate = (type) => {
-    if (type === "today") {
-      setFormData({ ...formData, date: today });
-    } else {
-      setFormData({ ...formData, date: tomorrow });
-    }
+    const selected = dateOptions.find((option) => option.key === type)?.value || today;
+    setFormData({ ...formData, date: selected });
   };
 
   // Handle selecting a recent search
@@ -566,7 +589,15 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
         return;
       }
 
-      const searchData = { ...formData, fromId, toId, fromSearchCity, toSearchCity };
+      const searchData = {
+        ...formData,
+        fromId,
+        toId,
+        fromSearchCity,
+        toSearchCity,
+        seatPreference,
+        busTypes: seatPreference ? [seatPreference] : [],
+      };
       // Save to recent searches
       saveRecentSearch(formData.from, formData.to, fromId, toId, fromSearchCity, toSearchCity);
       onSearch(searchData);
@@ -582,7 +613,7 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
           <div className="search-module-header">
             <div className="search-heading-copy">
               <span className="search-eyebrow">Bus Ticket Booking</span>
-              <h2>Compare routes, fares, and operators in one place</h2>
+              <h2>Search bus tickets</h2>
             </div>
             <div className={`search-module-status ${stationNotice ? 'is-notice' : ''}`} aria-label="Live booking assurance">
               <span className="status-dot" />
@@ -592,172 +623,192 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
         )}
 
         <div className="search-card-figma">
-          {/* Origin - Audit Fix: Keep fixed labels */}
-          <div className="search-field-figma route-field origin-field" ref={fromRef}>
-            <img src={fromIcon} alt="Origin" className="field-icon-img" />
-            <div className="field-content-figma">
-              <span className="field-label-figma">Origin {mode === 'flight' ? 'Airport' : 'City'}</span>
-              <input
-                type="text"
-                name="from"
-                placeholder={mode === 'flight' ? 'From Airport or City' : 'From City'}
-                value={formData.from}
-                onChange={handleChange}
-                onFocus={() => handleFocus("from")}
-                autoComplete="off"
-                className="field-input-figma"
-              />
-            </div>
-            {showFromDropdown && (fromSuggestions.length > 0 || showRecentFrom) && (
-              <div className="city-dropdown city-dropdown-origin">
-                {showRecentFrom && recentSearches.length > 0 && (
-                  <div className="recent-searches-section">
-                    <div className="dropdown-section-header">
-                      <span className="section-icon">🕐</span>
-                      Recent Searches
-                    </div>
-                    <ul className="recent-list">
-                      {recentSearches.map((search, index) => (
-                        <li key={`recent-${index}`} onClick={() => handleSelectRecentSearch(search, "from")}>
-                          <span className="recent-route">{search.from} → {search.to}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {fromSuggestions.length > 0 && (
-                  <div className="suggestions-section">
-                    {showRecentFrom && <div className="dropdown-section-header">Popular Cities</div>}
-                    <ul className="suggestions-list">
-                      {fromSuggestions.map((city, index) => (
-                        <li key={`${city.displayName}-${index}`} onClick={() => handleSelectCity("from", city)}>
-                          <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : 'boarding'}`} aria-hidden="true">
-                            {city.kind === 'city' ? <Building2 size={18} /> : <MapPin size={18} />}
-                          </span>
-                          <span className="suggestion-copy">
-                            <b>{city.displayName}</b>
-                            <small>{city.subtitle || city.searchCity}</small>
-                          </span>
-                          <span className="suggestion-arrow">↗</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Swap Button - Audit Fix: Added tooltip for better clarity */}
-          <button 
-            className="swap-btn-figma" 
-            onClick={swapLocations} 
-            type="button"
-            title="Swap origin and destination"
-            aria-label="Swap origin and destination cities"
-          >
-            <ArrowLeftRight className="swap-icon" size={18} strokeWidth={2.4} aria-hidden="true" />
-          </button>
-
-          {/* Destination - Audit Fix: Keep fixed labels */}
-          <div className="search-field-figma route-field destination-field" ref={toRef}>
-            <img src={toIcon} alt="Destination" className="field-icon-img" />
-            <div className="field-content-figma">
-              <span className="field-label-figma">Destination {mode === 'flight' ? 'Airport' : 'City'}</span>
-              <input
-                type="text"
-                name="to"
-                placeholder={mode === 'flight' ? 'To Airport or City' : 'To city'}
-                value={formData.to}
-                onChange={handleChange}
-                onFocus={() => handleFocus("to")}
-                autoComplete="off"
-                className="field-input-figma"
-              />
-            </div>
-            {showToDropdown && (toSuggestions.length > 0 || showRecentTo) && (
-              <div className="city-dropdown city-dropdown-destination">
-                {showRecentTo && recentSearches.length > 0 && (
-                  <div className="recent-searches-section">
-                    <div className="dropdown-section-header">
-                      <span className="section-icon">🕐</span>
-                      Recent Searches
-                    </div>
-                    <ul className="recent-list">
-                      {recentSearches.map((search, index) => (
-                        <li key={`recent-${index}`} onClick={() => handleSelectRecentSearch(search, "to")}>
-                          <span className="recent-route">{search.from} → {search.to}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {toSuggestions.length > 0 && (
-                  <div className="suggestions-section">
-                    {showRecentTo && <div className="dropdown-section-header">Popular Cities</div>}
-                    <ul className="suggestions-list">
-                      {toSuggestions.map((city, index) => (
-                        <li key={`${city.displayName}-${index}`} onClick={() => handleSelectCity("to", city)}>
-                          <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : 'boarding'}`} aria-hidden="true">
-                            {city.kind === 'city' ? <Building2 size={18} /> : <MapPin size={18} />}
-                          </span>
-                          <span className="suggestion-copy">
-                            <b>{city.displayName}</b>
-                            <small>{city.subtitle || city.searchCity}</small>
-                          </span>
-                          <span className="suggestion-arrow">↗</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Date Section - Audit Fix: Better grouping of date and quick buttons */}
-          <div className="date-section-wrapper">
-            <div className="search-field-figma date-field" onClick={() => dateRef.current?.showPicker()}>
-              <img src={calIcon} alt="Calendar" className="field-icon-img cal-icon" />
+          <div className="search-main-row">
+            {/* Origin - Audit Fix: Keep fixed labels */}
+            <div className="search-field-figma route-field origin-field" ref={fromRef}>
+              <img src={fromIcon} alt="Origin" className="field-icon-img" />
               <div className="field-content-figma">
-                <span className="field-label-figma">Departure Date</span>
-                <span className="field-value-figma">{formatDate(formData.date)}</span>
+                <span className="field-label-figma">Origin {mode === 'flight' ? 'Airport' : 'City'}</span>
                 <input
-                  ref={dateRef}
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  min={today}
+                  type="text"
+                  name="from"
+                  placeholder={mode === 'flight' ? 'From Airport or City' : 'Enter Source'}
+                  value={formData.from}
                   onChange={handleChange}
-                  className="hidden-date-input"
+                  onFocus={() => handleFocus("from")}
+                  autoComplete="off"
+                  className="field-input-figma"
                 />
               </div>
+              {showFromDropdown && (fromSuggestions.length > 0 || showRecentFrom) && (
+                <div className="city-dropdown city-dropdown-origin">
+                  {showRecentFrom && recentSearches.length > 0 && (
+                    <div className="recent-searches-section">
+                      <div className="dropdown-section-header">
+                        <Clock3 size={14} aria-hidden="true" />
+                        Recent Searches
+                      </div>
+                      <ul className="recent-list">
+                        {recentSearches.map((search, index) => (
+                          <li key={`recent-${index}`} onClick={() => handleSelectRecentSearch(search, "from")}>
+                            <span className="recent-route">{search.from} → {search.to}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {fromSuggestions.length > 0 && (
+                    <div className="suggestions-section">
+                      {showRecentFrom && <div className="dropdown-section-header">Popular Cities</div>}
+                      <ul className="suggestions-list">
+                        {fromSuggestions.map((city, index) => (
+                          <li key={`${city.displayName}-${index}`} onClick={() => handleSelectCity("from", city)}>
+                            <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : 'boarding'}`} aria-hidden="true">
+                              {city.kind === 'city' ? <Building2 size={18} /> : <MapPin size={18} />}
+                            </span>
+                            <span className="suggestion-copy">
+                              <b>{city.displayName}</b>
+                              <small>{city.subtitle || city.searchCity}</small>
+                            </span>
+                            <span className="suggestion-kind">{city.kind === 'city' ? 'City' : 'Stop'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Quick Date Buttons - Grouped under Departure Date */}
-            <div className="quick-dates-figma">
-              <button 
-                type="button"
-                className={`quick-date-btn-figma ${quickDate === "today" ? "active" : ""}`}
-                onClick={() => handleQuickDate("today")}
-              >
-                Today
-              </button>
-              <button 
-                type="button"
-                className={`quick-date-btn-figma ${quickDate === "tomorrow" ? "active" : ""}`}
-                onClick={() => handleQuickDate("tomorrow")}
-              >
-                Tomorrow
-              </button>
+            {/* Swap Button - Audit Fix: Added tooltip for better clarity */}
+            <button
+              className="swap-btn-figma"
+              onClick={swapLocations}
+              type="button"
+              title="Swap origin and destination"
+              aria-label="Swap origin and destination cities"
+            >
+              <ArrowLeftRight className="swap-icon" size={18} strokeWidth={2.4} aria-hidden="true" />
+            </button>
+
+            {/* Destination - Audit Fix: Keep fixed labels */}
+            <div className="search-field-figma route-field destination-field" ref={toRef}>
+              <img src={toIcon} alt="Destination" className="field-icon-img" />
+              <div className="field-content-figma">
+                <span className="field-label-figma">Destination {mode === 'flight' ? 'Airport' : 'City'}</span>
+                <input
+                  type="text"
+                  name="to"
+                  placeholder={mode === 'flight' ? 'To Airport or City' : 'Enter Destination'}
+                  value={formData.to}
+                  onChange={handleChange}
+                  onFocus={() => handleFocus("to")}
+                  autoComplete="off"
+                  className="field-input-figma"
+                />
+              </div>
+              {showToDropdown && (toSuggestions.length > 0 || showRecentTo) && (
+                <div className="city-dropdown city-dropdown-destination">
+                  {showRecentTo && recentSearches.length > 0 && (
+                    <div className="recent-searches-section">
+                      <div className="dropdown-section-header">
+                        <Clock3 size={14} aria-hidden="true" />
+                        Recent Searches
+                      </div>
+                      <ul className="recent-list">
+                        {recentSearches.map((search, index) => (
+                          <li key={`recent-${index}`} onClick={() => handleSelectRecentSearch(search, "to")}>
+                            <span className="recent-route">{search.from} → {search.to}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {toSuggestions.length > 0 && (
+                    <div className="suggestions-section">
+                      {showRecentTo && <div className="dropdown-section-header">Popular Cities</div>}
+                      <ul className="suggestions-list">
+                        {toSuggestions.map((city, index) => (
+                          <li key={`${city.displayName}-${index}`} onClick={() => handleSelectCity("to", city)}>
+                            <span className={`suggestion-icon ${city.kind === 'city' ? 'city' : 'boarding'}`} aria-hidden="true">
+                              {city.kind === 'city' ? <Building2 size={18} /> : <MapPin size={18} />}
+                            </span>
+                            <span className="suggestion-copy">
+                              <b>{city.displayName}</b>
+                              <small>{city.subtitle || city.searchCity}</small>
+                            </span>
+                            <span className="suggestion-kind">{city.kind === 'city' ? 'City' : 'Stop'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* Date Section - Audit Fix: Better grouping of date and quick buttons */}
+            <div className="date-section-wrapper">
+              <div className="quick-dates-figma">
+                {dateOptions.map((option) => {
+                  const tile = formatDateTile(option.value, option.helper);
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      className={`quick-date-btn-figma ${formData.date === option.value ? "active" : ""}`}
+                      onClick={() => handleQuickDate(option.key)}
+                    >
+                      <strong>{tile.day}</strong>
+                      <span>{tile.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="search-field-figma date-field" onClick={() => dateRef.current?.showPicker()}>
+                <CalendarDays size={20} aria-hidden="true" className="calendar-field-icon" />
+                <div className="field-content-figma">
+                  <span className="field-label-figma">Departure Date</span>
+                  <span className="field-value-figma">{formatDate(formData.date)}</span>
+                  <input
+                    ref={dateRef}
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    min={today}
+                    onChange={handleChange}
+                    className="hidden-date-input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Search Button - Audit Fix: Made more prominent */}
+            <button className="search-btn-figma search-btn-prominent" onClick={handleSearch} type="button" disabled={stationsLoading}>
+              <Search size={20} strokeWidth={2.7} aria-hidden="true" />
+              <span>{stationsLoading ? 'Loading stations…' : mode === 'flight' ? 'Search Flights' : 'Search Buses'}</span>
+            </button>
           </div>
 
-          {/* Search Button - Audit Fix: Made more prominent */}
-          <button className="search-btn-figma search-btn-prominent" onClick={handleSearch} type="button" disabled={stationsLoading}>
-            <Search size={20} strokeWidth={2.7} aria-hidden="true" />
-            <span>{stationsLoading ? 'Loading stations…' : mode === 'flight' ? 'Search Flights' : 'Search Buses'}</span>
-          </button>
+          {!compact && mode === 'bus' && (
+            <div className="seat-preference-row" aria-label="Seat preference">
+              <span className="seat-preference-label">Seat Preference</span>
+              <div className="seat-preference-options">
+                {seatPreferenceOptions.map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`seat-preference-chip ${seatPreference === key ? 'active' : ''}`}
+                    onClick={() => setSeatPreference((current) => current === key ? '' : key)}
+                  >
+                    <Icon size={17} aria-hidden="true" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {!compact && (

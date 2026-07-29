@@ -21,13 +21,13 @@ function Hero() {
         <div className="hero-overlay"></div>
       </div>
       <div className="hero-content">
-        <div className="hero-kicker">Sancharie Bus Network</div>
+        <div className="hero-kicker">Sancharie Bus Booking</div>
         <h1 className="hero-title">
-          <span>Business-class bus</span>
-          <span>booking for every route</span>
+          <span>Bus ticket booking</span>
+          <span>made simple</span>
         </h1>
         <p className="hero-subtitle">
-          Compare verified operators, live fares, boarding points, and seat options in a calm booking workspace.
+          Compare verified operators, live fares, boarding points, and seats before checkout.
         </p>
         <div className="hero-proof-row" aria-label="Sancharie booking highlights">
           <span><strong>5000+</strong> routes covered</span>

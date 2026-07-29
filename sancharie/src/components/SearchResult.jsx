@@ -273,6 +273,11 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe?.());
   }, [buses, mode]);
 
+  useEffect(() => {
+    if (mode !== 'bus') return;
+    setSelectedBusTypes(Array.isArray(searchParams?.busTypes) ? searchParams.busTypes : []);
+  }, [mode, searchParams]);
+
   /* ---------------- FETCH BUSES ON MOUNT ---------------- */
   useEffect(() => {
     const fetchBuses = async () => {
