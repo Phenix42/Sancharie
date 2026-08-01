@@ -45,7 +45,13 @@ import {
 } from "lucide-react";
 import SelectSeat from "./selectseat";
 import NoResult from "./noresult";
-import MiniSeatPreview, { clearSeatLayoutCache, prefetchAllSeatLayouts, subscribeSeatLayout, getMinBaseFareFromCache } from "./MiniSeatPreview";
+import MiniSeatPreview, {
+  clearSeatLayoutCache,
+  getMinBaseFareFromCache,
+  prefetchAllSeatLayouts,
+  prioritizeSeatLayout,
+  subscribeSeatLayout,
+} from "./MiniSeatPreview";
 import Logo from "../assets/logosan.svg";
 import SearchBus from "./SearchBus";
 import { useBooking } from "../context/BookingContext";
@@ -778,6 +784,7 @@ export default function SearchResult({ searchParams, onSearch, onBackToHome, mod
 
   const handleBusSelect = (bus) => {
     const isClosing = selectedBus === bus.ResultIndex;
+    if (!isClosing) prioritizeSeatLayout(bus);
     setSelectedBus(isClosing ? null : bus.ResultIndex);
     actions.setSelectedBus(bus);
   };
