@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { hasRestrictedFlightSegment } = require('../config/flightRestrictions');
 
 const DEFAULT_BASE_URL = 'https://api.bdsd.technology/api';
 
@@ -147,7 +148,13 @@ const normalizeFare = (fare) => ({
 
 const normalizeSearchResults = (payload) => {
   const searchTokenId = payload?.SearchTokenId || '';
-  const itineraries = flattenItineraries(payload?.Result);
+  const itineraries = flattenItineraries(payload?.Result).filter((itinerary) => (
+    !itinerary.Segments
+      .filter(Array.isArray)
+      .flat()
+      .filter(Boolean)
+      .some(hasRestrictedFlightSegment)
+  ));
 
   return itineraries.map((itinerary, itineraryIndex) => {
     const journeys = itinerary.Segments

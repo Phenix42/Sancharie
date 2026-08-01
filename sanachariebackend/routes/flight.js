@@ -15,6 +15,7 @@ const {
   normalizeSearchResults,
   requestFlightProvider,
 } = require('../services/flightService');
+const { isRestrictedAirportCode } = require('../config/flightRestrictions');
 
 const router = express.Router();
 
@@ -174,6 +175,9 @@ const validateAirSegments = (segments) => {
     }
     if (segment.Origin === segment.Destination) {
       throw badRequest(`Segment ${index + 1} origin and destination must be different`);
+    }
+    if (isRestrictedAirportCode(segment.Origin) || isRestrictedAirportCode(segment.Destination)) {
+      throw badRequest('Flights to or from restricted destinations are unavailable');
     }
     if (!segment.PreferredTime) {
       throw badRequest(`Segment ${index + 1} must include a valid travel date`);

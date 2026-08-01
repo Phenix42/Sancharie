@@ -70,6 +70,19 @@ test('airport and date values are normalized without accepting city names as IAT
   assert.equal(toProviderDate('not-a-date'), '');
 });
 
+test('restricted Pakistan airports are rejected before calling the flight provider', () => {
+  assert.throws(() => buildSearchPayload({
+    body: {
+      origin: 'Delhi (DEL)',
+      destination: 'Lahore (LHE)',
+      date: '2026-12-12',
+    },
+    headers: {},
+    ip: '127.0.0.1',
+    socket: {},
+  }), /restricted destinations are unavailable/i);
+});
+
 test('search results retain token, fare IDs, segments, baggage, and lowest price', () => {
   const flights = normalizeSearchResults({
     SearchTokenId: 'token-123',
@@ -117,6 +130,22 @@ test('search results retain token, fare IDs, segments, baggage, and lowest price
   assert.equal(flights[0].stops, 'Non-stop');
   assert.equal(flights[0].fares.length, 2);
   assert.ok(flights[0].amenities.includes('Cabin 7 Kg'));
+});
+
+test('search results omit itineraries that pass through restricted airports', () => {
+  const flights = normalizeSearchResults({
+    SearchTokenId: 'token-restricted',
+    Result: [[{
+      Segments: [[{
+        Airline: { AirlineCode: 'XX', FlightNumber: 101 },
+        Origin: { AirportCode: 'DEL', CountryCode: 'IN' },
+        Destination: { AirportCode: 'KHI', CountryCode: 'PK' },
+      }]],
+      FareList: [{ FareId: 'restricted-fare', PublishedPrice: 10000 }],
+    }]],
+  });
+
+  assert.deepEqual(flights, []);
 });
 
 test('calendar fares are normalized to stable date, price, and currency fields', () => {

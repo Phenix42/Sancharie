@@ -752,6 +752,7 @@ export const bus = {
       destinationCity: data.destinationCity,
       journeyDate: data.journeyDate,
       departureTime: data.departureTime,
+      arrivalTime: data.arrivalTime,
       routeScheduleId: data.routeScheduleId,
       serviceProvider: data.serviceProvider,
       serviceType: data.service_type,

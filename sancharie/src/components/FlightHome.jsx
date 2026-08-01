@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { flights as flightApi } from '../services';
+import { filterAllowedFlightAirports } from '../data/flightRestrictions';
 import './FlightHome.css';
 
 const cabinOptions = [
@@ -368,7 +369,7 @@ export default function FlightHome({ onSearch }) {
     let mounted = true;
     import('../data/airports')
       .then((module) => {
-        if (mounted) setAirportOptions(module.default || []);
+        if (mounted) setAirportOptions(filterAllowedFlightAirports(module.default || []));
       })
       .catch(() => {
         if (mounted) setAirportOptions([]);
@@ -401,6 +402,7 @@ export default function FlightHome({ onSearch }) {
 
   const handleSearch = () => {
     setError('');
+    const allowedAirportCodes = new Set(airportOptions.map((airport) => airport.code));
     const normalizedSegments = segments.map((segment) => ({
       ...segment,
       fromId: segment.fromId || extractIataCode(segment.from),
@@ -409,6 +411,12 @@ export default function FlightHome({ onSearch }) {
 
     if (normalizedSegments.some((segment) => !segment.fromId || !segment.toId || !segment.date)) {
       setError('Choose valid origin, destination, and travel date for every flight.');
+      return;
+    }
+    if (normalizedSegments.some((segment) => (
+      !allowedAirportCodes.has(segment.fromId) || !allowedAirportCodes.has(segment.toId)
+    ))) {
+      setError('Flights to or from restricted destinations are unavailable. Choose another airport.');
       return;
     }
     if (normalizedSegments.some((segment) => segment.fromId === segment.toId)) {
@@ -486,6 +494,11 @@ export default function FlightHome({ onSearch }) {
 
     if (!fromId || !toId || !date) {
       setCalendarError('Select airports first to show live fares.');
+      return;
+    }
+    const allowedAirportCodes = new Set(airportOptions.map((airport) => airport.code));
+    if (!allowedAirportCodes.has(fromId) || !allowedAirportCodes.has(toId)) {
+      setCalendarError('Flights to or from restricted destinations are unavailable.');
       return;
     }
     if (fromId === toId) {

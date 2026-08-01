@@ -3,27 +3,117 @@
  * Displays detailed ticket information fetched from ETS API using getTicketByETSTNumber
  */
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Armchair,
+  BusFront,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  Clock3,
+  Copy,
+  Download,
+  Headphones,
+  IndianRupee,
+  Info,
+  MapPin,
+  Phone,
+  ReceiptText,
+  Route,
+  ShieldCheck,
+  Ticket,
+  UserRound,
+  X,
+  XCircle,
+} from 'lucide-react';
 import { bus } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 import Header from './Header';
 import Footer from './Footer';
 import { generateTicketPDF } from '../utils/ticketGenerator';
 import './BookingDetails.css';
 
+const STATUS_DETAILS = {
+  CONFIRMED: {
+    label: 'Booking confirmed',
+    description: 'Your seat is reserved and ready for the journey.',
+    className: 'confirmed',
+    Icon: CheckCircle2,
+  },
+  CANCELLED: {
+    label: 'Booking cancelled',
+    description: 'This booking has been cancelled.',
+    className: 'cancelled',
+    Icon: XCircle,
+  },
+  TRAVELLED: {
+    label: 'Journey completed',
+    description: 'We hope you had a comfortable journey.',
+    className: 'travelled',
+    Icon: CheckCircle2,
+  },
+  SERVICE_CANCELLED: {
+    label: 'Service cancelled',
+    description: 'The operator has cancelled this service.',
+    className: 'service-cancelled',
+    Icon: AlertTriangle,
+  },
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'Not available';
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return dateString;
+
+  return date.toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const formatCurrency = (value) => {
+  const amount = Number(value) || 0;
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const parseCancellationPolicy = (policy) => {
+  if (!policy) return { items: [], text: '' };
+
+  if (Array.isArray(policy)) return { items: policy, text: '' };
+
+  if (typeof policy === 'string') {
+    try {
+      const parsed = JSON.parse(policy);
+      return Array.isArray(parsed)
+        ? { items: parsed, text: '' }
+        : { items: [], text: policy };
+    } catch {
+      return { items: [], text: policy };
+    }
+  }
+
+  return { items: [], text: '' };
+};
+
 export default function BookingDetails() {
   const { ticketNumber } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // State
   const [ticketDetails, setTicketDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Cancellation states
+  const [copiedField, setCopiedField] = useState('');
+
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellationDetails, setCancellationDetails] = useState(null);
   const [isLoadingCancellation, setIsLoadingCancellation] = useState(false);
@@ -31,21 +121,9 @@ export default function BookingDetails() {
   const [cancelError, setCancelError] = useState('');
   const [cancelSuccess, setCancelSuccess] = useState('');
 
-  // Get ticket number from URL params or location state
   const etsTicketNumber = ticketNumber || location.state?.ticketNumber || location.state?.etsTicketNumber;
 
-  // Fetch ticket details on mount
-  useEffect(() => {
-    if (!etsTicketNumber) {
-      setError('No ticket number provided');
-      setIsLoading(false);
-      return;
-    }
-
-    fetchTicketDetails();
-  }, [etsTicketNumber]);
-
-  const fetchTicketDetails = async () => {
+  const fetchTicketDetails = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -63,9 +141,62 @@ export default function BookingDetails() {
     } finally {
       setIsLoading(false);
     }
+  }, [etsTicketNumber]);
+
+  useEffect(() => {
+    if (!etsTicketNumber) {
+      setError('No ticket number provided');
+      setIsLoading(false);
+      return;
+    }
+
+    fetchTicketDetails();
+  }, [etsTicketNumber, fetchTicketDetails]);
+
+  const totalFare = useMemo(
+    () => ticketDetails?.travelerDetails?.reduce(
+      (sum, traveler) => sum + (Number(traveler.fare) || 0),
+      0,
+    ) || 0,
+    [ticketDetails],
+  );
+
+  const closeCancelModal = () => {
+    setShowCancelModal(false);
+    setCancellationDetails(null);
+    setCancelError('');
+    setCancelSuccess('');
   };
 
-  // Get cancellation details before showing modal
+  useEffect(() => {
+    if (!showCancelModal) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !isCancelling) closeCancelModal();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showCancelModal, isCancelling]);
+
+  const copyReference = async (value, field) => {
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      window.setTimeout(() => setCopiedField(''), 1800);
+    } catch (copyError) {
+      console.error('Unable to copy ticket reference:', copyError);
+    }
+  };
+
   const openCancelModal = async () => {
     if (!ticketDetails) return;
 
@@ -75,18 +206,16 @@ export default function BookingDetails() {
     setCancellationDetails(null);
 
     try {
-      // Get seat numbers from traveler details
-      const seatNbrsToCancel = ticketDetails.travelerDetails?.map(t => t.seatNo) || [];
+      const seatNbrsToCancel = ticketDetails.travelerDetails?.map((traveler) => traveler.seatNo) || [];
 
       if (seatNbrsToCancel.length === 0) {
         setCancelError('No seats found to cancel');
-        setIsLoadingCancellation(false);
         return;
       }
 
       const result = await bus.cancelTicketConfirmation(
         ticketDetails.etsTicketNumber,
-        seatNbrsToCancel
+        seatNbrsToCancel,
       );
 
       if (result.success && result.cancellable) {
@@ -109,7 +238,6 @@ export default function BookingDetails() {
     }
   };
 
-  // Handle actual cancellation
   const handleCancelTicket = async () => {
     if (!ticketDetails || !cancellationDetails) return;
 
@@ -119,18 +247,17 @@ export default function BookingDetails() {
     try {
       const result = await bus.cancelBooking(
         ticketDetails.etsTicketNumber,
-        cancellationDetails.seatNbrsToCancel
+        cancellationDetails.seatNbrsToCancel,
       );
 
       if (result.success) {
-        const refundMsg = result.totalRefundAmount 
-          ? `Refund of ₹${result.totalRefundAmount} will be processed within 5-7 business days.`
-          : 'Refund will be processed as per cancellation policy.';
-        
-        setCancelSuccess(`Ticket cancelled successfully! ${refundMsg}`);
+        const refundMsg = result.totalRefundAmount
+          ? `Refund of ${formatCurrency(result.totalRefundAmount)} will be processed within 5–7 business days.`
+          : 'Refund will be processed as per the cancellation policy.';
 
-        // Refresh ticket details after cancellation
-        setTimeout(() => {
+        setCancelSuccess(`Ticket cancelled successfully. ${refundMsg}`);
+
+        window.setTimeout(() => {
           setShowCancelModal(false);
           fetchTicketDetails();
         }, 3000);
@@ -145,14 +272,6 @@ export default function BookingDetails() {
     }
   };
 
-  const closeCancelModal = () => {
-    setShowCancelModal(false);
-    setCancellationDetails(null);
-    setCancelError('');
-    setCancelSuccess('');
-  };
-
-  // Download ticket PDF
   const handleDownloadTicket = () => {
     if (!ticketDetails) return;
 
@@ -167,390 +286,434 @@ export default function BookingDetails() {
       boardingPoint: ticketDetails.boardingPoint,
       droppingPoint: ticketDetails.droppingPoint,
       departureTime: ticketDetails.departureTime,
-      seats: ticketDetails.travelerDetails?.map(t => t.seatNo) || [],
-      passengers: ticketDetails.travelerDetails?.map(t => ({
-        name: `${t.name} ${t.lastName || ''}`.trim(),
-        age: t.age,
-        gender: t.gender,
-        seatNumber: t.seatNo,
+      seats: ticketDetails.travelerDetails?.map((traveler) => traveler.seatNo) || [],
+      passengers: ticketDetails.travelerDetails?.map((traveler) => ({
+        name: `${traveler.name} ${traveler.lastName || ''}`.trim(),
+        age: traveler.age,
+        gender: traveler.gender,
+        seatNumber: traveler.seatNo,
       })) || [],
-      totalFare: ticketDetails.travelerDetails?.reduce((sum, t) => sum + (t.fare || 0), 0) || 0,
+      totalFare,
     });
   };
 
-  // Format date
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  // Get status color
-  const getStatusColor = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'CONFIRMED':
-        return '#38a169';
-      case 'CANCELLED':
-        return '#e53e3e';
-      case 'TRAVELLED':
-        return '#3182ce';
-      case 'SERVICE_CANCELLED':
-        return '#dd6b20';
-      default:
-        return '#718096';
-    }
-  };
-
-  // Render loading state
   if (isLoading) {
     return (
       <>
         <Header />
-        <div className="booking-details-page">
-          <div className="loading-container">
-            <div className="spinner"></div>
-            <p>Loading ticket details...</p>
+        <main className="booking-details-page state-page">
+          <div className="booking-state-card loading-container">
+            <div className="ticket-loader" aria-hidden="true">
+              <BusFront size={24} />
+            </div>
+            <h2>Getting your ticket ready</h2>
+            <p>Fetching the latest trip and passenger details…</p>
           </div>
-        </div>
+        </main>
         <Footer />
       </>
     );
   }
 
-  // Render error state
-  if (error) {
+  if (error || !ticketDetails) {
     return (
       <>
         <Header />
-        <div className="booking-details-page">
-          <div className="error-container">
-            <div className="error-icon">❌</div>
-            <h2>Unable to Load Ticket</h2>
-            <p>{error}</p>
+        <main className="booking-details-page state-page">
+          <div className="booking-state-card error-container">
+            <span className="state-icon" aria-hidden="true">
+              {error ? <AlertTriangle size={30} /> : <Ticket size={30} />}
+            </span>
+            <h2>{error ? 'Unable to load your ticket' : 'Ticket not found'}</h2>
+            <p>{error || 'The requested ticket could not be found.'}</p>
             <div className="error-actions">
-              <button onClick={fetchTicketDetails} className="retry-btn">
-                Try Again
-              </button>
-              <button onClick={() => navigate('/my-bookings')} className="back-btn">
-                Back to Bookings
+              {error && (
+                <button onClick={fetchTicketDetails} className="retry-btn" type="button">
+                  Try again
+                </button>
+              )}
+              <button onClick={() => navigate('/my-bookings')} className="back-btn" type="button">
+                Back to bookings
               </button>
             </div>
           </div>
-        </div>
+        </main>
         <Footer />
       </>
     );
   }
 
-  // Render no ticket found
-  if (!ticketDetails) {
-    return (
-      <>
-        <Header />
-        <div className="booking-details-page">
-          <div className="error-container">
-            <div className="error-icon">🎫</div>
-            <h2>Ticket Not Found</h2>
-            <p>The requested ticket could not be found.</p>
-            <button onClick={() => navigate('/my-bookings')} className="back-btn">
-              Back to Bookings
-            </button>
-          </div>
-        </div>
-        <Footer />
-      </>
-    );
-  }
+  const normalizedStatus = ticketDetails.ticketStatus?.toUpperCase() || 'PENDING';
+  const status = STATUS_DETAILS[normalizedStatus] || {
+    label: ticketDetails.ticketStatus || 'Status pending',
+    description: 'Check back later for the latest booking status.',
+    className: 'pending',
+    Icon: Info,
+  };
+  const StatusIcon = status.Icon;
+  const travelers = ticketDetails.travelerDetails || [];
+  const seatNumbers = travelers.map((traveler) => traveler.seatNo).filter(Boolean);
+  const cancellationPolicy = parseCancellationPolicy(ticketDetails.cancellationPolicy);
+  const isCancellable = normalizedStatus === 'CONFIRMED';
 
-  const isCancellable = ticketDetails.ticketStatus?.toUpperCase() === 'CONFIRMED';
+  const references = [
+    { key: 'ticket', label: 'Ticket number', value: ticketDetails.etsTicketNumber },
+    { key: 'pnr', label: 'Operator PNR', value: ticketDetails.opPNR },
+    { key: 'trip', label: 'Trip code', value: ticketDetails.tripCode },
+  ].filter((reference) => reference.value);
 
   return (
     <>
       <Header />
-      <div className="booking-details-page">
+      <main className="booking-details-page">
         <div className="booking-details-container">
-          {/* Header */}
           <div className="details-header">
-            <button className="back-button" onClick={() => navigate(-1)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-              <span className="back-text">Back</span>
+            <button className="back-button" onClick={() => navigate(-1)} type="button">
+              <ArrowLeft size={19} />
+              <span>My bookings</span>
             </button>
-            <h1>Ticket Details</h1>
+            <div className="details-title-copy">
+              <span className="details-eyebrow">Your journey</span>
+              <h1>Booking details</h1>
+              <p>Everything you need for a smooth departure.</p>
+            </div>
+            <div className={`header-status-pill ${status.className}`}>
+              <StatusIcon size={17} />
+              <span>{status.label}</span>
+            </div>
           </div>
 
-          {/* Ticket Status Banner */}
-          <div 
-            className="status-banner"
-            style={{ backgroundColor: getStatusColor(ticketDetails.ticketStatus) }}
-          >
-            <span className="status-icon">
-              {ticketDetails.ticketStatus?.toUpperCase() === 'CONFIRMED' ? '✓' : 
-               ticketDetails.ticketStatus?.toUpperCase() === 'CANCELLED' ? '✕' : 'ℹ'}
-            </span>
-            <span className="status-text">
-              Ticket {ticketDetails.ticketStatus}
-            </span>
-          </div>
-
-          {/* Main Ticket Card */}
-          <div className="ticket-detail-card">
-            {/* Ticket Numbers */}
-            <div className="ticket-numbers">
-              <div className="ticket-number-item">
-                <span className="label">ETS Ticket No</span>
-                <span className="value">{ticketDetails.etsTicketNumber}</span>
-              </div>
-              {ticketDetails.opPNR && (
-                <div className="ticket-number-item">
-                  <span className="label">Operator PNR</span>
-                  <span className="value">{ticketDetails.opPNR}</span>
-                </div>
-              )}
-              {ticketDetails.tripCode && (
-                <div className="ticket-number-item">
-                  <span className="label">Trip Code</span>
-                  <span className="value">{ticketDetails.tripCode}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Journey Details */}
-            <div className="journey-section">
-              <div className="journey-point">
-                <div className="point-time">{ticketDetails.departureTime || 'N/A'}</div>
-                <div className="point-city">{ticketDetails.sourceCity}</div>
-                <div className="point-location">{ticketDetails.boardingPoint}</div>
-              </div>
-              
-              <div className="journey-line">
-                <div className="journey-duration">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                    <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/>
-                  </svg>
-                </div>
-                <div className="line"></div>
-              </div>
-              
-              <div className="journey-point">
-                <div className="point-time">{ticketDetails.arrivalTime || 'N/A'}</div>
-                <div className="point-city">{ticketDetails.destinationCity}</div>
-                <div className="point-location">{ticketDetails.droppingPoint}</div>
-              </div>
-            </div>
-
-            {/* Journey Date */}
-            <div className="journey-date">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              {formatDate(ticketDetails.journeyDate)}
-            </div>
-
-            {/* Bus Details */}
-            <div className="bus-details-section">
-              <h3>Bus Details</h3>
-              <div className="bus-info-grid">
-                <div className="info-item">
-                  <span className="label">Operator</span>
-                  <span className="value">{ticketDetails.serviceProvider}</span>
-                </div>
-                <div className="info-item">
-                  <span className="label">Bus Type</span>
-                  <span className="value">{ticketDetails.serviceType}</span>
-                </div>
-                {ticketDetails.serviceProviderContact && (
-                  <div className="info-item">
-                    <span className="label">Contact</span>
-                    <span className="value">{ticketDetails.serviceProviderContact}</span>
+          <div className="booking-content-grid">
+            <article className="ticket-detail-card">
+              <section className="ticket-cover">
+                <div className="ticket-cover-orbit orbit-one" aria-hidden="true" />
+                <div className="ticket-cover-orbit orbit-two" aria-hidden="true" />
+                <div className="ticket-cover-topline">
+                  <div className="operator-mark">
+                    <span className="operator-icon"><BusFront size={22} /></span>
+                    <div>
+                      <span className="cover-kicker">Travelling with</span>
+                      <h2>{ticketDetails.serviceProvider || 'Bus operator'}</h2>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
+                  <span className="service-type">{ticketDetails.serviceType || 'Bus service'}</span>
+                </div>
 
-            {/* Traveler Details */}
-            <div className="traveler-details-section">
-              <h3>Passenger Details</h3>
-              <div className="travelers-list">
-                {ticketDetails.travelerDetails?.map((traveler, index) => (
-                  <div key={index} className="traveler-item">
-                    <div className="traveler-info">
-                      <span className="traveler-name">
-                        {traveler.name} {traveler.lastName}
-                      </span>
-                      <span className="traveler-meta">
-                        {traveler.age} yrs • {traveler.gender === 'M' ? 'Male' : 'Female'}
-                      </span>
-                    </div>
-                    <div className="traveler-seat">
-                      <span className="seat-label">Seat</span>
-                      <span className="seat-number">{traveler.seatNo}</span>
-                    </div>
-                    <div className="traveler-fare">
-                      <span className="fare-label">Fare</span>
-                      <span className="fare-amount">₹{traveler.fare || 0}</span>
+                <div className="route-hero">
+                  <div className="route-city route-city-origin">
+                    <span className="route-time">{ticketDetails.departureTime || '--:--'}</span>
+                    <strong>{ticketDetails.sourceCity || 'Origin'}</strong>
+                    <span>{ticketDetails.boardingPoint || 'Boarding point to be confirmed'}</span>
+                  </div>
+
+                  <div className="route-track" aria-hidden="true">
+                    <span className="route-dot" />
+                    <span className="route-dash" />
+                    <span className="route-bus"><BusFront size={18} /></span>
+                    <span className="route-dash" />
+                    <span className="route-dot destination" />
+                  </div>
+
+                  <div className="route-city route-city-destination">
+                    <span className="route-time">{ticketDetails.arrivalTime || '--:--'}</span>
+                    <strong>{ticketDetails.destinationCity || 'Destination'}</strong>
+                    <span>{ticketDetails.droppingPoint || 'Dropping point to be confirmed'}</span>
+                  </div>
+                </div>
+
+                <div className="booking-journey-date-chip">
+                  <CalendarDays size={17} />
+                  <span>{formatDate(ticketDetails.journeyDate)}</span>
+                </div>
+              </section>
+
+              <section className="ticket-references" aria-label="Booking references">
+                {references.map((reference) => (
+                  <div className="ticket-reference" key={reference.key}>
+                    <span>{reference.label}</span>
+                    <div>
+                      <strong>{reference.value}</strong>
+                      <button
+                        type="button"
+                        className={`copy-reference ${copiedField === reference.key ? 'copied' : ''}`}
+                        onClick={() => copyReference(reference.value, reference.key)}
+                        aria-label={`Copy ${reference.label}`}
+                        title={`Copy ${reference.label}`}
+                      >
+                        {copiedField === reference.key ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
+              </section>
 
-            {/* Booking Info */}
-            <div className="booking-info-section">
-              <h3>Booking Information</h3>
-              <div className="booking-info-grid">
-                {ticketDetails.bookingDate && (
-                  <div className="info-item">
-                    <span className="label">Booked On</span>
-                    <span className="value">{formatDate(ticketDetails.bookingDate)}</span>
+              <div className="ticket-body">
+                <section className="detail-section bus-details-section">
+                  <div className="section-heading">
+                    <span className="section-icon"><Route size={18} /></span>
+                    <div>
+                      <h3>Trip details</h3>
+                      <p>Your service and boarding information</p>
+                    </div>
                   </div>
-                )}
-                {ticketDetails.cancelDate && (
-                  <div className="info-item">
-                    <span className="label">Cancelled On</span>
-                    <span className="value">{formatDate(ticketDetails.cancelDate)}</span>
+                  <div className="info-card-grid">
+                    <div className="info-card">
+                      <span className="info-card-icon"><BusFront size={17} /></span>
+                      <div><span>Operator</span><strong>{ticketDetails.serviceProvider || 'Not available'}</strong></div>
+                    </div>
+                    <div className="info-card">
+                      <span className="info-card-icon"><Ticket size={17} /></span>
+                      <div><span>Bus type</span><strong>{ticketDetails.serviceType || 'Not available'}</strong></div>
+                    </div>
+                    <div className="info-card">
+                      <span className="info-card-icon"><MapPin size={17} /></span>
+                      <div><span>Boarding point</span><strong>{ticketDetails.boardingPoint || 'Not available'}</strong></div>
+                    </div>
+                    {ticketDetails.serviceProviderContact && (
+                      <div className="info-card">
+                        <span className="info-card-icon"><Phone size={17} /></span>
+                        <div><span>Operator contact</span><strong>{ticketDetails.serviceProviderContact}</strong></div>
+                      </div>
+                    )}
                   </div>
-                )}
-                {ticketDetails.refundAmount && (
-                  <div className="info-item">
-                    <span className="label">Refund Amount</span>
-                    <span className="value refund">₹{ticketDetails.refundAmount}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+                </section>
 
-            {/* Cancellation Policy */}
-            {ticketDetails.cancellationPolicy && (
-              <div className="cancellation-policy-section">
-                <h3>Cancellation Policy</h3>
-                <div className="policy-list">
-                  {(() => {
-                    try {
-                      const policies = typeof ticketDetails.cancellationPolicy === 'string' 
-                        ? JSON.parse(ticketDetails.cancellationPolicy) 
-                        : ticketDetails.cancellationPolicy;
-                      
-                      return policies.map((policy, index) => (
-                        <div key={index} className="policy-item">
-                          <span className="policy-time">
-                            {policy.cutoffTime} hrs before departure
+                <section className="detail-section traveler-details-section">
+                  <div className="section-heading section-heading-row">
+                    <div className="section-heading-main">
+                      <span className="section-icon"><UserRound size={18} /></span>
+                      <div>
+                        <h3>Passengers</h3>
+                        <p>{travelers.length} {travelers.length === 1 ? 'traveller' : 'travellers'} on this booking</p>
+                      </div>
+                    </div>
+                    <span className="booking-passenger-count">{travelers.length.toString().padStart(2, '0')}</span>
+                  </div>
+                  <div className="travelers-list">
+                    {travelers.map((traveler, index) => (
+                      <div key={`${traveler.seatNo || 'seat'}-${index}`} className="traveler-item">
+                        <span className="traveler-avatar">{String(index + 1).padStart(2, '0')}</span>
+                        <div className="traveler-info">
+                          <span className="traveler-name">
+                            {`${traveler.name || ''} ${traveler.lastName || ''}`.trim() || `Passenger ${index + 1}`}
                           </span>
-                          <span className="policy-refund">
-                            {policy.refundInPercentage}% refund
+                          <span className="traveler-meta">
+                            {traveler.age ? `${traveler.age} yrs` : 'Age not added'}
+                            {traveler.gender && ` · ${traveler.gender === 'M' ? 'Male' : traveler.gender === 'F' ? 'Female' : traveler.gender}`}
                           </span>
                         </div>
-                      ));
-                    } catch {
-                      return <p className="policy-text">{ticketDetails.cancellationPolicy}</p>;
-                    }
-                  })()}
-                </div>
-              </div>
-            )}
-          </div>
+                        <div className="traveler-seat">
+                          <span className="seat-label"><Armchair size={13} /> Seat</span>
+                          <span className="seat-number">{traveler.seatNo || '—'}</span>
+                        </div>
+                        <div className="traveler-fare">
+                          <span className="fare-label">Fare</span>
+                          <span className="fare-amount">{formatCurrency(traveler.fare)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
 
-          {/* Action Buttons */}
-          <div className="action-buttons">
-            {ticketDetails.ticketStatus?.toUpperCase() === 'CONFIRMED' && (
-              <>
-                <button className="download-btn" onClick={handleDownloadTicket}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                  Download Ticket
-                </button>
-                <button className="cancel-btn" onClick={openCancelModal}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                  </svg>
-                  Cancel Ticket
-                </button>
-              </>
-            )}
+                <section className="detail-section booking-info-section">
+                  <div className="section-heading">
+                    <span className="section-icon"><ReceiptText size={18} /></span>
+                    <div>
+                      <h3>Booking information</h3>
+                      <p>Important dates and refund information</p>
+                    </div>
+                  </div>
+                  <div className="booking-info-grid">
+                    <div className="booking-info-item">
+                      <CalendarDays size={16} />
+                      <span>Booked on</span>
+                      <strong>{formatDate(ticketDetails.bookingDate)}</strong>
+                    </div>
+                    {ticketDetails.cancelDate && (
+                      <div className="booking-info-item">
+                        <XCircle size={16} />
+                        <span>Cancelled on</span>
+                        <strong>{formatDate(ticketDetails.cancelDate)}</strong>
+                      </div>
+                    )}
+                    {ticketDetails.refundAmount && (
+                      <div className="booking-info-item refund-info">
+                        <IndianRupee size={16} />
+                        <span>Refund amount</span>
+                        <strong>{formatCurrency(ticketDetails.refundAmount)}</strong>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {(cancellationPolicy.items.length > 0 || cancellationPolicy.text) && (
+                  <section className="detail-section cancellation-policy-section">
+                    <div className="section-heading">
+                      <span className="section-icon"><ShieldCheck size={18} /></span>
+                      <div>
+                        <h3>Cancellation policy</h3>
+                        <p>Refund eligibility before departure</p>
+                      </div>
+                    </div>
+                    <div className="policy-list">
+                      {cancellationPolicy.items.length > 0 ? cancellationPolicy.items.map((policy, index) => (
+                        <div key={`${policy.cutoffTime}-${index}`} className="booking-policy-item">
+                          <span className="policy-clock"><Clock3 size={16} /></span>
+                          <div>
+                            <span className="policy-time">Cancel {policy.cutoffTime} hrs before departure</span>
+                            <span className="policy-note">Refund as per operator terms</span>
+                          </div>
+                          <span className="policy-refund">{policy.refundInPercentage}% refund</span>
+                        </div>
+                      )) : (
+                        <p className="policy-text">{cancellationPolicy.text}</p>
+                      )}
+                    </div>
+                  </section>
+                )}
+              </div>
+            </article>
+
+            <aside className="booking-side-panel">
+              <section className={`status-card ${status.className}`}>
+                <span className="status-card-icon"><StatusIcon size={22} /></span>
+                <div>
+                  <span className="status-kicker">Current status</span>
+                  <h3>{status.label}</h3>
+                  <p>{status.description}</p>
+                </div>
+              </section>
+
+              <section className="fare-summary-card">
+                <div className="side-card-heading">
+                  <div>
+                    <span className="side-card-kicker">Booking summary</span>
+                    <h3>Trip total</h3>
+                  </div>
+                  <span className="summary-icon"><ReceiptText size={19} /></span>
+                </div>
+                <div className="summary-list">
+                  <div><span>Passengers</span><strong>{travelers.length}</strong></div>
+                  <div><span>Seats</span><strong>{seatNumbers.join(', ') || '—'}</strong></div>
+                  <div><span>Journey</span><strong>{ticketDetails.sourceCity} → {ticketDetails.destinationCity}</strong></div>
+                </div>
+                <div className="fare-total">
+                  <span>Total paid</span>
+                  <strong>{formatCurrency(totalFare)}</strong>
+                </div>
+              </section>
+
+              {isCancellable && (
+                <div className="action-buttons">
+                  <button className="download-btn" onClick={handleDownloadTicket} type="button">
+                    <Download size={18} />
+                    <span>Download ticket</span>
+                  </button>
+                  <button className="cancel-btn" onClick={openCancelModal} type="button">
+                    <XCircle size={18} />
+                    <span>Cancel booking</span>
+                  </button>
+                </div>
+              )}
+
+              <section className="help-card">
+                <span className="help-icon"><Headphones size={20} /></span>
+                <div>
+                  <h3>Need help?</h3>
+                  <p>Our support team can help with this booking.</p>
+                </div>
+              </section>
+            </aside>
           </div>
         </div>
-      </div>
+      </main>
 
-      {/* Cancel Modal */}
       {showCancelModal && (
-        <div className="cancel-modal-overlay" onClick={closeCancelModal}>
-          <div className="cancel-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="booking-details-cancel-overlay" onClick={closeCancelModal} role="presentation">
+          <div
+            className="cancel-modal"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-modal-title"
+          >
             <div className="cancel-modal-header">
-              <h3>Cancel Ticket</h3>
-              <button className="close-btn" onClick={closeCancelModal}>✕</button>
+              <div className="modal-title-group">
+                <span className="modal-warning-icon"><AlertTriangle size={19} /></span>
+                <div>
+                  <span>Review carefully</span>
+                  <h3 id="cancel-modal-title">Cancel this booking?</h3>
+                </div>
+              </div>
+              <button className="close-btn" onClick={closeCancelModal} type="button" aria-label="Close cancellation dialog">
+                <X size={19} />
+              </button>
             </div>
-            
+
             <div className="cancel-modal-body">
               {cancelSuccess ? (
                 <div className="success-message">
-                  <span className="success-icon">✓</span>
+                  <span className="success-icon"><Check size={30} /></span>
+                  <h4>Cancellation confirmed</h4>
                   <p>{cancelSuccess}</p>
                 </div>
               ) : isLoadingCancellation ? (
                 <div className="loading-state">
-                  <div className="spinner"></div>
-                  <p>Loading cancellation details...</p>
+                  <div className="modal-loader" />
+                  <h4>Checking your refund</h4>
+                  <p>We’re calculating the latest cancellation charges…</p>
                 </div>
               ) : (
                 <>
                   <div className="cancel-info">
-                    <p className="warning-text">Are you sure you want to cancel this ticket?</p>
-                    
+                    <p className="warning-text">This action applies to every passenger and seat on this ticket.</p>
+
                     <div className="ticket-summary">
-                      <p><strong>Route:</strong> {ticketDetails.sourceCity} → {ticketDetails.destinationCity}</p>
-                      <p><strong>Date:</strong> {formatDate(ticketDetails.journeyDate)}</p>
-                      <p><strong>Ticket No:</strong> {ticketDetails.etsTicketNumber}</p>
+                      <div><span>Route</span><strong>{ticketDetails.sourceCity} → {ticketDetails.destinationCity}</strong></div>
+                      <div><span>Journey date</span><strong>{formatDate(ticketDetails.journeyDate)}</strong></div>
+                      <div><span>Seats</span><strong>{seatNumbers.join(', ') || '—'}</strong></div>
                     </div>
 
                     {cancellationDetails && (
                       <div className="cancellation-breakdown">
-                        <h4>Cancellation Charges</h4>
+                        <div className="breakdown-heading">
+                          <h4>Refund breakdown</h4>
+                          <span>{cancellationDetails.cancelChargesPercentage} charge</span>
+                        </div>
                         <div className="breakdown-item">
-                          <span>Total Ticket Fare:</span>
-                          <span>₹{cancellationDetails.totalTicketFare}</span>
+                          <span>Total ticket fare</span>
+                          <strong>{formatCurrency(cancellationDetails.totalTicketFare)}</strong>
                         </div>
                         <div className="breakdown-item charges">
-                          <span>Cancellation Charges ({cancellationDetails.cancelChargesPercentage}):</span>
-                          <span>-₹{cancellationDetails.cancellationCharges}</span>
+                          <span>Cancellation charges</span>
+                          <strong>−{formatCurrency(cancellationDetails.cancellationCharges)}</strong>
                         </div>
                         <div className="breakdown-item refund">
-                          <span>Refund Amount:</span>
-                          <span>₹{cancellationDetails.totalRefundAmount}</span>
+                          <span>You’ll receive</span>
+                          <strong>{formatCurrency(cancellationDetails.totalRefundAmount)}</strong>
                         </div>
                       </div>
                     )}
 
                     {cancelError && (
                       <div className="error-message">
+                        <AlertTriangle size={17} />
                         <p>{cancelError}</p>
                       </div>
                     )}
                   </div>
 
                   <div className="modal-actions">
-                    <button className="keep-btn" onClick={closeCancelModal} disabled={isCancelling}>
-                      Keep Ticket
+                    <button className="keep-btn" onClick={closeCancelModal} disabled={isCancelling} type="button">
+                      Keep my ticket
                     </button>
-                    <button 
-                      className="confirm-cancel-btn" 
+                    <button
+                      className="confirm-cancel-btn"
                       onClick={handleCancelTicket}
                       disabled={isCancelling || !cancellationDetails}
+                      type="button"
                     >
-                      {isCancelling ? 'Cancelling...' : 'Confirm Cancel'}
+                      {isCancelling ? 'Cancelling…' : 'Confirm cancellation'}
                     </button>
                   </div>
                 </>

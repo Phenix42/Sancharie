@@ -237,9 +237,8 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
   const [boardingSearch, setBoardingSearch] = useState("");
   const [droppingSearch, setDroppingSearch] = useState("");
   
-  /* ----------- SELECTSEAT INLINE STATE ----------- */
+  /* ----------- SELECTSEAT MODAL STATE ----------- */
   const [selectedBus, setSelectedBus] = useState(null);
-  const seatLayoutRef = useRef(null);
   
   /* ----------- BUS DETAILS MODAL STATE ----------- */
   const [modalOpen, setModalOpen] = useState(false);
@@ -287,6 +286,26 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
     if (mode !== 'bus') return;
     setSelectedBusTypes(Array.isArray(searchParams?.busTypes) ? searchParams.busTypes : []);
   }, [mode, searchParams]);
+
+  useEffect(() => {
+    if (!selectedBus) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setSelectedBus(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedBus]);
 
   /* ---------------- FETCH BUSES ON MOUNT ---------------- */
   useEffect(() => {
@@ -754,12 +773,6 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
     const isClosing = selectedBus === bus.ResultIndex;
     setSelectedBus(isClosing ? null : bus.ResultIndex);
     actions.setSelectedBus(bus);
-    if (!isClosing) {
-      // Scroll to seat layout after it renders
-      setTimeout(() => {
-        seatLayoutRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
   };
 
   /* ----------- MODAL HANDLERS ----------- */
@@ -811,6 +824,11 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
     };
     return iconMap[iconName] || <Shield size={20} />;
   };
+
+  const selectedSeatBus = selectedBus
+    ? sortedBuses.find((bus) => String(bus.ResultIndex) === String(selectedBus)) ||
+      buses.find((bus) => String(bus.ResultIndex) === String(selectedBus))
+    : null;
 
   /* ---------------- UI ---------------- */
   
@@ -1691,7 +1709,7 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
                       className="select-seat-btn" 
                       onClick={() => handleBusSelect(bus)}
                     >
-                      <span>{selectedBus === bus.ResultIndex ? "Hide seats" : "Choose seats"}</span>
+                      <span>{selectedBus === bus.ResultIndex ? "Close seats" : "Choose seats"}</span>
                       <ArrowRight size={16} />
                     </button>
                     <div className="fare-assurance">
@@ -1739,16 +1757,6 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
                 </div>
               </div>
 
-              {/* INLINE SELECTSEAT COMPONENT */}
-              {selectedBus === bus.ResultIndex && (
-                <div ref={seatLayoutRef}>
-                  <SelectSeat 
-                    bus={bus} 
-                    searchTokenId={searchTokenId}
-                    onClose={() => setSelectedBus(null)} 
-                  />
-                </div>
-              )}
             </React.Fragment>
           )})}
 
@@ -1885,6 +1893,19 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
           </div>
         </div>
       </div>
+
+      {/* SEAT SELECTION MODAL */}
+      {selectedSeatBus && (
+        <div className="seat-selection-modal-overlay" onClick={() => setSelectedBus(null)}>
+          <div className="seat-selection-modal" onClick={(event) => event.stopPropagation()}>
+            <SelectSeat
+              bus={selectedSeatBus}
+              searchTokenId={searchTokenId}
+              onClose={() => setSelectedBus(null)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* BUS DETAILS MODAL */}
       {modalOpen && modalBus && (

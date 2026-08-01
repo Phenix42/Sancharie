@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./SearchBus.css";
 import { busApi } from "../services";
+import { filterAllowedFlightAirports } from "../data/flightRestrictions";
 import { ArrowLeftRight, Armchair, BadgeCheck, BedSingle, Building2, CalendarDays, Clock3, MapPin, Search, ShieldCheck, Snowflake } from "lucide-react";
 
 // Import custom icons from assets
@@ -313,7 +314,7 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
     if (mode === 'flight') {
       setStationNotice("");
       const { default: airports } = await import("../data/airports");
-      const airportList = airports.map((airport) => createStationOption({
+      const airportList = filterAllowedFlightAirports(airports).map((airport) => createStationOption({
         displayName: airport.display,
         stationName: airport.display,
         stationId: airport.code,

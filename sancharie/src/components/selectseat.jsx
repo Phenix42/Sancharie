@@ -164,13 +164,13 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
       status: seat.available === true ? "available" : "booked",
       isLadiesSeat: seat.ladiesSeat === true,
       isMalesSeat: seat.malesSeat === true,
-      isUpper: seat.zIndex === 1, // zIndex 0 = lower, 1 = upper
-      rowNo: seat.row,
-      columnNo: seat.column,
-      zIndex: seat.zIndex,
+      isUpper: Number(seat.zIndex) === 1, // zIndex 0 = lower, 1 = upper
+      rowNo: Number.isFinite(Number(seat.row)) ? Number(seat.row) : 0,
+      columnNo: Number.isFinite(Number(seat.column)) ? Number(seat.column) : 0,
+      zIndex: Number(seat.zIndex) || 0,
       seatType: seat.sleeper ? 2 : 1, // 1 = Seater, 2 = Sleeper/Berth
-      length: seat.length || 1,
-      width: seat.width || 1,
+      length: Math.max(1, Number(seat.length) || 1),
+      width: Math.max(1, Number(seat.width) || 1),
       ac: seat.ac === true,
       bookedBy: seat.bookedBy, // 'Male'/'Female' if booked
       reservedForSocialDistancing: seat.reservedForSocialDistancing === true,
@@ -205,11 +205,12 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
   // length=2, width=1: Horizontal sleeper (spans 2 columns)
   // length=1, width=2: Vertical sleeper (spans 2 rows)
   const organizeSeatsInGrid = (seats) => {
-    if (seats.length === 0) return { grid: [], maxRow: 0, maxCol: 0 };
-    
-    const maxRow = Math.max(...seats.map(s => s.rowNo)) + 1;
-    // For max column, consider that sleeper seats with length=2 span 2 columns
-    const maxCol = Math.max(...seats.map(s => s.columnNo + (s.length > 1 ? s.length - 1 : 0))) + 1;
+    if (seats.length === 0) return { grid: [], maxRow: 0, maxCol: 0, seats: [], naturalAisleRow: -1 };
+
+    const minRow = Math.min(...seats.map(s => s.rowNo));
+    const minCol = Math.min(...seats.map(s => s.columnNo));
+    const maxRow = Math.max(...seats.map(s => (s.rowNo - minRow) + s.width));
+    const maxCol = Math.max(...seats.map(s => (s.columnNo - minCol) + s.length));
     
     // Create 2D grid initialized with null
     const grid = Array(maxRow).fill(null).map(() => Array(maxCol).fill(null));
@@ -217,39 +218,66 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
     // Track cells occupied by multi-cell seats
     const occupiedCells = new Set();
     
-    // Place each seat in its correct position
-    seats.forEach(seat => {
-      const row = seat.rowNo;
-      const col = seat.columnNo;
-      
+    const sortedSeats = [...seats].sort((a, b) => (
+      (a.rowNo - b.rowNo) ||
+      (a.columnNo - b.columnNo) ||
+      String(a.seatName).localeCompare(String(b.seatName), undefined, { numeric: true })
+    ));
+
+    // Place real seats first so a sleeper span can never overwrite a numbered seat.
+    sortedSeats.forEach(seat => {
+      const row = seat.rowNo - minRow;
+      const col = seat.columnNo - minCol;
+
       if (row >= 0 && row < maxRow && col >= 0 && col < maxCol) {
-        // Place the seat at its primary position
         grid[row][col] = seat;
-        
-        // Mark additional cells as occupied for horizontal sleepers (length=2)
-        if (seat.length > 1) {
-          for (let c = col + 1; c < col + seat.length && c < maxCol; c++) {
-            occupiedCells.add(`${row}-${c}`);
-            // Mark as span cell (will be skipped in rendering)
-            grid[row][c] = { ...seat, isSpanCell: true, spanParent: seat.id };
-          }
-        }
-        
-        // Mark additional cells as occupied for vertical sleepers (width=2)
-        if (seat.width > 1) {
-          for (let r = row + 1; r < row + seat.width && r < maxRow; r++) {
-            occupiedCells.add(`${r}-${col}`);
-            grid[r][col] = { ...seat, isSpanCell: true, spanParent: seat.id };
+      }
+    });
+
+    sortedSeats.forEach(seat => {
+      const row = seat.rowNo - minRow;
+      const col = seat.columnNo - minCol;
+
+      if (row >= 0 && row < maxRow && col >= 0 && col < maxCol) {
+        for (let r = row; r < row + seat.width && r < maxRow; r++) {
+          for (let c = col; c < col + seat.length && c < maxCol; c++) {
+            if (r === row && c === col) continue;
+            occupiedCells.add(`${r}-${c}`);
+            if (!grid[r][c]) {
+              grid[r][c] = { ...seat, isSpanCell: true, spanParent: seat.id };
+            }
           }
         }
       }
     });
-    
-    return { grid, maxRow, maxCol, occupiedCells };
+
+    const naturalAisleRow = grid.findIndex(row => row.every(cell => cell === null));
+
+    return { grid, maxRow, maxCol, occupiedCells, naturalAisleRow, seats: sortedSeats };
   };
 
   const lowerSeatGrid = organizeSeatsInGrid(lowerSeats);
   const upperSeatGrid = organizeSeatsInGrid(upperSeats);
+  const mobileDeckGrids = upperSeatGrid.maxRow > 0
+    ? [lowerSeatGrid, upperSeatGrid]
+    : [lowerSeatGrid];
+  const mobileDeckCount = mobileDeckGrids.length;
+  const mobileColumnCount = Math.max(
+    1,
+    mobileDeckGrids.reduce((total, grid) => total + grid.maxRow, 0),
+  );
+  const mobileColumnGapCount = mobileDeckGrids.reduce(
+    (total, grid) => total + Math.max(0, grid.maxRow - 1),
+    0,
+  );
+  // Modal/body spacing + deck padding/borders + inter-deck and grid gaps.
+  const mobileReservedWidth = 24
+    + (mobileDeckCount * 18)
+    + (Math.max(0, mobileDeckCount - 1) * 6)
+    + (mobileColumnGapCount * 3);
+  const mobileViewportShare = (100 / mobileColumnCount).toFixed(4);
+  const mobileReservedShare = (mobileReservedWidth / mobileColumnCount).toFixed(2);
+  const mobileFittedSeatSize = `clamp(18px, calc(${mobileViewportShare}vw - ${mobileReservedShare}px), 26px)`;
 
   // Filter boarding and dropping points based on search
   const filteredBoardingPoints = React.useMemo(() => {
@@ -455,6 +483,61 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
     window.location.reload();
   };
 
+  const renderSeatGrid = (seatGrid, deckName) => {
+    return (
+      <div
+        className="seat-grid-container seat-grid-responsive"
+        style={{
+          '--seat-column-count': seatGrid.maxCol,
+          '--seat-row-count': seatGrid.maxRow,
+          '--mobile-seat-column-count': seatGrid.maxRow,
+          '--mobile-seat-row-count': seatGrid.maxCol,
+        }}
+        aria-label={`${deckName} seat layout`}
+      >
+        {seatGrid.grid.map((row, rowIdx) => row.map((seat, colIdx) => {
+          if (!seat || seat.isSpanCell) return null;
+
+          const isHorizontalSleeper = seat.length > 1;
+          const isVerticalSleeper = seat.width > 1;
+          const isSleeper = seat.seatType === 2 || isHorizontalSleeper || isVerticalSleeper;
+          const seatClass = isHorizontalSleeper ? 'sleeper horizontal-sleeper'
+            : isVerticalSleeper ? 'sleeper vertical-sleeper'
+            : isSleeper ? 'sleeper' : 'seat';
+
+          return (
+            <div
+              key={seat.id}
+              className={`seat-wrapper ${isSleeper ? 'sleeper-wrapper' : ''} ${isHorizontalSleeper ? 'horizontal' : ''} ${isVerticalSleeper ? 'vertical' : ''}`}
+              style={{
+                '--seat-grid-column': `${colIdx + 1} / span ${seat.length || 1}`,
+                '--seat-grid-row': `${rowIdx + 1} / span ${seat.width || 1}`,
+                '--mobile-seat-grid-column': `${seatGrid.maxRow - rowIdx - (seat.width || 1) + 1} / span ${seat.width || 1}`,
+                '--mobile-seat-grid-row': `${colIdx + 1} / span ${seat.length || 1}`,
+              }}
+            >
+              <div
+                className={`
+                  ${seatClass}
+                  ${seat.status}
+                  ${seat.isLadiesSeat ? 'female' : ''}
+                  ${seat.isMalesSeat ? 'male' : ''}
+                  ${seat.reservedForSocialDistancing ? 'social-distancing' : ''}
+                  ${selectedSeats.some(sel => sel.id === seat.id) ? 'active' : ''}
+                `}
+                onClick={() => toggleSeat(seat)}
+                title={`${seat.seatName} - ₹${Math.round(seat.price)} ${seat.isLadiesSeat ? '(Ladies Only)' : seat.isMalesSeat ? '(Gents Only)' : ''}`}
+              >
+                <div className="seat-tooltip">{seat.seatName}</div>
+                <span className="seat-price">₹{Math.round(seat.price)}</span>
+              </div>
+            </div>
+          );
+        }))}
+      </div>
+    );
+  };
+
   // Session Expired - show popup if session expires during seat selection
   if (sessionExpired) {
     return (
@@ -549,124 +632,24 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
           </div>
 
           {/* SEAT LAYOUT FROM API */}
-          {upperSeatGrid.maxRow > 0 && (
-            <div className="deck">
-              <div className="deck-label">Upper Deck</div>
-              <div className="seat-grid-container">
-                {upperSeatGrid.grid.map((row, rowIdx) => (
-                  <div key={`upper-row-${rowIdx}`} className="seat-row">
-                    {row.map((seat, colIdx) => {
-                      // Skip span cells (part of a multi-cell sleeper)
-                      if (seat?.isSpanCell) return null;
-                      
-                      if (seat) {
-                        // Determine seat type based on ETS dimensions
-                        // length=2, width=1: Horizontal sleeper
-                        // length=1, width=2: Vertical sleeper
-                        // length=1, width=1, sleeper=true: Semi-sleeper
-                        const isHorizontalSleeper = seat.length > 1;
-                        const isVerticalSleeper = seat.width > 1;
-                        const isSleeper = seat.seatType === 2 || isHorizontalSleeper || isVerticalSleeper;
-                        
-                        const seatClass = isHorizontalSleeper ? 'sleeper horizontal-sleeper' 
-                          : isVerticalSleeper ? 'sleeper vertical-sleeper'
-                          : isSleeper ? 'sleeper' : 'seat';
-                        
-                        return (
-                          <div
-                            key={seat.id}
-                            className={`seat-wrapper ${isSleeper ? 'sleeper-wrapper' : ''} ${isHorizontalSleeper ? 'horizontal' : ''} ${isVerticalSleeper ? 'vertical' : ''}`}
-                            style={{
-                              ...(isHorizontalSleeper ? { gridColumn: `span ${seat.length}` } : {}),
-                              ...(isVerticalSleeper ? { gridRow: `span ${seat.width}` } : {})
-                            }}
-                          >
-                            <div
-                              className={`
-                                ${seatClass}
-                                ${seat.status}
-                                ${seat.isLadiesSeat ? 'female' : ''}
-                                ${seat.isMalesSeat ? 'male' : ''}
-                                ${seat.reservedForSocialDistancing ? 'social-distancing' : ''}
-                                ${selectedSeats.some(sel => sel.id === seat.id) ? 'active' : ''}
-                              `}
-                              onClick={() => toggleSeat(seat)}
-                              title={`${seat.seatName} - ₹${Math.round(seat.price)} ${seat.isLadiesSeat ? '(Ladies Only)' : seat.isMalesSeat ? '(Gents Only)' : ''}`}
-                            >
-                              <div className="seat-tooltip">{seat.seatName}</div>
-                              <span className="seat-price">₹{Math.round(seat.price)}</span>
-                            </div>
-                          </div>
-                        );
-                      }
-                      
-                      return (
-                        <div key={`empty-upper-${rowIdx}-${colIdx}`} className="seat-wrapper empty-seat"></div>
-                      );
-                    })}
-                  </div>
-                ))}
+          <div
+            className="seat-map-cabin"
+            style={{ '--mobile-fitted-seat-size': mobileFittedSeatSize }}
+          >
+            {upperSeatGrid.maxRow > 0 && (
+              <div className="deck">
+                <div className="deck-label">Upper Deck</div>
+                {renderSeatGrid(upperSeatGrid, 'Upper deck')}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* LOWER DECK WITH STEERING */}
-          <div className="deck-section lower-with-steering">
-            <div className="driver">
-              <GiSteeringWheel size={28} />
-              <span className="driver-label">Driver</span>
-            </div>
-            <div className="seat-grid-container">
-              {lowerSeatGrid.grid.map((row, rowIdx) => (
-                <div key={`lower-row-${rowIdx}`} className="seat-row">
-                  {row.map((seat, colIdx) => {
-                    // Skip span cells (part of a multi-cell sleeper)
-                    if (seat?.isSpanCell) return null;
-                    
-                    if (seat) {
-                      // Determine seat type based on ETS dimensions
-                      const isHorizontalSleeper = seat.length > 1;
-                      const isVerticalSleeper = seat.width > 1;
-                      const isSleeper = seat.seatType === 2 || isHorizontalSleeper || isVerticalSleeper;
-                      
-                      const seatClass = isHorizontalSleeper ? 'sleeper horizontal-sleeper' 
-                        : isVerticalSleeper ? 'sleeper vertical-sleeper'
-                        : isSleeper ? 'sleeper' : 'seat';
-                      
-                      return (
-                        <div
-                          key={seat.id}
-                          className={`seat-wrapper ${isSleeper ? 'sleeper-wrapper' : ''} ${isHorizontalSleeper ? 'horizontal' : ''} ${isVerticalSleeper ? 'vertical' : ''}`}
-                          style={{
-                            ...(isHorizontalSleeper ? { gridColumn: `span ${seat.length}` } : {}),
-                            ...(isVerticalSleeper ? { gridRow: `span ${seat.width}` } : {})
-                          }}
-                        >
-                          <div
-                            className={`
-                              ${seatClass}
-                              ${seat.status}
-                              ${seat.isLadiesSeat ? 'female' : ''}
-                              ${seat.isMalesSeat ? 'male' : ''}
-                              ${seat.reservedForSocialDistancing ? 'social-distancing' : ''}
-                              ${selectedSeats.some(sel => sel.id === seat.id) ? 'active' : ''}
-                            `}
-                            onClick={() => toggleSeat(seat)}
-                            title={`${seat.seatName} - ₹${Math.round(seat.price)} ${seat.isLadiesSeat ? '(Ladies Only)' : seat.isMalesSeat ? '(Gents Only)' : ''}`}
-                          >
-                            <div className="seat-tooltip">{seat.seatName}</div>
-                            <span className="seat-price">₹{Math.round(seat.price)}</span>
-                          </div>
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <div key={`empty-lower-${rowIdx}-${colIdx}`} className="seat-wrapper empty-seat"></div>
-                    );
-                  })}
-                </div>
-              ))}
+            {/* LOWER DECK WITH STEERING */}
+            <div className="deck-section lower-with-steering">
+              <div className="driver">
+                <GiSteeringWheel size={28} />
+                <span className="driver-label">Driver</span>
+              </div>
+              {renderSeatGrid(lowerSeatGrid, 'Lower deck')}
             </div>
           </div>
 
@@ -675,7 +658,7 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
         </div>
 
         {/* ================= RIGHT – POINTS ================= */}
-        <div className="points-panel" ref={pointsPanelRef}>
+        <div className={`points-panel ${selectedSeats.length > 0 ? 'selection-ready' : ''}`} ref={pointsPanelRef}>
           <div className="tabs">
             <button
               className={activeTab === "boarding" ? "active" : ""}

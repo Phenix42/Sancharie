@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./Details.css";
 import { 
@@ -7,22 +7,23 @@ import {
   Phone, 
   Mail, 
   MapPin, 
-  Clock, 
   Shield, 
   CreditCard, 
-  Tag, 
   Bus, 
   CheckCircle2,
   ChevronRight,
   Armchair,
   Info,
   Lock,
-  Gift,
-  Percent
+  CalendarDays,
+  MapPinned,
+  Sparkles
 } from "lucide-react";
 import { bus as busApi } from "../services/api";
 import { useBooking } from "../context/BookingContext";
 import { useToast } from "./Toast";
+
+const ASSURANCE_AVAILABLE = false;
 
 export default function Details() {
   const location = useLocation();
@@ -34,17 +35,13 @@ export default function Details() {
   const stateData = location.state || {};
   const { fareData, selectedSeats, boardingPoint, droppingPoint, bus } = stateData;
   
-  console.log("Details - location:", location);
-  console.log("Details - location.state:", location.state);
-  console.log("Details component received state:", { fareData, selectedSeats, boardingPoint, droppingPoint, bus });
-  
   // Loading state for block seat
   const [isBlocking, setIsBlocking] = useState(false);
   
   // Initialize passenger details for each selected seat
   const [passengers, setPassengers] = useState(() => {
     if (!selectedSeats) return [];
-    return selectedSeats.map((seat, index) => ({
+    return selectedSeats.map((seat) => ({
       seatNumber: seat.seatName || seat,
       seatName: seat.seatName || seat,
       name: "",
@@ -78,6 +75,15 @@ export default function Details() {
         year: 'numeric',
       })
     : 'Travel date';
+  const operatorName = bus?.TravelName || bus?.name || "Bus Operator";
+  const busType = bus?.BusType || bus?.type || "A/C Sleeper";
+  const boardingTime = boardingPoint?.time || boardingPoint?.Time || '—';
+  const droppingTime = droppingPoint?.time || droppingPoint?.Time || '—';
+  const boardingName = boardingPoint?.name || boardingPoint?.CityPointName || 'Boarding point';
+  const droppingName = droppingPoint?.name || droppingPoint?.CityPointName || 'Dropping point';
+  const assuranceTotal = assurancePrice * (selectedSeats?.length || 0);
+  const assuranceSelected = ASSURANCE_AVAILABLE && assurance === 'yes';
+  const payableTotal = Number(fareData?.totalFare || 0) + (assuranceSelected ? assuranceTotal : 0);
 
   // Validation errors state
   const [passengerErrors, setPassengerErrors] = useState(() => {
@@ -268,7 +274,7 @@ export default function Details() {
         passengers: passengersWithContact,
         contactDetails,
         fareData,
-        assurance,
+        assurance: assuranceSelected ? 'yes' : 'no',
       });
       
       // Store block seat response in context
@@ -286,7 +292,7 @@ export default function Details() {
           bus,
           passengers: passengersWithContact,
           contactDetails,
-          assurance,
+          assurance: assuranceSelected ? 'yes' : 'no',
           blockSeatData: blockSeatResponse,
         }
       });
@@ -308,36 +314,41 @@ export default function Details() {
       <div className="booking-progress">
         <div className="progress-step completed">
           <div className="step-icon"><CheckCircle2 size={18} /></div>
-          <span>Select Seat</span>
+          <div className="step-copy"><small>Step 1</small><span>Seat selected</span></div>
         </div>
         <div className="progress-line completed"></div>
         <div className="progress-step active">
           <div className="step-icon"><User size={18} /></div>
-          <span>Passenger Info</span>
+          <div className="step-copy"><small>Step 2</small><span>Passenger info</span></div>
         </div>
         <div className="progress-line"></div>
         <div className="progress-step">
           <div className="step-icon"><CreditCard size={18} /></div>
-          <span>Payment</span>
+          <div className="step-copy"><small>Step 3</small><span>Payment</span></div>
         </div>
       </div>
 
       <div className="details-container">
         {/* HEADER */}
-        <div className="details-header">
+        <div className="details-header booking-hero">
+          <span className="hero-orbit hero-orbit-one" aria-hidden="true"></span>
+          <span className="hero-orbit hero-orbit-two" aria-hidden="true"></span>
           <div className="header-left">
-            <button className="back-btn" onClick={handleBack}>
+            <button className="back-btn" onClick={handleBack} aria-label="Go back">
               <ArrowLeft size={20} />
             </button>
             <div className="header-info">
-              <span className="details-eyebrow">Passenger information</span>
-              <h4>Complete your booking</h4>
-              <p>Review the journey and enter traveller details</p>
+              <span className="details-eyebrow"><Sparkles size={12} /> You’re almost there</span>
+              <h1>Complete your booking</h1>
+              <p>Add passenger details and review your trip before payment.</p>
             </div>
           </div>
-          <div className="header-badge">
-            <Lock size={14} />
-            <span>Secure Booking</span>
+          <div className="hero-meta">
+            <div className="header-badge">
+              <Lock size={14} />
+              <span>Secure booking</span>
+            </div>
+            <span className="hero-seat-count"><Armchair size={15} /> {selectedSeats.length} seat{selectedSeats.length > 1 ? 's' : ''}</span>
           </div>
         </div>
 
@@ -347,32 +358,46 @@ export default function Details() {
           {/* Bus Summary Card */}
           <div className="bus-summary-card">
             <div className="bus-summary-header">
-              <div><Bus size={20} /><span>Journey Summary</span></div>
-              <span className="journey-date-pill"><Clock size={14} /> {journeyDateLabel}</span>
+              <div className="operator-lockup">
+                <span className="operator-icon"><Bus size={20} /></span>
+                <div>
+                  <span className="summary-kicker">Your journey</span>
+                  <strong>{operatorName}</strong>
+                </div>
+              </div>
+              <span className="journey-date-pill"><CalendarDays size={14} /> {journeyDateLabel}</span>
             </div>
             <div className="bus-summary-content">
               <div className="bus-operator">
-                <strong>{bus?.TravelName || bus?.name || "Bus Operator"}</strong>
-                <span className="bus-type-badge">{bus?.BusType || bus?.type || "A/C Sleeper"}</span>
+                <span className="bus-type-badge">{busType}</span>
+                <span className="ticket-confirmation"><CheckCircle2 size={14} /> Ready to reserve</span>
               </div>
               <div className="journey-route">
                 <div className="route-point">
-                  <div className="point-marker start"></div>
                   <div className="point-info">
-                    <span className="point-time">{boardingPoint?.time || boardingPoint?.Time || '—'}</span>
-                    <span className="point-name">{boardingPoint?.name || boardingPoint?.CityPointName || 'Boarding point'}</span>
+                    <span className="point-label">Boarding</span>
+                    <span className="point-time">{boardingTime}</span>
+                    <span className="point-name">{boardingName}</span>
                   </div>
                 </div>
-                <div className="route-line">
-                  <ChevronRight size={16} />
+                <div className="route-line" aria-hidden="true">
+                  <span className="point-marker start"></span>
+                  <span className="route-dashes"></span>
+                  <span className="route-bus"><Bus size={16} /></span>
+                  <span className="route-dashes"></span>
+                  <span className="point-marker end"></span>
                 </div>
-                <div className="route-point">
-                  <div className="point-marker end"></div>
+                <div className="route-point route-point-end">
                   <div className="point-info">
-                    <span className="point-time">{droppingPoint?.time || droppingPoint?.Time || '—'}</span>
-                    <span className="point-name">{droppingPoint?.name || droppingPoint?.CityPointName || 'Dropping point'}</span>
+                    <span className="point-label">Dropping</span>
+                    <span className="point-time">{droppingTime}</span>
+                    <span className="point-name">{droppingName}</span>
                   </div>
                 </div>
+              </div>
+              <div className="journey-footnote">
+                <span><MapPinned size={15} /> Please arrive at the boarding point 15 minutes early</span>
+                <span className="journey-seat-note"><Armchair size={15} /> Seat{selectedSeats.length > 1 ? 's' : ''} {selectedSeats.map((seat) => seat.seatName || seat).join(', ')}</span>
               </div>
             </div>
           </div>
@@ -383,6 +408,7 @@ export default function Details() {
                 <User size={20} />
               </div>
               <div className="section-title-group">
+                <span className="section-kicker">01 · Travellers</span>
                 <h3>Passenger Details</h3>
                 <p className="section-subtitle">Enter details for {selectedSeats.length} passenger{selectedSeats.length > 1 ? 's' : ''}</p>
               </div>
@@ -392,7 +418,11 @@ export default function Details() {
               <div key={passenger.seatNumber} className="passenger-form">
                 <div className="passenger-header">
                   <div className="passenger-info">
-                    <span className="passenger-number">Passenger {index + 1}</span>
+                    <span className="passenger-avatar">{String(index + 1).padStart(2, '0')}</span>
+                    <div className="passenger-title">
+                      <span className="passenger-number">Passenger {index + 1}</span>
+                      <small>{index === 0 ? 'Booking contact' : 'Co-traveller'}</small>
+                    </div>
                     {index === 0 && <span className="primary-badge">Primary</span>}
                   </div>
                   <div className="seat-tag">
@@ -463,6 +493,7 @@ export default function Details() {
                 <Phone size={20} />
               </div>
               <div className="section-title-group">
+                <span className="section-kicker">02 · Stay informed</span>
                 <h3>Contact Details</h3>
                 <p className="section-subtitle">Ticket details will be sent here</p>
               </div>
@@ -579,12 +610,16 @@ export default function Details() {
           </div>
 
           {/* SANCHARIE ASSURANCE */}
-          <div className="section-card assurance-card">
+          <div
+            className="section-card assurance-card assurance-coming-soon-card"
+            aria-disabled={!ASSURANCE_AVAILABLE}
+          >
             <div className="assurance-header">
               <div className="assurance-icon">
                 <Shield size={24} />
               </div>
               <div className="assurance-title">
+                <span className="section-kicker">03 · Optional protection</span>
                 <h3>Sancharie Assurance</h3>
                 <span className="assurance-price">₹{assurancePrice} per passenger</span>
               </div>
@@ -600,7 +635,7 @@ export default function Details() {
                 </div>
                 <div className="benefit-info">
                   <span className="benefit-label">If bus cancelled, get</span>
-                  <span className="benefit-value">₹{fareData.baseFare + 500}</span>
+                  <span className="benefit-value">₹{Number(fareData.baseFare || 0) + 500}</span>
                   <span className="benefit-breakdown">₹{fareData.baseFare} + ₹500 bonus</span>
                 </div>
               </div>
@@ -630,14 +665,15 @@ export default function Details() {
               <label className={`assurance-option ${assurance === 'yes' ? 'selected' : ''}`}>
                 <div className="option-content">
                   <CheckCircle2 size={18} className={assurance === 'yes' ? 'checked' : ''} />
-                  <span>Yes, protect my trip at ₹{assurancePrice * selectedSeats.length}</span>
+                  <span>Yes, protect my trip at ₹{assuranceTotal}</span>
                 </div>
                 <input
                   type="radio"
                   name="assurance"
                   value="yes"
-                  checked={assurance === 'yes'}
+                  checked={assuranceSelected}
                   onChange={(e) => setAssurance(e.target.value)}
+                  disabled={!ASSURANCE_AVAILABLE}
                 />
                 <span className="radio-circle"></span>
               </label>
@@ -650,17 +686,30 @@ export default function Details() {
                   type="radio"
                   name="assurance"
                   value="no"
-                  checked={assurance === 'no'}
+                  checked={!assuranceSelected}
                   onChange={(e) => setAssurance(e.target.value)}
+                  disabled={!ASSURANCE_AVAILABLE}
                 />
                 <span className="radio-circle"></span>
               </label>
             </div>
 
-            <a href="#" className="terms-link">
+            <button type="button" className="terms-link" disabled={!ASSURANCE_AVAILABLE}>
               <Info size={14} />
               View Terms & Conditions
-            </a>
+            </button>
+
+            {!ASSURANCE_AVAILABLE && (
+              <div className="assurance-coming-soon-overlay" role="status">
+                <div className="assurance-coming-soon-message">
+                  <span className="coming-soon-badge">
+                    <Sparkles size={13} /> Coming soon
+                  </span>
+                  <h3>Sancharie Assurance</h3>
+                  <p>We’re fine-tuning trip protection to make every journey more worry-free.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -668,10 +717,11 @@ export default function Details() {
         <div className="fare-section">
           <div className="fare-card">
             <div className="fare-card-header">
-              <h3>
-                <CreditCard size={18} />
-                Fare Summary
-              </h3>
+              <div>
+                <span className="fare-kicker">Booking total</span>
+                <h3>Fare Summary</h3>
+              </div>
+              <span className="fare-header-icon"><CreditCard size={19} /></span>
             </div>
 
             <div className="selected-seats-display">
@@ -701,18 +751,18 @@ export default function Details() {
                   <span>₹{fareData.operatorCharge || fareData.serviceCharge || 0}</span>
                 </div>
               )}
-              {assurance === 'yes' && (
+              {assuranceSelected && (
                 <div className="fare-row assurance-row">
                   <span>
                     <Shield size={14} />
                     Sancharie Assurance
                   </span>
-                  <span>₹{assurancePrice * selectedSeats.length}</span>
+                  <span>₹{assuranceTotal}</span>
                 </div>
               )}
               <div className="fare-row total">
-                <span>Total Amount</span>
-                <span>₹{fareData.totalFare + (assurance === 'yes' ? assurancePrice * selectedSeats.length : 0)}</span>
+                <span><small>Payable now</small>Total Amount</span>
+                <span>₹{payableTotal}</span>
               </div>
             </div>
 
