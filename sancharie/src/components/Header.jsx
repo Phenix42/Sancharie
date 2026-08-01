@@ -6,6 +6,7 @@ import MyAccount from './Myaccount'
 import ProfileCompletion from './ProfileCompletion'
 import { useAuth } from '../context/AuthContext'
 import { useBooking } from '../context/BookingContext'
+import SancharieLogo from '../assets/logosan.svg'
 import {
   BookOpen,
   Building2,
@@ -158,7 +159,7 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
           <div className="brand-cluster">
             <button className="logo" onClick={handleLogoClick} type="button" aria-label="Sancharie home">
               <span className="logo-mark" aria-hidden="true">
-                <BusFront size={22} strokeWidth={2.4} />
+                <img src={SancharieLogo} alt="" />
               </span>
               <span className="logo-copy">
                 <span className="logo-text">Sancharie</span>
@@ -267,7 +268,7 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
               {/* Drawer header */}
               <div className="nav-drawer-header">
                 <span className="nav-drawer-logo">
-                  <BusFront size={19} strokeWidth={2.4} />
+                  <img src={SancharieLogo} alt="" aria-hidden="true" />
                   Sancharie
                 </span>
                 <button className="nav-close-btn" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" type="button">

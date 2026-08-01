@@ -3,10 +3,15 @@ import { useNavigate } from "react-router-dom";
 import "./noresult.css";
 import Logo from "../assets/logosan.svg";
 
-export default function NoResult({ searchParams }) {
+export default function NoResult({ searchParams, onBackToHome }) {
   const navigate = useNavigate();
 
   const handleModifySearch = () => {
+    if (onBackToHome) {
+      onBackToHome();
+      return;
+    }
+
     navigate("/");
   };
 

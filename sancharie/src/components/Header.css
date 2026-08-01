@@ -65,13 +65,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  border-radius: 12px;
-  background: var(--header-gold);
-  color: var(--header-primary);
-  box-shadow: 0 10px 24px rgba(206, 180, 95, 0.2);
+  width: 44px;
+  height: 54px;
+  flex: 0 0 44px;
+}
+
+.logo-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .logo-copy {
@@ -502,10 +505,9 @@
   }
 
   .logo-mark {
-    width: 36px;
-    height: 36px;
-    flex-basis: 36px;
-    border-radius: 10px;
+    width: 34px;
+    height: 44px;
+    flex-basis: 34px;
   }
 
   .logo-mark svg {
@@ -616,13 +618,18 @@
     align-items: center;
     gap: 8px;
     min-height: 34px;
-    padding: 0 10px;
-    border-radius: 7px;
-    background: var(--header-gold);
-    color: var(--header-primary);
+    padding: 0;
+    color: var(--header-white);
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     font-size: 20px;
     font-weight: 800;
+  }
+
+  .nav-drawer-logo img {
+    display: block;
+    width: 30px;
+    height: 40px;
+    object-fit: contain;
   }
 
   .nav-close-btn {

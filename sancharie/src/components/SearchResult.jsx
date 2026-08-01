@@ -201,7 +201,7 @@ function BusPriceDisplay({ price }) {
   );
 }
 
-export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
+export default function SearchResult({ searchParams, onSearch, onBackToHome, mode = 'bus' }) {
   const { state, actions } = useBooking();
   const navigate = useNavigate();
   const bookingActionsRef = useRef(actions);
@@ -409,6 +409,13 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
   // Handle session expiration - go to home
   const handleGoHome = () => {
     actions.resetSession();
+    actions.resetAll();
+
+    if (onBackToHome) {
+      onBackToHome();
+      return;
+    }
+
     navigate(mode === 'flight' ? '/?mode=flight' : '/');
   };
 
@@ -1267,12 +1274,12 @@ export default function SearchResult({ searchParams, onSearch, mode = 'bus' }) {
   }
 
   if (!loading && buses.length === 0) {
-    return <NoResult searchParams={searchParams} />;
+    return <NoResult searchParams={searchParams} onBackToHome={handleGoHome} />;
   }
 
   return (
     <div className="sr-page">
-      <button className="page-back-btn-inline" onClick={() => window.history.back()} title="Back">
+      <button className="page-back-btn-inline" onClick={handleGoHome} title="Back">
         <ArrowLeft size={16} />
         Back to home
       </button>

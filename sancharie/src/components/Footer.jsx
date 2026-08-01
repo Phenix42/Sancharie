@@ -32,11 +32,15 @@ function Footer({ className = '' }) {
               </div>
               <div className="contact-item">
                 <Phone size={16} />
-                <a href="tel:+919876543210">+91 98765 43210</a>
+                <span>
+                  <a href="tel:+918125263692">+91 81252 63692</a>
+                  {', '}
+                  <a href="tel:+916300023565">+91 6300 023 565</a>
+                </span>
               </div>
               <div className="contact-item">
                 <Mail size={16} />
-                <a href="mailto:support@sancharie.com">support@sancharie.com</a>
+                <a href="mailto:info@sancharie.com">info@sancharie.com</a>
               </div>
               <div className="contact-item">
                 <Clock size={16} />

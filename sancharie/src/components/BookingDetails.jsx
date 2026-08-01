@@ -277,15 +277,19 @@ export default function BookingDetails() {
 
     generateTicketPDF({
       bookingId: ticketDetails.etsTicketNumber,
+      ticketNo: ticketDetails.etsTicketNumber,
       pnr: ticketDetails.opPNR,
       busName: ticketDetails.serviceProvider,
       busType: ticketDetails.serviceType,
+      serviceNo: ticketDetails.serviceId || ticketDetails.routeScheduleId || ticketDetails.tripCode,
+      status: ticketDetails.ticketStatus,
       fromCity: ticketDetails.sourceCity,
       toCity: ticketDetails.destinationCity,
       journeyDate: ticketDetails.journeyDate,
       boardingPoint: ticketDetails.boardingPoint,
       droppingPoint: ticketDetails.droppingPoint,
       departureTime: ticketDetails.departureTime,
+      arrivalTime: ticketDetails.arrivalTime,
       seats: ticketDetails.travelerDetails?.map((traveler) => traveler.seatNo) || [],
       passengers: ticketDetails.travelerDetails?.map((traveler) => ({
         name: `${traveler.name} ${traveler.lastName || ''}`.trim(),
@@ -294,6 +298,7 @@ export default function BookingDetails() {
         seatNumber: traveler.seatNo,
       })) || [],
       totalFare,
+      contactPhone: ticketDetails.serviceProviderContact,
     });
   };
 

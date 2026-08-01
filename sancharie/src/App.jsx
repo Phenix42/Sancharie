@@ -120,7 +120,12 @@ function App() {
               onBackToHome={handleBackToHome}
             />
             {showSearchResult ? (
-              <SearchResult searchParams={searchParams} onSearch={handleSearch} mode={travelMode} />
+              <SearchResult
+                searchParams={searchParams}
+                onSearch={handleSearch}
+                onBackToHome={handleBackToHome}
+                mode={travelMode}
+              />
             ) : travelMode === 'flight' ? (
               <FlightHome onSearch={handleSearch} />
             ) : travelMode === 'hotel' ? (

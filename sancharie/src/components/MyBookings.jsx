@@ -324,9 +324,12 @@ export default function MyBookings() {
   const downloadTicket = (booking) => {
     generateTicketPDF({
       bookingId: booking.bookingId,
+      ticketNo: booking.ticketNo || booking.externalBookingId,
       pnr: booking.pnr,
       busName: booking.busName,
       busType: booking.busType,
+      serviceNo: booking.busNumber,
+      status: booking.status,
       fromCity: booking.fromCity || booking.source,
       toCity: booking.toCity || booking.destination,
       journeyDate: booking.journeyDate,
