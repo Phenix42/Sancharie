@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, Plane, ShieldCheck, XCircle } from 'lucide-react';
 import { flights as flightApi, payment as paymentApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { createBookingReference, persistBookingUpdate } from '../utils/bookingSync';
 import './FlightBooking.css';
 
 const formatMoney = (value) => new Intl.NumberFormat('en-IN', {
@@ -78,7 +79,7 @@ const toProviderDate = (value) => value ? `${value}T00:00:00` : '';
 export default function FlightBooking() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user, createBooking } = useAuth();
+  const { isAuthenticated, user, createBooking, updateBooking } = useAuth();
   const draft = location.state || null;
   const flight = draft?.flight;
   const [confirmation, setConfirmation] = useState(draft?.confirmation || null);
@@ -201,6 +202,9 @@ export default function FlightBooking() {
     }
 
     let paymentVerified = false;
+    let paymentVerification = null;
+    let bookingRecordId = '';
+    let lifecycleStage = 'fare_check';
 
     try {
       setStatus('checking');
@@ -218,7 +222,45 @@ export default function FlightBooking() {
       setConfirmation(latestConfirmation);
       setStatus('payment');
       const payablePrice = (latestPrice || basePrice) + Number(selectedMeal?.Price || 0);
-      const paymentVerification = await paymentApi.initiatePayment({
+
+      const passengerAge = new Date(passenger.dateOfBirth).getFullYear()
+        ? Math.max(1, new Date().getFullYear() - new Date(passenger.dateOfBirth).getFullYear())
+        : 25;
+      const bookingAttempt = await createBooking({
+        clientReference: createBookingReference('flight'),
+        serviceType: 'flight',
+        status: 'pending',
+        providerStatus: 'payment_pending',
+        busName: flight.carrier || 'Airline',
+        busType: 'Flight',
+        busNumber: flight.flightNumber || '',
+        source: flight.from,
+        destination: flight.to,
+        fromCity: flight.from,
+        toCity: flight.to,
+        journeyDate: flight.departureTime,
+        departureTime: flight.departureTime,
+        arrivalTime: flight.arrivalTime,
+        seats: [],
+        passengers: [{
+          name: `${passenger.firstName} ${passenger.lastName}`.trim(),
+          age: passengerAge,
+          gender: passenger.gender === '1' ? 'male' : 'female',
+        }],
+        baseFare: Number(latestFare?.Fare?.BaseFare || latestPrice || totalPrice),
+        serviceTax: Number(latestFare?.Fare?.Tax || 0),
+        totalFare: payablePrice,
+        paymentStatus: 'pending',
+        paymentMethod: 'razorpay',
+      });
+
+      if (!bookingAttempt?.success || !bookingAttempt.booking?.id) {
+        throw new Error(bookingAttempt?.message || 'Unable to safely create your booking record. No payment was taken.');
+      }
+      bookingRecordId = bookingAttempt.booking.id;
+
+      lifecycleStage = 'payment';
+      paymentVerification = await paymentApi.initiatePayment({
         amount: payablePrice,
         customerInfo: {
           name: `${passenger.firstName} ${passenger.lastName}`.trim(),
@@ -236,6 +278,18 @@ export default function FlightBooking() {
       });
       paymentVerified = Boolean(paymentVerification?.verified);
 
+      await persistBookingUpdate(updateBooking, bookingRecordId, {
+        status: 'pending',
+        paymentStatus: 'completed',
+        paymentId: paymentVerification?.data?.payment_id || '',
+        paymentOrderId: paymentVerification?.data?.order_id || '',
+        paymentMethod: paymentVerification?.data?.method || 'razorpay',
+        providerStatus: 'payment_verified',
+        failureStage: '',
+        failureReason: '',
+      });
+
+      lifecycleStage = 'provider_booking';
       setStatus('booking');
       const booked = await flightApi.book({
         searchTokenId: flight.searchTokenId,
@@ -262,38 +316,31 @@ export default function FlightBooking() {
         }
       }
 
-      try {
-        await createBooking({
-          busName: flight.carrier,
-          busType: 'Flight',
-          busNumber: flight.flightNumber,
-          source: flight.from,
-          destination: flight.to,
-          fromCity: flight.from,
-          toCity: flight.to,
-          journeyDate: flight.departureTime,
-          departureTime: flight.departureTime,
-          arrivalTime: flight.arrivalTime,
-          seats: [],
-          passengers: [{
-            name: `${passenger.firstName} ${passenger.lastName}`.trim(),
-            age: Math.max(1, new Date().getFullYear() - new Date(passenger.dateOfBirth).getFullYear()),
-            gender: passenger.gender === '1' ? 'male' : 'female',
-          }],
-          baseFare: Number(latestFare?.Fare?.BaseFare || latestPrice || totalPrice),
-          serviceTax: Number(latestFare?.Fare?.Tax || 0),
-          totalFare: payablePrice,
-          paymentId: paymentVerification?.data?.payment_id || '',
-          paymentStatus: 'completed',
-          externalBookingId: String(bookingId || ''),
-          pnr: String(pnr || ''),
-        });
-      } catch {
-        // Provider confirmation is the source of truth; local history can be reconciled later.
-      }
+      await persistBookingUpdate(updateBooking, bookingRecordId, {
+        status: 'confirmed',
+        paymentStatus: 'completed',
+        paymentId: paymentVerification?.data?.payment_id || '',
+        paymentOrderId: paymentVerification?.data?.order_id || '',
+        paymentMethod: paymentVerification?.data?.method || 'razorpay',
+        externalBookingId: String(bookingId || ''),
+        ticketNo: String(pnr || bookingId || ''),
+        pnr: String(pnr || ''),
+        providerStatus: 'confirmed',
+        failureStage: '',
+        failureReason: '',
+      });
 
       setStatus('success');
     } catch (bookingError) {
+      if (bookingRecordId) {
+        await persistBookingUpdate(updateBooking, bookingRecordId, {
+          status: 'failed',
+          paymentStatus: paymentVerified ? 'completed' : 'failed',
+          providerStatus: paymentVerified ? 'booking_failed' : 'payment_failed',
+          failureStage: lifecycleStage,
+          failureReason: bookingError.message || 'Flight booking failed',
+        });
+      }
       setStatus('idle');
       setError(paymentVerified
         ? `Payment was verified, but airline booking needs attention: ${bookingError.message}. Please contact support before paying again.`

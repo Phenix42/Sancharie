@@ -240,6 +240,43 @@ const fetchOrderDetails = async (orderId) => {
 };
 
 /**
+ * List Razorpay payments in a bounded time window. This is used only by the
+ * server-side reconciliation job; callers never receive the raw Razorpay
+ * response or card/bank metadata.
+ */
+const listPayments = async ({ from, to, skip = 0, count = 100 } = {}) => {
+  try {
+    const razorpay = getRazorpayInstance();
+    const options = {
+      skip: Math.max(0, Number(skip) || 0),
+      count: Math.min(100, Math.max(1, Number(count) || 100)),
+    };
+
+    if (from) options.from = Math.floor(new Date(from).getTime() / 1000);
+    if (to) options.to = Math.floor(new Date(to).getTime() / 1000);
+
+    const response = await razorpay.payments.all(options);
+    const items = Array.isArray(response?.items) ? response.items : [];
+
+    return items.map((payment) => ({
+      id: payment.id,
+      order_id: payment.order_id,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status,
+      captured: payment.captured,
+      method: payment.method,
+      email: payment.email,
+      contact: payment.contact,
+      created_at: payment.created_at,
+    }));
+  } catch (error) {
+    console.error('Error listing Razorpay payments:', error.message);
+    throw error;
+  }
+};
+
+/**
  * Check if Razorpay is properly configured
  * 
  * @returns {boolean} Whether Razorpay is configured
@@ -265,6 +302,7 @@ module.exports = {
   verifyPaymentSignature,
   fetchPaymentDetails,
   fetchOrderDetails,
+  listPayments,
   isConfigured,
   getPublicKeyId,
 };

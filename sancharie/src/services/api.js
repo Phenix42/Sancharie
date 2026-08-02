@@ -714,8 +714,8 @@ export const bus = {
     if (paymentId) params.set('paymentId', paymentId);
     const data = await apiRequest(`/api/ets/seatBooking?${params}`);
 
-    if (data.apiStatus && !data.apiStatus.success) {
-      throw new Error(data.apiStatus.message || 'Booking failed');
+    if (data.apiStatus?.success !== true || !data.etstnumber) {
+      throw new Error(data.apiStatus?.message || 'The operator did not issue a ticket number');
     }
 
     return {

@@ -25,6 +25,7 @@ const userRoutes = require('./routes/user');
 const busRoutes = require('./routes/bus');
 const { router: flightRoutes } = require('./routes/flight');
 const { router: hotelRoutes } = require('./routes/hotel');
+const { reconcileAllUsers } = require('./services/bookingReconciliationService');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -49,10 +50,42 @@ if (missingEnvVars.length > 0) {
 // MONGODB CONNECTION
 // ============================================
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/sancharie';
+let reconciliationTimer = null;
+let reconciliationStartTimer = null;
+let reconciliationRunning = false;
+
+const runBookingReconciliation = async () => {
+  if (reconciliationRunning) return;
+  reconciliationRunning = true;
+  try {
+    const summary = await reconcileAllUsers();
+    console.log('✅ Booking reconciliation completed:', summary);
+  } catch (error) {
+    console.error('⚠️ Booking reconciliation failed:', error.message);
+  } finally {
+    reconciliationRunning = false;
+  }
+};
+
+const startBookingReconciliation = () => {
+  if (!process.env.ETS_API_USERNAME || !process.env.ETS_API_PASSWORD ||
+      !process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    console.warn('⚠️ Booking reconciliation disabled: provider/payment credentials are missing');
+    return;
+  }
+
+  const requestedInterval = Number(process.env.BOOKING_RECONCILIATION_INTERVAL_MS) || 15 * 60 * 1000;
+  const interval = Math.max(5 * 60 * 1000, requestedInterval);
+  reconciliationStartTimer = setTimeout(runBookingReconciliation, 30 * 1000);
+  reconciliationTimer = setInterval(runBookingReconciliation, interval);
+  reconciliationStartTimer.unref();
+  reconciliationTimer.unref();
+};
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB');
+    startBookingReconciliation();
   })
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
@@ -238,6 +271,8 @@ server.on('error', (err) => {
 
 process.on('SIGINT', () => {
   console.log('\nShutting down server...');
+  if (reconciliationStartTimer) clearTimeout(reconciliationStartTimer);
+  if (reconciliationTimer) clearInterval(reconciliationTimer);
   server.close(() => {
     process.exit(0);
   });

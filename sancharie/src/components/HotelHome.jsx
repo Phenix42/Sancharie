@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { hotels, payment } from '../services';
 import { useAuth } from '../context/AuthContext';
+import { createBookingReference, persistBookingUpdate } from '../utils/bookingSync';
 import './HotelHome.css';
 
 const addDays = (offset) => {
@@ -54,7 +55,7 @@ function Counter({ label, hint, value, min = 0, max = 8, onChange }) {
 }
 
 export default function HotelHome() {
-  const { isAuthenticated, createBooking } = useAuth();
+  const { isAuthenticated, createBooking, updateBooking } = useAuth();
   const [cities, setCities] = useState([]);
   const [cityQuery, setCityQuery] = useState('Hyderabad');
   const [selectedCity, setSelectedCity] = useState(null);
@@ -73,7 +74,7 @@ export default function HotelHome() {
   const [hotelInfo, setHotelInfo] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
-  const [blockData, setBlockData] = useState(null);
+  const [, setBlockData] = useState(null);
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState('');
   const [error, setError] = useState('');
@@ -242,17 +243,63 @@ export default function HotelHome() {
       setError(guestError);
       return;
     }
+    if (!isAuthenticated) {
+      setError('Please sign in before booking so this stay is saved to My Bookings.');
+      return;
+    }
 
     setError('');
     setLoading(skipPayment ? 'book-test' : 'payment');
+
+    let bookingRecordId = '';
+    let lifecycleStage = 'price_check';
+    let paymentVerified = false;
 
     try {
       const blocked = await blockSelectedRoom();
       if (!blocked) return;
       const paymentAmount = Number(blocked.requiredAmount || totalAmount);
 
+      const destinationName = selectedCity?.name || cityQuery || 'Hotel destination';
+      const bookingAttempt = await createBooking({
+        clientReference: createBookingReference('hotel'),
+        serviceType: 'hotel',
+        status: 'pending',
+        providerStatus: skipPayment ? 'test_booking_pending' : 'payment_pending',
+        busName: selectedHotel.name || 'Hotel',
+        busType: selectedRoom.name || selectedRoom.roomType || 'Hotel room',
+        busNumber: selectedHotel.hotelCode || selectedHotel.id || '',
+        source: destinationName,
+        destination: selectedHotel.name || destinationName,
+        fromCity: destinationName,
+        toCity: destinationName,
+        journeyDate: checkIn,
+        departureTime: checkIn,
+        arrivalTime: checkOut,
+        boardingPoint: selectedHotel.address || hotelInfo?.address || destinationName,
+        droppingPoint: selectedHotel.address || hotelInfo?.address || destinationName,
+        seats: [],
+        passengers: [{
+          name: `${contact.firstName} ${contact.lastName}`.trim(),
+          age: 30,
+          gender: contact.title === 'Ms' || contact.title === 'Mrs' ? 'female' : 'male',
+          seatNumber: `${roomsCount} room${roomsCount === 1 ? '' : 's'}`,
+        }],
+        baseFare: paymentAmount,
+        serviceTax: 0,
+        totalFare: paymentAmount,
+        paymentStatus: 'pending',
+        paymentMethod: skipPayment ? 'test' : 'razorpay',
+      });
+
+      if (!bookingAttempt?.success || !bookingAttempt.booking?.id) {
+        throw new Error(bookingAttempt?.message || 'Unable to safely create your booking record. No payment was taken.');
+      }
+      bookingRecordId = bookingAttempt.booking.id;
+
       let paymentId = '';
       if (!skipPayment) {
+        lifecycleStage = 'payment';
         const verification = await payment.initiatePayment({
           amount: paymentAmount,
           customerInfo: {
@@ -271,8 +318,20 @@ export default function HotelHome() {
           },
         });
         paymentId = verification.data?.payment_id || verification.data?.paymentId || '';
+        paymentVerified = Boolean(verification?.verified);
+        await persistBookingUpdate(updateBooking, bookingRecordId, {
+          status: 'pending',
+          paymentStatus: 'completed',
+          paymentId,
+          paymentOrderId: verification.data?.order_id || verification.data?.orderId || '',
+          paymentMethod: verification.data?.method || 'razorpay',
+          providerStatus: 'payment_verified',
+          failureStage: '',
+          failureReason: '',
+        });
       }
 
+      lifecycleStage = 'provider_booking';
       const data = await hotels.book({
         searchToken: selectedHotel.searchToken || searchToken,
         resultIndex: selectedHotel.resultIndex,
@@ -307,17 +366,28 @@ export default function HotelHome() {
       setBooking(bookingData);
       setNotice('Hotel booking confirmed.');
 
-      if (isAuthenticated) {
-        createBooking({
-          type: 'hotel',
-          status: data.HotelBookingStatus || 'Confirmed',
-          bookingId: data.bookingId || data.BookingId || data.Result,
-          bookingRefNo: data.bookingRefNo || data.BookingRefNo,
-          provider: 'hotel',
-          details: bookingData,
-        }).catch(() => {});
-      }
+      const providerBookingId = data.bookingId || data.BookingId || data.bookingRefNo || data.BookingRefNo || '';
+      await persistBookingUpdate(updateBooking, bookingRecordId, {
+        status: 'confirmed',
+        paymentStatus: skipPayment ? 'pending' : 'completed',
+        paymentId,
+        externalBookingId: String(providerBookingId),
+        ticketNo: String(data.bookingRefNo || data.BookingRefNo || providerBookingId),
+        pnr: String(data.confirmationNo || data.ConfirmationNo || ''),
+        providerStatus: String(data.HotelBookingStatus || 'confirmed').toLowerCase(),
+        failureStage: '',
+        failureReason: '',
+      });
     } catch (err) {
+      if (bookingRecordId) {
+        await persistBookingUpdate(updateBooking, bookingRecordId, {
+          status: 'failed',
+          paymentStatus: paymentVerified ? 'completed' : 'failed',
+          providerStatus: paymentVerified ? 'booking_failed' : 'payment_failed',
+          failureStage: lifecycleStage,
+          failureReason: err.message || 'Hotel booking failed',
+        });
+      }
       setError(err.message || 'Hotel booking failed.');
     } finally {
       setLoading('');

@@ -882,6 +882,86 @@
 .booking-status.cancelled,
 .booking-status.failed { background: #fff0ef; color: #b74545; }
 
+.booking-failure-detail {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0 27px 20px;
+  padding: 14px 16px;
+  border: 1px solid #f0ceca;
+  border-radius: 14px;
+  background: #fff6f5;
+  color: #a83f3f;
+}
+
+.booking-failure-detail svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.booking-failure-detail strong,
+.booking-failure-detail p,
+.booking-failure-detail small {
+  display: block;
+}
+
+.booking-payment-warning {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0 27px 20px;
+  padding: 14px 16px;
+  border: 1px solid #ead38a;
+  border-radius: 14px;
+  background: #fff9e8;
+  color: #8a6512;
+}
+
+.booking-payment-warning svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.booking-payment-warning strong,
+.booking-payment-warning p,
+.booking-payment-warning small {
+  display: block;
+}
+
+.booking-payment-warning strong { font-size: 12px; }
+.booking-payment-warning p {
+  margin: 4px 0 0;
+  color: #705f36;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.booking-payment-warning small {
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+  color: #8a6512;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.booking-failure-detail strong {
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.booking-failure-detail p {
+  margin: 4px 0 0;
+  color: #785b5b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.booking-failure-detail small {
+  margin-top: 7px;
+  color: #a83f3f;
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .booking-route {
   display: grid;
   grid-template-columns: minmax(110px, 1fr) minmax(130px, 1.2fr) minmax(110px, 1fr);

@@ -31,13 +31,14 @@ import { bus, payment } from "../services/api";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import { generateTicketPDF } from "../utils/ticketGenerator";
+import { createBookingReference, persistBookingUpdate } from "../utils/bookingSync";
 import { useToast } from "./Toast";
 
 export default function Payment() {
   const location = useLocation();
   const navigate = useNavigate();
   const { state: bookingState, actions } = useBooking();
-  const { createBooking, isAuthenticated } = useAuth();
+  const { createBooking, updateBooking, isAuthenticated } = useAuth();
   const toast = useToast();
   
   // Get session expired state from booking context
@@ -188,9 +189,55 @@ export default function Payment() {
     setIsProcessing(true);
     setBookingError(null);
 
+    let bookingRecordId = '';
+    let lifecycleStage = 'fare_check';
+    let paymentVerified = false;
+
     try {
       const blockTicketKey = blockSeatData?.blockTicketKey;
       let payableAmount = grandTotal;
+
+      if (!isAuthenticated) {
+        throw new Error('Please sign in before payment so your ticket can be saved to My Bookings.');
+      }
+
+      const bookingAttempt = await createBooking({
+        clientReference: createBookingReference('bus'),
+        serviceType: 'bus',
+        providerReference: blockTicketKey,
+        status: 'pending',
+        providerStatus: 'payment_pending',
+        busName: busData?.name || busData?.TravelName || 'Bus Service',
+        busType: busData?.type || busData?.BusType || 'Bus',
+        busNumber: busData?.busNumber || busData?.BusNumber || busData?.serviceId || '',
+        source: boardingPoint?.name || boardingPoint?.CityPointName || fromCity,
+        destination: droppingPoint?.name || droppingPoint?.CityPointName || toCity,
+        fromCity,
+        toCity,
+        journeyDate: rawJourneyDate || new Date().toISOString(),
+        boardingPoint: boardingPoint?.name || boardingPoint?.CityPointName || boardingPoint || '',
+        droppingPoint: droppingPoint?.name || droppingPoint?.CityPointName || droppingPoint || '',
+        departureTime: boardingPoint?.time || boardingPoint?.Time || '',
+        arrivalTime: droppingPoint?.time || droppingPoint?.Time || '',
+        seats: seatNames,
+        selectedSeats: seatNames,
+        passengers: passengers.map((passenger) => ({
+          name: passenger.name,
+          age: passenger.age,
+          gender: String(passenger.gender || 'male').toLowerCase(),
+          seatNumber: passenger.seatName || passenger.seatNumber,
+        })),
+        baseFare: fareData?.baseFare || fareData?.totalFare || payableAmount,
+        serviceTax: fareData?.serviceTax || 0,
+        totalFare: payableAmount,
+        paymentStatus: 'pending',
+        paymentMethod: 'razorpay',
+      });
+
+      if (!bookingAttempt?.success || !bookingAttempt.booking?.id) {
+        throw new Error(bookingAttempt?.message || 'Unable to safely create your booking record. No payment was taken.');
+      }
+      bookingRecordId = bookingAttempt.booking.id;
 
       if (busData?.isRTC) {
         console.log('[Booking Flow] Bus is RTC, refreshing fare before payment...');
@@ -218,6 +265,7 @@ export default function Payment() {
         phone: contactDetails?.phone || '',
       };
 
+      lifecycleStage = 'payment';
       const paymentResult = await payment.initiatePayment({
         amount: payableAmount,
         customerInfo,
@@ -238,6 +286,19 @@ export default function Payment() {
       });
 
       if (paymentResult.verified) {
+        paymentVerified = true;
+        await persistBookingUpdate(updateBooking, bookingRecordId, {
+          status: 'pending',
+          paymentStatus: 'completed',
+          paymentId: paymentResult.data?.payment_id || '',
+          paymentOrderId: paymentResult.data?.order_id || '',
+          paymentMethod: paymentResult.data?.method || 'razorpay',
+          providerStatus: 'payment_verified',
+          failureStage: '',
+          failureReason: '',
+        });
+
+        lifecycleStage = 'provider_booking';
         console.log('[Booking Flow] Starting seatBooking with blockTicketKey:', blockTicketKey.substring(0, 20) + '...');
         
         // Call seatBooking to complete reservation
@@ -251,45 +312,20 @@ export default function Payment() {
           orderId: paymentResult.data?.order_id,
         });
         actions.setBookingData(bookingResult);
-        
-        if (isAuthenticated) {
-          try {
-            await createBooking({
-              busName: busData?.name || busData?.TravelName || 'Bus Service',
-              busType: busData?.type || busData?.BusType || 'Sleeper',
-              busNumber: busData?.busNumber || busData?.BusNumber || busData?.serviceId || '',
-              source: boardingPoint?.name || boardingPoint?.CityPointName || busData?.fromCity || '',
-              destination: droppingPoint?.name || droppingPoint?.CityPointName || busData?.toCity || '',
-              fromCity: busData?.fromCity || boardingPoint?.name || '',
-              toCity: busData?.toCity || droppingPoint?.name || '',
-              journeyDate: busData?.date || busData?.DepartureTime || new Date().toISOString(),
-              boardingPoint: boardingPoint?.name || boardingPoint?.CityPointName || '',
-              droppingPoint: droppingPoint?.name || droppingPoint?.CityPointName || '',
-              departureTime: boardingPoint?.time || boardingPoint?.Time || '',
-              arrivalTime: droppingPoint?.time || droppingPoint?.Time || '',
-              seats: seatNames,
-              selectedSeats: seatNames,
-              passengers: passengers.map(p => ({
-                name: p.name,
-                age: p.age,
-                gender: p.gender,
-                seatNumber: p.seatName || p.seatNumber
-              })),
-              baseFare: fareData?.baseFare || fareData?.totalFare || payableAmount,
-              serviceTax: fareData?.serviceTax || 0,
-              totalFare: payableAmount,
-              paymentId: paymentResult.data?.payment_id,
-              paymentStatus: 'completed',
-              paymentMethod: 'razorpay',
-              externalBookingId: bookingResult?.etsTicketNumber || bookingResult?.bookingId,
-              ticketNo: bookingResult?.etsTicketNumber || bookingResult?.ticketNo,
-              pnr: bookingResult?.opPNR || bookingResult?.travelOperatorPNR
-            });
-            console.log('Booking saved to database');
-          } catch (dbError) {
-            console.error('Failed to save booking to database:', dbError);
-          }
-        }
+
+        await persistBookingUpdate(updateBooking, bookingRecordId, {
+          status: 'confirmed',
+          paymentStatus: 'completed',
+          paymentId: paymentResult.data?.payment_id || '',
+          paymentOrderId: paymentResult.data?.order_id || '',
+          paymentMethod: paymentResult.data?.method || 'razorpay',
+          externalBookingId: bookingResult?.etsTicketNumber || bookingResult?.bookingId || '',
+          ticketNo: bookingResult?.etsTicketNumber || bookingResult?.ticketNo || '',
+          pnr: bookingResult?.opPNR || bookingResult?.travelOperatorPNR || '',
+          providerStatus: 'confirmed',
+          failureStage: '',
+          failureReason: '',
+        });
         
         const ticketData = {
           bookingId: bookingResult?.BookingID || bookingResult?.bookingId || `SAN${Date.now().toString().slice(-8)}`,
@@ -326,13 +362,23 @@ export default function Payment() {
       }
     } catch (error) {
       console.error("Payment/Booking error:", error);
+
+      if (bookingRecordId) {
+        await persistBookingUpdate(updateBooking, bookingRecordId, {
+          status: 'failed',
+          paymentStatus: paymentVerified ? 'completed' : 'failed',
+          providerStatus: paymentVerified ? 'booking_failed' : 'payment_failed',
+          failureStage: lifecycleStage,
+          failureReason: error.message || 'Booking failed',
+        });
+      }
       
       // Handle specific API errors
       if (error.message && error.message.includes('missing API')) {
         setBookingError('Booking session expired. Please select seats again and complete details to retry.');
         toast.error('Session expired. Starting fresh booking...');
         setTimeout(() => navigate('/', { replace: true }), 3000);
-      } else if (error.message === 'Payment cancelled by user') {
+      } else if (error.message === 'Payment cancelled' || error.message === 'Payment cancelled by user') {
         setBookingError(null);
       } else if (error.message && error.message.includes('Block ticket')) {
         setBookingError('Failed to reserve seats. Please try again.');

@@ -3,12 +3,12 @@
  * Handles user login, logout, profile, and token management
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
               setUser(null);
               setIsAuthenticated(false);
             }
-          } catch (verifyError) {
+          } catch {
             // Network error during verification - keep the cached state
             console.log('⚠️ Could not verify token (network error), using cached state');
           }
@@ -179,7 +179,7 @@ export function AuthProvider({ children }) {
   /**
    * Get user bookings
    */
-  const getBookings = async () => {
+  const getBookings = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/user/bookings`, {
         method: 'GET',
@@ -199,12 +199,35 @@ export function AuthProvider({ children }) {
       console.error('Get bookings error:', error);
       return { success: false, message: 'Network error', bookings: [] };
     }
-  };
+  }, [token]);
+
+  /**
+   * Ask the backend to compare provider tickets and captured payments, then
+   * return the refreshed MongoDB booking list.
+   */
+  const reconcileBookings = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/bookings/reconcile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      return data.success
+        ? { success: true, bookings: data.bookings || [], reconciliation: data.reconciliation }
+        : { success: false, message: data.message, bookings: [] };
+    } catch (error) {
+      console.error('Reconcile bookings error:', error);
+      return { success: false, message: 'Network error', bookings: [] };
+    }
+  }, [token]);
 
   /**
    * Create a new booking
    */
-  const createBooking = async (bookingData) => {
+  const createBooking = useCallback(async (bookingData) => {
     try {
       const response = await fetch(`${API_BASE_URL}/user/bookings`, {
         method: 'POST',
@@ -221,7 +244,29 @@ export function AuthProvider({ children }) {
       console.error('Create booking error:', error);
       return { success: false, message: 'Network error' };
     }
-  };
+  }, [token]);
+
+  /**
+   * Update a booking attempt as payment/provider state changes.
+   */
+  const updateBooking = useCallback(async (bookingId, updateData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/bookings/${bookingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Update booking error:', error);
+      return { success: false, message: 'Network error' };
+    }
+  }, [token]);
 
   /**
    * Logout user
@@ -243,7 +288,9 @@ export function AuthProvider({ children }) {
     updateProfile,
     getProfile,
     getBookings,
+    reconcileBookings,
     createBooking,
+    updateBooking,
     logout
   };
 
@@ -254,6 +301,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

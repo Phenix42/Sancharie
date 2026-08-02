@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Armchair,
+  AlertTriangle,
   ArrowRight,
   BusFront,
   CalendarDays,
@@ -29,6 +30,7 @@ import { useAuth } from '../context/AuthContext';
 import Header from './Header';
 import Footer from './Footer';
 import { generateTicketPDF } from '../utils/ticketGenerator';
+import { flushPendingBookingUpdates } from '../utils/bookingSync';
 import { bus, user as userApi } from '../services/api';
 import './MyBookings.css';
 
@@ -108,7 +110,7 @@ const getBookingSeats = (booking) => {
 };
 
 export default function MyBookings() {
-  const { isAuthenticated, getBookings, isLoading: authLoading, user } = useAuth();
+  const { isAuthenticated, getBookings, reconcileBookings, updateBooking, isLoading: authLoading, user } = useAuth();
   const navigate = useNavigate();
 
   const [bookings, setBookings] = useState([]);
@@ -126,20 +128,25 @@ export default function MyBookings() {
   const [cancellationDetails, setCancellationDetails] = useState(null);
   const [isLoadingCancellation, setIsLoadingCancellation] = useState(false);
 
-  const fetchBookings = useCallback(async () => {
-    setIsLoading(true);
+  const fetchBookings = useCallback(async (options = {}) => {
+    const silent = options?.silent === true;
+    if (!silent) setIsLoading(true);
     setError('');
 
-    const result = await getBookings();
+    await flushPendingBookingUpdates(updateBooking);
+    let result = options?.reconcile === true ? await reconcileBookings() : await getBookings();
+    if (!result.success && options?.reconcile === true) {
+      result = await getBookings();
+    }
 
     if (result.success) {
       setBookings(result.bookings || []);
-    } else {
+    } else if (!silent) {
       setError(result.message || 'Failed to load bookings');
     }
 
-    setIsLoading(false);
-  }, [getBookings]);
+    if (!silent) setIsLoading(false);
+  }, [getBookings, reconcileBookings, updateBooking]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -149,8 +156,28 @@ export default function MyBookings() {
       return;
     }
 
-    fetchBookings();
+    fetchBookings({ reconcile: true });
   }, [authLoading, fetchBookings, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (!isAuthenticated || authLoading) return undefined;
+
+    const refreshSavedBookings = () => {
+      if (document.visibilityState === 'visible') fetchBookings({ silent: true });
+    };
+    const reconcileVisibleDashboard = () => {
+      if (document.visibilityState === 'visible') fetchBookings({ silent: true, reconcile: true });
+    };
+    const intervalId = window.setInterval(refreshSavedBookings, 30000);
+
+    window.addEventListener('focus', reconcileVisibleDashboard);
+    document.addEventListener('visibilitychange', reconcileVisibleDashboard);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', reconcileVisibleDashboard);
+      document.removeEventListener('visibilitychange', reconcileVisibleDashboard);
+    };
+  }, [authLoading, fetchBookings, isAuthenticated]);
 
   useEffect(() => {
     if (!showCancelModal) return undefined;
@@ -190,6 +217,7 @@ export default function MyBookings() {
     return filtered.filter((booking) => [
       booking.bookingId,
       booking.pnr,
+      booking.ticketNo,
       booking.busName,
       booking.fromCity || booking.source,
       booking.toCity || booking.destination,
@@ -529,7 +557,7 @@ export default function MyBookings() {
                   const destination = booking.toCity || booking.destination || 'Destination';
                   const seats = getBookingSeats(booking);
                   const statusKey = String(booking.status || '').toLowerCase();
-                  const canManage = ['confirmed', 'pending'].includes(statusKey);
+                  const canManage = statusKey === 'confirmed';
 
                   return (
                     <article
@@ -580,7 +608,7 @@ export default function MyBookings() {
                             <span className="booking-operator-icon"><BusFront size={19} /></span>
                             <span>
                               <strong>{booking.busName || 'Bus operator'}</strong>
-                              <small>{booking.busType || 'Bus service'}</small>
+                              <small>{booking.busType || booking.serviceType || 'Travel service'}</small>
                             </span>
                           </div>
                           <div className="booking-card-facts">
@@ -626,6 +654,14 @@ export default function MyBookings() {
                                 <strong>{booking.pnr || booking.ticketNo || 'Not available'}</strong>
                               </div>
                             </div>
+                            <div className="booking-detail-item">
+                              <span className="detail-icon"><CheckCircle2 size={18} /></span>
+                              <div>
+                                <small>Provider status</small>
+                                <strong>{booking.providerStatus || 'Awaiting provider update'}</strong>
+                                {booking.lastReconciledAt && <small>Checked {formatDate(booking.lastReconciledAt)}</small>}
+                              </div>
+                            </div>
                           </div>
 
                           <div className="booking-passengers">
@@ -658,13 +694,42 @@ export default function MyBookings() {
                           <div className="booking-payment-row">
                             <div>
                               <span className="detail-icon"><IndianRupee size={18} /></span>
-                              <span><small>Payment</small><strong>{booking.paymentMethod || 'Online payment'}</strong></span>
+                              <span>
+                                <small>Payment</small>
+                                <strong>{booking.paymentStatus === 'completed' ? 'Payment completed' : booking.paymentStatus || 'Pending'}</strong>
+                              </span>
                             </div>
                             <div>
-                              <small>Total paid</small>
+                              <small>{booking.paymentStatus === 'completed' ? 'Total paid' : 'Booking amount'}</small>
                               <strong>{formatCurrency(booking.totalFare)}</strong>
                             </div>
                           </div>
+
+                          {booking.paymentIssue && (
+                            <div className="booking-payment-warning" role="status">
+                              <AlertTriangle size={19} />
+                              <div>
+                                <strong>{booking.paymentIssue === 'duplicate_payment' ? 'Duplicate payment detected' : 'Payment needs review'}</strong>
+                                <p>{booking.paymentNote || 'This payment requires manual review.'}</p>
+                                {booking.relatedPaymentIds?.length > 0 && (
+                                  <small>Payment references: {booking.relatedPaymentIds.join(', ')}</small>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {statusKey === 'failed' && (
+                            <div className="booking-failure-detail" role="status">
+                              <XCircle size={19} />
+                              <div>
+                                <strong>Booking attempt failed{booking.failureStage ? ` during ${booking.failureStage.replaceAll('_', ' ')}` : ''}</strong>
+                                <p>{booking.failureReason || 'The booking could not be completed. No ticket was issued.'}</p>
+                                {booking.paymentStatus === 'completed' && (
+                                  <small>Payment was completed. Please contact support before trying to pay again.</small>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                           {canManage && (
                             <div className="booking-actions">

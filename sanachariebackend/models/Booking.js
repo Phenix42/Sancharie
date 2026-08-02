@@ -1,6 +1,6 @@
 /**
  * Booking Model - MongoDB Schema
- * Stores bus booking information
+ * Stores the complete lifecycle of a travel booking attempt.
  */
 
 const mongoose = require('mongoose');
@@ -11,6 +11,22 @@ const passengerSchema = new mongoose.Schema({
   gender: { type: String, enum: ['male', 'female', 'other'], default: 'male' },
   seatNumber: { type: String, default: '' }
 });
+
+const statusHistorySchema = new mongoose.Schema({
+  status: {
+    type: String,
+    enum: ['confirmed', 'cancelled', 'pending', 'completed', 'failed'],
+    required: true
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'refunded'],
+    default: 'pending'
+  },
+  stage: { type: String, default: '' },
+  message: { type: String, default: '', maxlength: 500 },
+  createdAt: { type: Date, default: Date.now }
+}, { _id: false });
 
 const bookingSchema = new mongoose.Schema({
   // Reference to user
@@ -25,6 +41,23 @@ const bookingSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+
+  // A browser-generated idempotency key. It lets a retried request return the
+  // original attempt instead of adding a duplicate dashboard entry.
+  clientReference: {
+    type: String,
+    trim: true,
+    maxlength: 100
+  },
+  serviceType: {
+    type: String,
+    enum: ['bus', 'flight', 'hotel'],
+    default: 'bus'
+  },
+  // SHA-256 of the provider block/search reference. The raw supplier token is
+  // never persisted, but this hash lets reconciliation join provider reports,
+  // payments, and the original pending booking safely.
+  providerReferenceHash: { type: String, default: '', index: true },
   
   // Booking reference
   bookingId: {
@@ -81,6 +114,14 @@ const bookingSchema = new mongoose.Schema({
   
   // Payment details
   paymentId: { type: String, default: '' },
+  paymentOrderId: { type: String, default: '' },
+  relatedPaymentIds: { type: [String], default: [] },
+  paymentIssue: {
+    type: String,
+    enum: ['', 'duplicate_payment', 'amount_mismatch'],
+    default: ''
+  },
+  paymentNote: { type: String, default: '', maxlength: 500 },
   paymentStatus: {
     type: String,
     enum: ['pending', 'completed', 'failed', 'refunded'],
@@ -91,9 +132,20 @@ const bookingSchema = new mongoose.Schema({
   // Booking status
   status: {
     type: String,
-    enum: ['confirmed', 'cancelled', 'pending', 'completed'],
+    enum: ['confirmed', 'cancelled', 'pending', 'completed', 'failed'],
     default: 'pending'
   },
+
+  // Lifecycle diagnostics make partially-completed bookings visible and
+  // actionable without exposing provider secrets.
+  failureStage: { type: String, default: '' },
+  failureReason: { type: String, default: '', maxlength: 500 },
+  providerStatus: { type: String, default: '' },
+  reconciliationSource: { type: String, default: '' },
+  lastReconciledAt: { type: Date },
+  statusHistory: { type: [statusHistorySchema], default: [] },
+  confirmedAt: { type: Date },
+  failedAt: { type: Date },
   
   // Cancellation details
   cancellationReason: { type: String, default: '' },
@@ -113,5 +165,12 @@ bookingSchema.pre('save', async function() {
 // Index for efficient queries
 bookingSchema.index({ userId: 1, createdAt: -1 });
 bookingSchema.index({ userPhone: 1, createdAt: -1 });
+bookingSchema.index(
+  { userId: 1, clientReference: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { clientReference: { $exists: true } }
+  }
+);
 
 module.exports = mongoose.model('Booking', bookingSchema);
