@@ -12,6 +12,27 @@ const passengerSchema = new mongoose.Schema({
   seatNumber: { type: String, default: '' }
 });
 
+const selectedSeatDetailSchema = new mongoose.Schema({
+  seatNumber: { type: String, default: '', maxlength: 50 },
+  row: { type: Number, min: 0, max: 100, default: null },
+  column: { type: Number, min: 0, max: 100, default: null },
+  zIndex: { type: Number, enum: [0, 1], default: 0 }
+}, { _id: false });
+
+const seatLayoutItemSchema = new mongoose.Schema({
+  seatNumber: { type: String, required: true, maxlength: 50 },
+  row: { type: Number, min: 0, max: 100, required: true },
+  column: { type: Number, min: 0, max: 100, required: true },
+  zIndex: { type: Number, enum: [0, 1], default: 0 },
+  length: { type: Number, min: 1, max: 4, default: 1 },
+  width: { type: Number, min: 1, max: 4, default: 1 },
+  sleeper: { type: Boolean, default: false },
+  available: { type: Boolean, default: false },
+  ladiesSeat: { type: Boolean, default: false },
+  malesSeat: { type: Boolean, default: false },
+  reservedForSocialDistancing: { type: Boolean, default: false }
+}, { _id: false });
+
 const statusHistorySchema = new mongoose.Schema({
   status: {
     type: String,
@@ -101,6 +122,9 @@ const bookingSchema = new mongoose.Schema({
   // Seat details
   seats: [String],
   selectedSeats: [String],
+  seatDetails: { type: [selectedSeatDetailSchema], default: [] },
+  seatLayout: { type: [seatLayoutItemSchema], default: [] },
+  hasUpperDeck: { type: Boolean, default: false },
   passengers: [passengerSchema],
   
   // External booking reference

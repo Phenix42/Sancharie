@@ -54,6 +54,12 @@ const STATUS_DETAILS = {
     className: 'travelled',
     Icon: CheckCircle2,
   },
+  COMPLETED: {
+    label: 'Journey completed',
+    description: 'We hope you had a comfortable journey.',
+    className: 'travelled',
+    Icon: CheckCircle2,
+  },
   SERVICE_CANCELLED: {
     label: 'Service cancelled',
     description: 'The operator has cancelled this service.',
@@ -274,6 +280,8 @@ export default function BookingDetails() {
 
   const handleDownloadTicket = () => {
     if (!ticketDetails) return;
+    const ticketStatus = String(ticketDetails.ticketStatus || '').toUpperCase();
+    if (['CANCELLED', 'SERVICE_CANCELLED'].includes(ticketStatus)) return;
 
     generateTicketPDF({
       bookingId: ticketDetails.etsTicketNumber,
@@ -360,6 +368,9 @@ export default function BookingDetails() {
   const seatNumbers = travelers.map((traveler) => traveler.seatNo).filter(Boolean);
   const cancellationPolicy = parseCancellationPolicy(ticketDetails.cancellationPolicy);
   const isCancellable = normalizedStatus === 'CONFIRMED';
+  const isCancelled = ['CANCELLED', 'SERVICE_CANCELLED'].includes(normalizedStatus);
+  const isDownloadable = !isCancelled
+    && ['CONFIRMED', 'TRAVELLED', 'COMPLETED'].includes(normalizedStatus);
 
   const references = [
     { key: 'ticket', label: 'Ticket number', value: ticketDetails.etsTicketNumber },
@@ -608,16 +619,20 @@ export default function BookingDetails() {
                 </div>
               </section>
 
-              {isCancellable && (
+              {(isDownloadable || isCancellable) && (
                 <div className="action-buttons">
-                  <button className="download-btn" onClick={handleDownloadTicket} type="button">
-                    <Download size={18} />
-                    <span>Download ticket</span>
-                  </button>
-                  <button className="cancel-btn" onClick={openCancelModal} type="button">
-                    <XCircle size={18} />
-                    <span>Cancel booking</span>
-                  </button>
+                  {isDownloadable && (
+                    <button className="download-btn" onClick={handleDownloadTicket} type="button">
+                      <Download size={18} />
+                      <span>Download ticket</span>
+                    </button>
+                  )}
+                  {isCancellable && (
+                    <button className="cancel-btn" onClick={openCancelModal} type="button">
+                      <XCircle size={18} />
+                      <span>Cancel booking</span>
+                    </button>
+                  )}
                 </div>
               )}
 

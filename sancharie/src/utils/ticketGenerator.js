@@ -5,6 +5,7 @@
 
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
+import SancharieTicketLogoUrl from '../assets/logosan-ticket.jpg';
 
 const BRAND = {
   name: 'SANCHARIE',
@@ -32,6 +33,11 @@ const COLORS = {
 const safeString = (value, fallback = 'N/A') => {
   if (value === null || value === undefined || value === '') return fallback;
   return String(value).replace(/\s+/g, ' ').trim() || fallback;
+};
+
+const shortReference = (value, maxLength = 8) => {
+  const text = safeString(value, '');
+  return text.slice(0, maxLength);
 };
 
 const capitalize = (value) => {
@@ -137,14 +143,39 @@ const normalizePassengers = (passengers, seats) => {
   }));
 };
 
-const drawBrandMark = (doc, x, y, radius = 7) => {
-  doc.setDrawColor(...COLORS.goldLight);
-  doc.setLineWidth(1);
-  doc.circle(x, y, radius, 'S');
-  doc.setTextColor(...COLORS.goldLight);
-  doc.setFont('helvetica', 'bolditalic');
-  doc.setFontSize(radius * 1.7);
-  doc.text('S', x, y + radius * 0.55, { align: 'center' });
+let brandLogoPromise;
+
+const loadBrandLogo = async () => {
+  if (!brandLogoPromise) {
+    brandLogoPromise = fetch(SancharieTicketLogoUrl)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Logo request failed with status ${response.status}`);
+        return response.arrayBuffer();
+      })
+      .then((buffer) => new Uint8Array(buffer))
+      .catch((error) => {
+        console.warn('Sancharie ticket logo could not be loaded:', error);
+        return null;
+      });
+  }
+
+  return brandLogoPromise;
+};
+
+const drawBrandLogo = (doc, logoData, x, y, width = 14) => {
+  if (!logoData) return;
+
+  const height = width * (316 / 210);
+  doc.addImage(
+    logoData,
+    'JPEG',
+    x,
+    y,
+    width,
+    height,
+    'sancharie-ticket-logo',
+    'FAST',
+  );
 };
 
 const drawBusIcon = (doc, x, y, scale = 1) => {
@@ -185,6 +216,180 @@ const drawSeatIcon = (doc, x, y) => {
   doc.roundedRect(x + 4.5, y + 5.5, 4, 3, 0.8, 0.8, 'S');
   doc.line(x + 1, y + 7, x + 1, y + 10);
   doc.line(x + 8, y + 8, x + 8, y + 10);
+};
+
+const toSeatCoordinate = (value) => {
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) && coordinate >= 0 ? Math.floor(coordinate) : null;
+};
+
+const normalizeSeatPosition = (seat, index = 0) => {
+  const nested = seat?.fullData && typeof seat.fullData === 'object' ? seat.fullData : {};
+  const source = { ...nested, ...(seat && typeof seat === 'object' ? seat : {}) };
+  const name = safeString(
+    source.seatName || source.seatNumber || source.seatNbr || source.id || seat,
+    `Seat ${index + 1}`,
+  );
+  const explicitDeck = toSeatCoordinate(source.zIndex ?? source.deck);
+  const inferredDeck = /^UPPER[-\s]/i.test(name) ? 1 : 0;
+
+  return {
+    name,
+    row: toSeatCoordinate(source.row ?? source.rowNo),
+    column: toSeatCoordinate(source.column ?? source.columnNo),
+    length: Math.max(1, toSeatCoordinate(source.length) || 1),
+    width: Math.max(1, toSeatCoordinate(source.width) || 1),
+    deck: explicitDeck !== null
+      ? (explicitDeck === 1 ? 1 : 0)
+      : (source.isUpper === true ? 1 : inferredDeck),
+  };
+};
+
+const getFallbackSeatIndex = (seatName, fallbackIndex) => {
+  const numericPart = String(seatName || '').match(/\d+/)?.[0];
+  if (!numericPart) return fallbackIndex;
+  return Math.max(0, Number(numericPart) - 1);
+};
+
+const createFallbackDeck = (deck, selectedDetails) => {
+  const rows = 2;
+  const columns = 8;
+  const seats = Array.from({ length: rows * columns }, (_, index) => ({
+    name: '',
+    row: index % rows,
+    column: Math.floor(index / rows),
+    selected: false,
+  }));
+
+  selectedDetails.filter((seat) => seat.deck === deck).forEach((seat, index) => {
+    let row = seat.row === null ? null : Math.min(rows - 1, seat.row === 0 ? 0 : 1);
+    let column = seat.column === null ? null : Math.min(columns - 1, seat.column);
+
+    if (row === null || column === null) {
+      const fallbackSeatIndex = getFallbackSeatIndex(seat.name, index);
+      row = fallbackSeatIndex % rows;
+      column = Math.floor(fallbackSeatIndex / rows) % columns;
+    }
+
+    let slot = column * rows + row;
+    while (seats[slot]?.selected && slot < seats.length - 1) slot += 1;
+    seats[slot] = { ...seats[slot], name: seat.name, selected: true };
+  });
+
+  return { deck, rows, columns, seats };
+};
+
+const createActualDeck = (deck, details, selectedNames) => {
+  const deckSeats = details.filter((seat) => seat.deck === deck);
+  const normalizedSeats = deckSeats.map((seat, index) => ({
+    ...seat,
+    row: seat.row === null ? index % 2 : seat.row,
+    column: seat.column === null ? Math.floor(index / 2) : seat.column,
+    selected: selectedNames.has(seat.name.toLowerCase()),
+  }));
+  const rows = Math.max(1, ...normalizedSeats.map((seat) => seat.row + seat.width));
+  const columns = Math.max(1, ...normalizedSeats.map((seat) => seat.column + seat.length));
+
+  return {
+    deck,
+    rows,
+    columns,
+    seats: normalizedSeats,
+  };
+};
+
+const buildMiniSeatLayout = (seatNames, seatLayout, hasUpperDeck) => {
+  const rawSeatLayout = Array.isArray(seatLayout) ? seatLayout : [];
+  const selectedNames = new Set(seatNames.map((seat) => seat.toLowerCase()));
+  const layoutDetails = rawSeatLayout
+    .map(normalizeSeatPosition)
+    .filter((seat) => seat.name);
+  const hasStructuralMetadata = rawSeatLayout.some((seat) => seat && typeof seat === 'object' && (
+    'length' in seat || 'width' in seat || 'available' in seat || 'sleeper' in seat
+  ));
+  const isFullLayout = layoutDetails.some((seat) => seat.row !== null && seat.column !== null)
+    && (layoutDetails.length > seatNames.length || hasStructuralMetadata);
+
+  if (isFullLayout) {
+    const availableDecks = [...new Set(layoutDetails.map((seat) => seat.deck))].sort((a, b) => b - a);
+    return availableDecks.map((deck) => createActualDeck(deck, layoutDetails, selectedNames));
+  }
+
+  const detailsByName = new Map(layoutDetails.map((seat) => [seat.name.toLowerCase(), seat]));
+  const selectedDetails = seatNames.map((seatName, index) => (
+    detailsByName.get(seatName.toLowerCase()) || normalizeSeatPosition(seatName, index)
+  ));
+  const showUpperDeck = hasUpperDeck === true || selectedDetails.some((seat) => seat.deck === 1);
+  const decks = showUpperDeck ? [1, 0] : [0];
+  return decks.map((deck) => createFallbackDeck(deck, selectedDetails));
+};
+
+const drawMiniSeatLayout = (doc, seatNames, seatLayout, hasUpperDeck) => {
+  if (seatNames.length === 0) {
+    doc.setTextColor(...COLORS.muted);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text('Seat details will be confirmed by the operator.', 20, 204);
+    return;
+  }
+
+  const decks = buildMiniSeatLayout(seatNames, seatLayout, hasUpperDeck);
+  const top = 197;
+  const bottom = 213.5;
+  const deckGap = decks.length > 1 ? 1.1 : 0;
+  const deckHeight = (bottom - top - deckGap * (decks.length - 1)) / decks.length;
+  const gridX = 43;
+  const gridWidth = 149;
+
+  decks.forEach((deck, deckIndex) => {
+    const deckTop = top + deckIndex * (deckHeight + deckGap);
+    const rowGap = 0.55;
+    const columnGap = 0.9;
+    const cellWidth = Math.min(14, (gridWidth - columnGap * (deck.columns - 1)) / deck.columns);
+    const cellHeight = Math.min(3.8, (deckHeight - rowGap * (deck.rows - 1)) / deck.rows);
+    const renderedWidth = cellWidth * deck.columns + columnGap * (deck.columns - 1);
+    const renderedHeight = cellHeight * deck.rows + rowGap * (deck.rows - 1);
+    const startX = gridX + Math.max(0, (gridWidth - renderedWidth) / 2);
+    const startY = deckTop + Math.max(0, (deckHeight - renderedHeight) / 2);
+
+    doc.setTextColor(...COLORS.muted);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.7);
+    doc.text(deck.deck === 1 ? 'UPPER DECK' : 'LOWER DECK', 20, deckTop + deckHeight / 2 + 1);
+
+    deck.seats.forEach((seat) => {
+      const x = startX + seat.column * (cellWidth + columnGap);
+      const y = startY + seat.row * (cellHeight + rowGap);
+      const seatWidth = cellWidth * (seat.length || 1) + columnGap * ((seat.length || 1) - 1);
+      const seatHeight = cellHeight * (seat.width || 1) + rowGap * ((seat.width || 1) - 1);
+      doc.setLineWidth(seat.selected ? 0.45 : 0.25);
+      doc.setDrawColor(...(seat.selected ? COLORS.gold : COLORS.goldLight));
+      doc.setFillColor(...(seat.selected ? COLORS.gold : COLORS.paper));
+      doc.roundedRect(x, y, seatWidth, seatHeight, 0.7, 0.7, 'FD');
+
+      if (seatHeight >= 2.4) {
+        doc.setDrawColor(...(seat.selected ? COLORS.white : COLORS.goldSoft));
+        doc.setLineWidth(0.22);
+        doc.line(x + 1.1, y + 0.7, x + 1.1, y + seatHeight - 0.7);
+      }
+
+      if (seat.selected && seatHeight >= 2.6) {
+        doc.setTextColor(...COLORS.white);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(Math.min(6.5, seatHeight * 1.55));
+        doc.text(truncateText(doc, seat.name, Math.max(4, seatWidth - 2)), x + seatWidth / 2, y + seatHeight * 0.68, {
+          align: 'center',
+        });
+      }
+    });
+
+    if (deckIndex < decks.length - 1) {
+      doc.setDrawColor(...COLORS.goldSoft);
+      doc.setLineDashPattern([1, 1], 0);
+      doc.line(20, deckTop + deckHeight + deckGap / 2, 192, deckTop + deckHeight + deckGap / 2);
+      doc.setLineDashPattern([], 0);
+    }
+  });
 };
 
 const drawDashedLine = (doc, x1, y, x2) => {
@@ -283,6 +488,7 @@ const drawManifestPage = (doc, data) => {
     droppingPoint,
     contactPhone,
     contactEmail,
+    brandLogo,
   } = data;
 
   doc.addPage('a4', 'portrait');
@@ -295,7 +501,7 @@ const drawManifestPage = (doc, data) => {
 
   doc.setFillColor(...COLORS.navy);
   doc.roundedRect(8, 8, 194, 46, 7, 7, 'F');
-  drawBrandMark(doc, 23, 25, 7);
+  drawBrandLogo(doc, brandLogo, 16, 13, 14);
   doc.setTextColor(...COLORS.white);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
@@ -309,7 +515,7 @@ const drawManifestPage = (doc, data) => {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text(`${formatDate(journeyDate)} | ${formatTime(departureTime)}`, 192, 31, { align: 'right' });
-  doc.text(`Ticket: ${safeString(reference)}${pnr ? ` | PNR: ${safeString(pnr)}` : ''}`, 192, 40, { align: 'right' });
+  doc.text(`Ticket: ${safeString(reference)}${pnr ? ` | PNR: ${shortReference(pnr)}` : ''}`, 192, 40, { align: 'right' });
 
   doc.setTextColor(...COLORS.gold);
   doc.setFont('helvetica', 'bold');
@@ -378,6 +584,7 @@ export const createTicketPDF = async (ticketData) => {
     paymentId = '',
     contactPhone = '',
     contactEmail = '',
+    hasUpperDeck = false,
   } = ticketData || {};
 
   const reference = safeString(ticketNo || bookingId);
@@ -386,9 +593,10 @@ export const createTicketPDF = async (ticketData) => {
   const passengerCount = passengerRows.length || seatNames.length;
   const boardingText = getPointText(boardingPoint);
   const droppingText = getPointText(droppingPoint);
-  const serviceText = safeString(serviceNo || vehicleNo, '-');
+  const serviceText = shortReference(serviceNo || vehicleNo) || '-';
   const normalizedStatus = safeString(status, 'CONFIRMED').toUpperCase();
   const isCancelled = normalizedStatus.includes('CANCEL');
+  const brandLogo = await loadBrandLogo();
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -403,7 +611,7 @@ export const createTicketPDF = async (ticketData) => {
   doc.setFillColor(...COLORS.navy);
   doc.roundedRect(8, 8, 194, 79, 7, 7, 'F');
   drawSkyline(doc, 82);
-  drawBrandMark(doc, 23, 24, 7);
+  drawBrandLogo(doc, brandLogo, 16, 12, 14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.white);
   doc.setFontSize(17);
@@ -523,11 +731,11 @@ export const createTicketPDF = async (ticketData) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.5);
   doc.text(`TICKET ${truncateText(doc, reference, 42)}`, 169.5, 163, { align: 'center' });
-  if (pnr) doc.text(`PNR ${truncateText(doc, pnr, 42)}`, 169.5, 168, { align: 'center' });
+  if (pnr) doc.text(`PNR ${shortReference(pnr)}`, 169.5, 168, { align: 'center' });
 
   drawDashedLine(doc, 16, 174, 194);
 
-  // Confirmed seat allocation. Deck information is shown when the live layout supplied it.
+  // Compact bus map with the traveller's chosen seat highlighted in gold.
   drawSeatIcon(doc, 20, 181);
   doc.setTextColor(...COLORS.gold);
   doc.setFont('helvetica', 'bold');
@@ -536,37 +744,8 @@ export const createTicketPDF = async (ticketData) => {
   doc.setTextColor(...COLORS.muted);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
-  doc.text('Present this ticket and a valid photo ID when boarding.', 33, 193);
-
-  const seatDetails = Array.isArray(seatLayout) ? seatLayout : [];
-  const seatsPerRow = 8;
-  seatNames.slice(0, 16).forEach((seat, index) => {
-    const row = Math.floor(index / seatsPerRow);
-    const column = index % seatsPerRow;
-    const x = 20 + column * 21.5;
-    const y = 198 + row * 9;
-    const detail = seatDetails.find((item) => (
-      String(item?.seatName || item?.seatNumber || item?.id || '') === seat
-    ));
-    doc.setFillColor(...COLORS.gold);
-    doc.setDrawColor(...COLORS.gold);
-    doc.roundedRect(x, y, 17, 8, 1.5, 1.5, 'FD');
-    doc.setTextColor(...COLORS.white);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text(truncateText(doc, seat, 13), x + 8.5, y + 5.3, { align: 'center' });
-    if (detail && (detail.zIndex === 0 || detail.zIndex === 1)) {
-      doc.setTextColor(...COLORS.white);
-      doc.setFontSize(4.5);
-      doc.text(detail.zIndex === 1 ? 'U' : 'L', x + 14.5, y + 2.5, { align: 'center' });
-    }
-  });
-  if (seatNames.length === 0) {
-    doc.setTextColor(...COLORS.muted);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text('Seat details will be confirmed by the operator.', 20, 204);
-  }
+  doc.text('Your selected seat is highlighted in gold.', 33, 193);
+  drawMiniSeatLayout(doc, seatNames, seatLayout, hasUpperDeck || /sleeper/i.test(busType));
 
   drawDashedLine(doc, 16, 216, 194);
   doc.setTextColor(...COLORS.gold);
@@ -623,6 +802,7 @@ export const createTicketPDF = async (ticketData) => {
       droppingPoint: droppingText,
       contactPhone,
       contactEmail,
+      brandLogo,
     });
   }
 

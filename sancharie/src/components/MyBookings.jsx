@@ -43,6 +43,9 @@ const TAB_STATUSES = {
   Cancelled: ['cancelled'],
 };
 
+const DOWNLOADABLE_STATUSES = ['confirmed', 'completed'];
+const CANCELLED_STATUSES = ['cancelled', 'service_cancelled', 'service cancelled'];
+
 const STATUS_META = {
   confirmed: { label: 'Confirmed', className: 'confirmed' },
   pending: { label: 'Pending', className: 'pending' },
@@ -350,6 +353,10 @@ export default function MyBookings() {
   };
 
   const downloadTicket = (booking) => {
+    const bookingStatus = String(booking.status || '').toLowerCase();
+    const providerStatus = String(booking.providerStatus || '').toLowerCase();
+    if (CANCELLED_STATUSES.includes(bookingStatus) || CANCELLED_STATUSES.includes(providerStatus)) return;
+
     generateTicketPDF({
       bookingId: booking.bookingId,
       ticketNo: booking.ticketNo || booking.externalBookingId,
@@ -366,6 +373,8 @@ export default function MyBookings() {
       departureTime: booking.departureTime,
       arrivalTime: booking.arrivalTime,
       seats: getBookingSeats(booking),
+      seatLayout: booking.seatLayout?.length ? booking.seatLayout : booking.seatDetails,
+      hasUpperDeck: booking.hasUpperDeck,
       passengers: booking.passengers,
       totalFare: booking.totalFare,
       paymentId: booking.paymentId,
@@ -557,7 +566,11 @@ export default function MyBookings() {
                   const destination = booking.toCity || booking.destination || 'Destination';
                   const seats = getBookingSeats(booking);
                   const statusKey = String(booking.status || '').toLowerCase();
-                  const canManage = statusKey === 'confirmed';
+                  const providerStatusKey = String(booking.providerStatus || '').toLowerCase();
+                  const isCancelled = CANCELLED_STATUSES.includes(statusKey)
+                    || CANCELLED_STATUSES.includes(providerStatusKey);
+                  const canDownload = !isCancelled && DOWNLOADABLE_STATUSES.includes(statusKey);
+                  const canCancel = !isCancelled && statusKey === 'confirmed';
 
                   return (
                     <article
@@ -731,16 +744,18 @@ export default function MyBookings() {
                             </div>
                           )}
 
-                          {canManage && (
+                          {(canDownload || canCancel) && (
                             <div className="booking-actions">
-                              {statusKey === 'confirmed' && (
+                              {canDownload && (
                                 <button type="button" className="download-ticket-btn" onClick={() => downloadTicket(booking)}>
                                   <Download size={17} /> Download ticket
                                 </button>
                               )}
-                              <button type="button" className="cancel-ticket-btn" onClick={() => openCancelModal(booking)}>
-                                <XCircle size={17} /> Cancel ticket
-                              </button>
+                              {canCancel && (
+                                <button type="button" className="cancel-ticket-btn" onClick={() => openCancelModal(booking)}>
+                                  <XCircle size={17} /> Cancel ticket
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>

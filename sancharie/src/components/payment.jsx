@@ -34,6 +34,38 @@ import { generateTicketPDF } from "../utils/ticketGenerator";
 import { createBookingReference, persistBookingUpdate } from "../utils/bookingSync";
 import { useToast } from "./Toast";
 
+const toSeatCoordinate = (value) => {
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) && coordinate >= 0 ? Math.floor(coordinate) : null;
+};
+
+const getSelectedSeatDetails = (selectedSeats = []) => selectedSeats.map((seat, index) => {
+  const fullData = seat?.fullData && typeof seat.fullData === 'object' ? seat.fullData : {};
+  return {
+    seatNumber: String(seat?.seatName || seat?.seatNumber || fullData.id || `Seat ${index + 1}`),
+    row: toSeatCoordinate(seat?.row ?? seat?.rowNo ?? fullData.row),
+    column: toSeatCoordinate(seat?.column ?? seat?.columnNo ?? fullData.column),
+    zIndex: toSeatCoordinate(seat?.zIndex ?? fullData.zIndex) === 1 ? 1 : 0,
+  };
+});
+
+const getPersistedSeatLayout = (seatLayout = []) => (Array.isArray(seatLayout) ? seatLayout : [])
+  .slice(0, 120)
+  .map((seat, index) => ({
+    seatNumber: String(seat?.id || seat?.seatName || seat?.seatNumber || `Seat ${index + 1}`),
+    row: toSeatCoordinate(seat?.row ?? seat?.rowNo),
+    column: toSeatCoordinate(seat?.column ?? seat?.columnNo),
+    zIndex: toSeatCoordinate(seat?.zIndex) === 1 ? 1 : 0,
+    length: Math.max(1, toSeatCoordinate(seat?.length) || 1),
+    width: Math.max(1, toSeatCoordinate(seat?.width) || 1),
+    sleeper: seat?.sleeper === true,
+    available: seat?.available === true,
+    ladiesSeat: seat?.ladiesSeat === true,
+    malesSeat: seat?.malesSeat === true,
+    reservedForSocialDistancing: seat?.reservedForSocialDistancing === true,
+  }))
+  .filter((seat) => seat.seatNumber && seat.row !== null && seat.column !== null);
+
 export default function Payment() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -45,7 +77,7 @@ export default function Payment() {
   const { sessionExpired } = bookingState;
 
   // Get data from navigation state
-  const { fareData, selectedSeats, boardingPoint, droppingPoint, bus: busData, passengers, contactDetails, assurance, blockSeatData } = location.state || {};
+  const { fareData, seatLayout, selectedSeats, boardingPoint, droppingPoint, bus: busData, passengers, contactDetails, assurance, blockSeatData } = location.state || {};
   
   // Get city names from booking context search params
   const fromCity = bookingState?.searchParams?.from || busData?.source || 'Origin';
@@ -154,6 +186,11 @@ export default function Payment() {
   };
   
   const seatNames = getSeatNames();
+  const selectedSeatDetails = getSelectedSeatDetails(selectedSeats);
+  const persistedSeatLayout = getPersistedSeatLayout(seatLayout);
+  const hasUpperDeck = Array.isArray(seatLayout)
+    ? seatLayout.some((seat) => Number(seat?.zIndex) === 1)
+    : selectedSeatDetails.some((seat) => seat.zIndex === 1);
   const assuranceTotal = assurance === 'yes' ? 24 * selectedSeats.length : 0;
   const displayGrandTotal = (fareData?.totalFare || 0) + assuranceTotal;
   const grandTotal = Number(serverRequiredAmount || blockSeatData?.requiredAmount || displayGrandTotal);
@@ -221,6 +258,9 @@ export default function Payment() {
         arrivalTime: droppingPoint?.time || droppingPoint?.Time || '',
         seats: seatNames,
         selectedSeats: seatNames,
+        seatDetails: selectedSeatDetails,
+        seatLayout: persistedSeatLayout,
+        hasUpperDeck,
         passengers: passengers.map((passenger) => ({
           name: passenger.name,
           age: passenger.age,
@@ -343,7 +383,8 @@ export default function Payment() {
           departureTime: boardingPoint?.time || boardingPoint?.Time,
           arrivalTime: droppingPoint?.time || droppingPoint?.Time,
           seats: seatNames,
-          seatLayout: selectedSeats,
+          seatLayout: Array.isArray(seatLayout) && seatLayout.length ? seatLayout : selectedSeatDetails,
+          hasUpperDeck,
           passengers: passengers,
           totalFare: payableAmount,
           paymentId: paymentResult.data?.payment_id,
@@ -555,7 +596,8 @@ export default function Payment() {
                 departureTime: boardingPoint?.time || boardingPoint?.Time,
                 arrivalTime: droppingPoint?.time || droppingPoint?.Time,
                 seats: seatNames,
-                seatLayout: selectedSeats,
+                seatLayout: Array.isArray(seatLayout) && seatLayout.length ? seatLayout : selectedSeatDetails,
+                hasUpperDeck,
                 passengers: passengers,
                 totalFare: grandTotal,
                 paymentId: paymentId,

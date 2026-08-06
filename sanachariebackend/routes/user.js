@@ -21,6 +21,47 @@ const SERVICE_TYPES = ['bus', 'flight', 'hotel'];
 
 const cleanText = (value, maxLength = 500) => String(value || '').trim().slice(0, maxLength);
 
+const cleanSeatCoordinate = (value) => {
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) && coordinate >= 0
+    ? Math.min(100, Math.floor(coordinate))
+    : null;
+};
+
+const sanitizeSeatDetails = (seatDetails) => (Array.isArray(seatDetails) ? seatDetails : [])
+  .slice(0, 16)
+  .map((seat) => ({
+    seatNumber: cleanText(seat?.seatNumber || seat?.seatName || seat?.id, 50),
+    row: cleanSeatCoordinate(seat?.row ?? seat?.rowNo),
+    column: cleanSeatCoordinate(seat?.column ?? seat?.columnNo),
+    zIndex: Number(seat?.zIndex) === 1 ? 1 : 0,
+  }))
+  .filter((seat) => seat.seatNumber);
+
+const cleanSeatSpan = (value) => {
+  const span = Number(value);
+  return Number.isFinite(span) && span >= 1
+    ? Math.min(4, Math.floor(span))
+    : 1;
+};
+
+const sanitizeSeatLayout = (seatLayout) => (Array.isArray(seatLayout) ? seatLayout : [])
+  .slice(0, 120)
+  .map((seat) => ({
+    seatNumber: cleanText(seat?.seatNumber || seat?.seatName || seat?.id, 50),
+    row: cleanSeatCoordinate(seat?.row ?? seat?.rowNo),
+    column: cleanSeatCoordinate(seat?.column ?? seat?.columnNo),
+    zIndex: Number(seat?.zIndex) === 1 ? 1 : 0,
+    length: cleanSeatSpan(seat?.length),
+    width: cleanSeatSpan(seat?.width),
+    sleeper: seat?.sleeper === true,
+    available: seat?.available === true,
+    ladiesSeat: seat?.ladiesSeat === true,
+    malesSeat: seat?.malesSeat === true,
+    reservedForSocialDistancing: seat?.reservedForSocialDistancing === true,
+  }))
+  .filter((seat) => seat.seatNumber && seat.row !== null && seat.column !== null);
+
 const parseJourneyDate = (value) => {
   const text = cleanText(value, 100);
   const dayFirstMatch = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:\D|$)/);
@@ -59,6 +100,9 @@ const serializeBooking = (booking) => ({
   droppingPoint: booking.droppingPoint,
   seats: booking.seats,
   selectedSeats: booking.selectedSeats?.length ? booking.selectedSeats : booking.seats,
+  seatDetails: booking.seatDetails || [],
+  seatLayout: booking.seatLayout || [],
+  hasUpperDeck: booking.hasUpperDeck === true,
   passengers: booking.passengers,
   baseFare: booking.baseFare,
   serviceTax: booking.serviceTax,
@@ -328,7 +372,7 @@ router.post('/bookings', authenticateToken, async (req, res) => {
       source, destination, fromCity, toCity,
       journeyDate, departureTime, arrivalTime,
       boardingPoint, droppingPoint,
-      seats, selectedSeats, passengers,
+      seats, selectedSeats, seatDetails, seatLayout, hasUpperDeck, passengers,
       baseFare, serviceTax, totalFare,
       paymentId, paymentOrderId, paymentStatus, paymentMethod,
       externalBookingId, ticketNo, pnr,
@@ -376,6 +420,8 @@ router.post('/bookings', authenticateToken, async (req, res) => {
     const normalizedPaymentStatus = PAYMENT_STATUSES.includes(String(paymentStatus).toLowerCase())
       ? String(paymentStatus).toLowerCase()
       : 'completed';
+    const normalizedSeatDetails = sanitizeSeatDetails(seatDetails);
+    const normalizedSeatLayout = sanitizeSeatLayout(seatLayout);
     const requestedServiceType = String(serviceType || type || 'bus').toLowerCase();
     const normalizedServiceType = SERVICE_TYPES.includes(requestedServiceType)
       ? requestedServiceType
@@ -401,6 +447,11 @@ router.post('/bookings', authenticateToken, async (req, res) => {
       droppingPoint,
       seats: seats || selectedSeats,
       selectedSeats: selectedSeats || seats,
+      seatDetails: normalizedSeatDetails,
+      seatLayout: normalizedSeatLayout,
+      hasUpperDeck: hasUpperDeck === true ||
+        normalizedSeatLayout.some((seat) => seat.zIndex === 1) ||
+        normalizedSeatDetails.some((seat) => seat.zIndex === 1),
       passengers,
       baseFare: parsedBaseFare,
       serviceTax: Number(serviceTax) || 0,

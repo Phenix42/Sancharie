@@ -62,3 +62,24 @@ test('duplicate payment diagnostics are valid booking details', () => {
   assert.equal(booking.relatedPaymentIds.length, 2);
   assert.equal(booking.paymentIssue, 'duplicate_payment');
 });
+
+test('selected seat coordinates can be saved for ticket mini layouts', () => {
+  const booking = makeBooking({
+    seats: ['U7'],
+    selectedSeats: ['U7'],
+    seatDetails: [{ seatNumber: 'U7', row: 0, column: 3, zIndex: 0 }],
+    seatLayout: [
+      { seatNumber: 'L1', row: 0, column: 0, zIndex: 0, length: 1, width: 1 },
+      { seatNumber: 'U7', row: 0, column: 3, zIndex: 0, length: 2, width: 1, sleeper: true },
+      { seatNumber: 'UP1', row: 1, column: 0, zIndex: 1, length: 2, width: 1, sleeper: true },
+    ],
+    hasUpperDeck: true,
+  });
+
+  assert.equal(booking.validateSync(), undefined);
+  assert.equal(booking.seatDetails[0].seatNumber, 'U7');
+  assert.equal(booking.seatDetails[0].column, 3);
+  assert.equal(booking.seatLayout[1].length, 2);
+  assert.equal(booking.seatLayout[2].zIndex, 1);
+  assert.equal(booking.hasUpperDeck, true);
+});

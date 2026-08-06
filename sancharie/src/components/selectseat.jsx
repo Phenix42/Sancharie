@@ -418,6 +418,7 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
     navigate('/booking-details', {
       state: {
         fareData: fare,
+        seatLayout,
         selectedSeats: selectedSeats.map(s => ({
           seatName: s.seatName,
           price: s.price,

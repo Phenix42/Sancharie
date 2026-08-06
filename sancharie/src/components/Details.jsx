@@ -33,7 +33,7 @@ export default function Details() {
   
   // Get data from navigation state
   const stateData = location.state || {};
-  const { fareData, selectedSeats, boardingPoint, droppingPoint, bus } = stateData;
+  const { fareData, seatLayout, selectedSeats, boardingPoint, droppingPoint, bus } = stateData;
   
   // Loading state for block seat
   const [isBlocking, setIsBlocking] = useState(false);
@@ -286,6 +286,7 @@ export default function Details() {
       navigate('/payment', {
         state: {
           fareData,
+          seatLayout,
           selectedSeats,
           boardingPoint,
           droppingPoint,
