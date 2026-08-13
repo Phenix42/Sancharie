@@ -3,8 +3,14 @@ import './Hero.css'
 import bgImage from '../assets/bgimage2.webp'
 import mobileBgImage from '../assets/mobilebg.webp'
 import { BadgeCheck, IndianRupee, TicketCheck } from 'lucide-react'
+import August15Hero from '../themes/August15Hero'
+import { THEME_FLAGS } from '../themes/themeConfig'
 
 function Hero() {
+  if (THEME_FLAGS.AUGUST_15) {
+    return <August15Hero />
+  }
+
   return (
     <section className="hero">
       <div className="hero-background">

@@ -21,6 +21,7 @@ import MobileBottomNav from "./components/MobileBottomNav";
 import FlightBooking from "./components/FlightBooking";
 import FlightHome from "./components/FlightHome";
 import HotelHome from "./components/HotelHome";
+import { THEME_FLAGS } from "./themes/themeConfig";
 
 const getInitialTravelMode = () => {
   const mode = new URLSearchParams(window.location.search).get('mode');
@@ -61,7 +62,7 @@ function App() {
 
   return (
     <ToastProvider>
-      <div className="app">
+      <div className={`app ${THEME_FLAGS.AUGUST_15 ? 'theme-august-15' : ''}`}>
         <Routes>
         <Route path="/privacy-policy" element={
           <>

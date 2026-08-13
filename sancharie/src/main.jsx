@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { BookingProvider } from './context/BookingContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
+import './themes/August15Theme.css'
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
