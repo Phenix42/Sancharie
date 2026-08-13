@@ -14,6 +14,40 @@ const posterParticles = [
   { x: '94%', y: '34%', size: 2, delay: '-9s', duration: '11s' },
 ];
 
+function AshokaChakra() {
+  return (
+    <svg className="ashoka-chakra-icon" viewBox="0 0 28 28" aria-hidden="true">
+      <circle cx="14" cy="14" r="11.4" />
+      {Array.from({ length: 12 }, (_, index) => {
+        const angle = (index * 15 * Math.PI) / 180;
+        const x = Math.cos(angle) * 10.2;
+        const y = Math.sin(angle) * 10.2;
+
+        return (
+          <line
+            key={index}
+            x1={14 - x}
+            y1={14 - y}
+            x2={14 + x}
+            y2={14 + y}
+          />
+        );
+      })}
+      <circle className="ashoka-chakra-hub" cx="14" cy="14" r="1.7" />
+    </svg>
+  );
+}
+
+function IndianFlag({ className = '' }) {
+  return (
+    <span className={`indian-flag ${className}`.trim()} aria-hidden="true">
+      <i className="flag-saffron" />
+      <i className="flag-white"><AshokaChakra /></i>
+      <i className="flag-green" />
+    </span>
+  );
+}
+
 function August15Hero() {
   return (
     <section className="hero august15-hero">
@@ -84,20 +118,14 @@ function August15Hero() {
 
         <div className="august15-floating-flags">
           {['one', 'two', 'three'].map((flag) => (
-            <span className={`august15-floating-flag flag-${flag}`} key={flag}>
-              <i className="flag-saffron" />
-              <i className="flag-white"><b /></i>
-              <i className="flag-green" />
-            </span>
+            <IndianFlag className={`august15-floating-flag flag-${flag}`} key={flag} />
           ))}
         </div>
       </div>
 
       <div className="hero-content">
         <div className="hero-kicker august15-kicker">
-          <span className="india-flag-dot" aria-hidden="true">
-            <i /><i /><i />
-          </span>
+          <IndianFlag className="india-flag-dot" />
           स्वतंत्रता · Celebrating India
         </div>
 

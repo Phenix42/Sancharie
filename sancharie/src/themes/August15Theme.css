@@ -367,12 +367,10 @@
 }
 .august15-floating-flag .flag-green { background: linear-gradient(90deg, #08742d, #25a444); }
 
-.august15-floating-flag b {
-  width: 8px;
-  height: 8px;
-  border: 1px solid #1a4f9c;
-  border-radius: 50%;
-  background: repeating-conic-gradient(#1a4f9c 0 2deg, transparent 2deg 15deg);
+.august15-floating-flag .ashoka-chakra-icon {
+  width: 9px;
+  height: 9px;
+  stroke-width: 1.3;
 }
 
 .august15-floating-flag.flag-one {
@@ -408,19 +406,59 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 30px rgba(0, 20, 38, 0.12);
 }
 
+.indian-flag {
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.indian-flag .flag-saffron {
+  background: #ff9933;
+}
+
+.indian-flag .flag-white {
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+}
+
+.indian-flag .flag-green {
+  background: #138808;
+}
+
+.ashoka-chakra-icon {
+  display: block;
+  width: 9px;
+  height: 9px;
+  overflow: visible;
+  fill: none;
+  stroke: #000080;
+  stroke-width: 1.15;
+  stroke-linecap: round;
+}
+
+.ashoka-chakra-icon .ashoka-chakra-hub {
+  fill: #000080;
+  stroke: none;
+}
+
 .india-flag-dot {
   display: grid;
-  width: 22px;
-  height: 15px;
+  width: 30px;
+  height: 20px;
   grid-template-rows: repeat(3, 1fr);
   overflow: hidden;
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2), 0 4px 10px rgba(0, 0, 0, 0.18);
 }
 
-.india-flag-dot i:nth-child(1) { background: #ff9933; }
-.india-flag-dot i:nth-child(2) { background: #ffffff; }
-.india-flag-dot i:nth-child(3) { background: #138808; }
+.india-flag-dot .ashoka-chakra-icon {
+  width: 7.5px;
+  height: 7.5px;
+  stroke-width: 1.35;
+}
 
 .august15-title {
   max-width: 760px;
