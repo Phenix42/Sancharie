@@ -38,6 +38,9 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  accountActive: { type: Boolean, default: true, index: true },
+  referralCode: { type: String, unique: true, sparse: true, uppercase: true, trim: true, minlength: 6, maxlength: 20 },
+  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
   
   // Timestamps
   createdAt: {

@@ -2,6 +2,7 @@ import { createElement, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
+  Bell,
   CalendarDays,
   Cake,
   Check,
@@ -21,6 +22,14 @@ import Header from './Header';
 import Footer from './Footer';
 import './Profile.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+const decodeVapidKey = (key) => {
+  const padded = `${key}${'='.repeat((4 - key.length % 4) % 4)}`.replace(/-/g, '+').replace(/_/g, '/');
+  const raw = window.atob(padded);
+  return Uint8Array.from(raw, (character) => character.charCodeAt(0));
+};
+
 const getProfileForm = (user) => ({
   name: user?.name || '',
   email: user?.email || '',
@@ -29,17 +38,92 @@ const getProfileForm = (user) => ({
 });
 
 export default function Profile() {
-  const { user, updateProfile, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, token, updateProfile, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState(getProfileForm());
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMessage, setPushMessage] = useState('');
+  const [referral, setReferral] = useState(null);
+  const [referralMessage, setReferralMessage] = useState('');
+  const supportsPush = typeof window !== 'undefined' && window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) navigate('/');
   }, [isAuthenticated, authLoading, navigate]);
+
+  useEffect(() => {
+    if (!supportsPush) return;
+    navigator.serviceWorker.ready.then(async (registration) => {
+      setPushEnabled(Boolean(await registration.pushManager.getSubscription()));
+    }).catch(() => {});
+  }, [supportsPush]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API_BASE_URL}/user/referrals/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (response.ok && payload.success) setReferral(payload);
+      })
+      .catch(() => {});
+  }, [token]);
+
+  const togglePushNotifications = async () => {
+    setPushBusy(true);
+    setPushMessage('');
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const current = await registration.pushManager.getSubscription();
+      if (current) {
+        const removed = await fetch(`${API_BASE_URL}/user/push/subscriptions`, {
+          method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ endpoint: current.endpoint }),
+        });
+        if (!removed.ok) throw new Error((await removed.json()).message || 'Could not update notification settings');
+        await current.unsubscribe();
+        setPushEnabled(false);
+        setPushMessage('Notifications turned off for this device.');
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') throw new Error('Allow notifications in your browser to turn them on.');
+      const keyResponse = await fetch(`${API_BASE_URL}/user/push/public-key`);
+      const keyData = await keyResponse.json();
+      if (!keyResponse.ok || !keyData.publicKey) throw new Error(keyData.message || 'Notifications are not available right now.');
+      const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decodeVapidKey(keyData.publicKey) });
+      const saved = await fetch(`${API_BASE_URL}/user/push/subscriptions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ subscription }),
+      });
+      if (!saved.ok) {
+        await subscription.unsubscribe();
+        throw new Error((await saved.json()).message || 'Could not save notification settings');
+      }
+      setPushEnabled(true);
+      setPushMessage('Notifications enabled on this device.');
+    } catch (pushError) {
+      setPushMessage(pushError.message || 'Could not update notification settings.');
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  const shareReferralLink = async () => {
+    if (!referral?.code) return;
+    const shareUrl = `${window.location.origin}/?ref=${encodeURIComponent(referral.code)}`;
+    try {
+      if (navigator.share) await navigator.share({ title: 'Travel with Sancharie', text: 'Join me on Sancharie.', url: shareUrl });
+      else { await navigator.clipboard.writeText(shareUrl); setReferralMessage('Your invite link is copied.'); }
+    } catch (shareError) {
+      if (shareError.name !== 'AbortError') setReferralMessage('Could not share the invite link. Please try again.');
+    }
+  };
 
   const completion = useMemo(() => {
     if (!user) return 0;
@@ -354,6 +438,33 @@ export default function Profile() {
             )}
           </section>
         </div>
+
+        <section className="profile-content-card push-settings-card" aria-labelledby="referral-title">
+          <div className="profile-section-header">
+            <div className="section-title-wrap">
+              <span className="section-title-icon"><UsersRound size={20} /></span>
+              <div><p>Bring your travel companions</p><h2 id="referral-title">Invite friends</h2></div>
+            </div>
+            <button className="profile-save-btn" type="button" disabled={!referral?.code} onClick={() => void shareReferralLink()}>Share invite link</button>
+          </div>
+          <p>Your invite code: <strong>{referral?.code || 'Loading…'}</strong> · Friends joined: <strong>{referral?.invited ?? 0}</strong></p>
+          {referralMessage && <div className="profile-alert" role="status">{referralMessage}</div>}
+        </section>
+
+        <section className="profile-content-card push-settings-card" aria-labelledby="push-settings-title">
+          <div className="profile-section-header">
+            <div className="section-title-wrap">
+              <span className="section-title-icon"><Bell size={20} /></span>
+              <div><p>Stay up to date</p><h2 id="push-settings-title">App notifications</h2></div>
+            </div>
+            {supportsPush && <button className="profile-save-btn" type="button" disabled={pushBusy} onClick={() => void togglePushNotifications()}>
+              {pushBusy ? 'Updating…' : pushEnabled ? 'Turn off' : 'Turn on'}
+            </button>}
+          </div>
+          <p>Get offer announcements and updates about your bookings and refunds on this device.</p>
+          {!supportsPush && <small>Push notifications are not supported in this browser or connection.</small>}
+          {pushMessage && <div className="profile-alert" role="status">{pushMessage}</div>}
+        </section>
 
         <section className="profile-quick-section" aria-labelledby="quick-actions-title">
           <div className="quick-section-heading">

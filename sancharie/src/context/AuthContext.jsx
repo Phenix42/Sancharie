@@ -87,13 +87,14 @@ export function AuthProvider({ children }) {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ phone })
+        body: JSON.stringify({ phone, referralCode: localStorage.getItem('pendingReferralCode') || '' })
       });
 
       const data = await response.json();
       console.log('🔐 Login response:', data);
 
       if (data.success) {
+        localStorage.removeItem('pendingReferralCode');
         setToken(data.token);
         setUser(data.user);
         setIsAuthenticated(true);

@@ -18,6 +18,7 @@ const {
 const { isRestrictedAirportCode } = require('../config/flightRestrictions');
 
 const router = express.Router();
+const { requireBookingAvailability } = require('../middleware/runtimeSettings');
 
 const authenticateTransaction = (req, res, next) => {
   const authHeader = req.headers.authorization || '';
@@ -420,7 +421,7 @@ router.post('/farerule', tokenEndpointHandler('farerule'));
 router.post('/fare-confirmation', tokenEndpointHandler('fareconfirmation'));
 router.post('/fareconfirmation', tokenEndpointHandler('fareconfirmation'));
 router.post('/ssr', tokenEndpointHandler('ssr'));
-router.post('/book', authenticateTransaction, bookHandler);
+router.post('/book', requireBookingAvailability, authenticateTransaction, bookHandler);
 router.post('/booking-detail', authenticateTransaction, bookingDetailHandler);
 router.post('/getbookingdetail', authenticateTransaction, bookingDetailHandler);
 router.post('/cancel-request', authenticateTransaction, cancelRequestHandler);

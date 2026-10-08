@@ -1,10 +1,14 @@
 {
   "name": "sanachariebackend",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
+    "dev": "node --watch index.js",
+    "admin:bootstrap": "node scripts/bootstrapSuperAdmin.js",
     "test": "node --test"
   },
   "keywords": [],
@@ -13,7 +17,7 @@
   "description": "Secure OTP Authentication Backend for Sancharie",
   "dependencies": {
     "@mhoc/axios-digest-auth": "^0.8.0",
-    "axios": "^1.6.2",
+    "axios": "^1.20.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -21,9 +25,10 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.1",
-    "razorpay": "^2.9.6"
+    "razorpay": "^2.9.6",
+    "web-push": "^3.6.7"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.11"
+  "overrides": {
+    "axios": "^1.20.0"
   }
 }

@@ -40,6 +40,7 @@ const {
   toAmount,
 } = require('../services/paymentSecurity');
 const router = express.Router();
+const { requireBookingAvailability } = require('../middleware/runtimeSettings');
 
 // ============================================
 // CONFIGURATION (from environment only)
@@ -694,7 +695,7 @@ router.get('/ets/getBusLayout', async (req, res) => {
  * IMPORTANT: For ladies seat, ensure passenger sex is 'F' and title is 'Mrs/Ms'
  * Always include idType and idNumber fields even if empty
  */
-router.post('/ets/blockTicket', async (req, res) => {
+router.post('/ets/blockTicket', requireBookingAvailability, async (req, res) => {
   try {
     const {
       sourceCity,
@@ -921,7 +922,7 @@ router.get('/ets/getRtcUpdatedFare', async (req, res) => {
  * IMPORTANT: Call this ONLY after successful payment
  * For RTC services, call getRtcUpdatedFare first
  */
-router.get('/ets/seatBooking', async (req, res) => {
+router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
   try {
     const { blockTicketKey, paymentId } = req.query;
     

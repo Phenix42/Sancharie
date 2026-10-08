@@ -19,6 +19,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const helmet = require('helmet');
 const authRoutes = require('./routes/auth');
 const paymentRoutes = require('./routes/payment');
 const userRoutes = require('./routes/user');
@@ -26,9 +27,12 @@ const busRoutes = require('./routes/bus');
 const { router: flightRoutes } = require('./routes/flight');
 const { router: hotelRoutes } = require('./routes/hotel');
 const { reconcileAllUsers } = require('./services/bookingReconciliationService');
+const adminRoutes = require('./routes/admin');
+const { ApplicationSettings, FestivalTheme, Banner, Discount, Coupon, Offer, AppAsset } = require('./models/AdminResources');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 
 // ============================================
 // SECURITY: Validate Required Environment Variables
@@ -115,6 +119,7 @@ const securityHeaders = (req, res, next) => {
 };
 
 app.use(securityHeaders);
+app.use(helmet());
 
 // CORS - Allow frontend origin
 // SECURITY: Restrict to specific domains only
@@ -126,6 +131,7 @@ const defaultAllowedOrigins = [
 
 const configuredOrigins = [
   process.env.FRONTEND_URL,
+  process.env.ADMIN_URL,
   process.env.CORS_ORIGINS,
 ]
   .filter(Boolean)
@@ -164,7 +170,7 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   maxAge: 86400 // Cache preflight for 24 hours
@@ -188,6 +194,61 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Public, read-only runtime configuration consumed by the customer app.
+app.get('/api/config', async (req, res, next) => {
+  try {
+    const now = new Date();
+    const [settings, theme, banners, discounts, coupons, offers, appIcon] = await Promise.all([
+      ApplicationSettings.findOne({ key: 'global' }).lean(),
+      FestivalTheme.findOne({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).sort({ priority: -1, startDate: -1 }).lean(),
+      Banner.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).sort({ priority: -1 }).limit(20).lean(),
+      Discount.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('name description code bannerImage percentage maximumDiscount minimumBooking applicableRoutes startDate endDate').sort({ startDate: 1 }).lean(),
+      Coupon.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('code name type value maximumDiscount minimumBooking applicableRoutes endDate').sort({ createdAt: -1 }).limit(50).lean(),
+      Offer.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('name description type discountType discountValue maximumDiscount minimumBooking applicableRoutes bannerImage priority startDate endDate').sort({ priority: -1 }).limit(20).lean(),
+      AppAsset.findOne({ key: 'app-icon' }).select('updatedAt').lean(),
+    ]);
+    const customerBanners = [
+      ...banners.filter((banner) => banner.kind !== 'notification').map(({ title, description, image, ctaText, ctaUrl, kind, priority }) => ({ title, description, image, ctaText, ctaUrl, kind, priority })),
+      ...offers.filter((offer) => offer.bannerImage).map((offer) => ({ title: offer.name, description: offer.description, image: offer.bannerImage, ctaText: 'Explore offer', ctaUrl: '/', kind: 'promotion', priority: offer.priority })),
+    ].sort((left, right) => right.priority - left.priority).slice(0, 20);
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.json({ success: true, data: {
+      appIconUrl: appIcon ? `/api/app-icon?v=${appIcon.updatedAt.getTime()}` : null,
+      settings: {
+        maintenanceMode: settings?.maintenanceMode ?? false,
+        bookingsEnabled: settings?.bookingsEnabled ?? true,
+        registrationEnabled: settings?.registrationEnabled ?? true,
+        couponsEnabled: settings?.couponsEnabled ?? true,
+        discountsEnabled: settings?.discountsEnabled ?? true,
+        festivalThemeEnabled: settings?.festivalThemeEnabled ?? true,
+        contactEmail: settings?.contactEmail || '', contactPhone: settings?.contactPhone || '',
+        supportInformation: settings?.supportInformation || '', announcement: settings?.announcement || '',
+      },
+      theme: settings?.festivalThemeEnabled === false ? null : theme ? {
+        name: theme.name, festival: theme.festival, primaryColor: theme.primaryColor,
+        secondaryColor: theme.secondaryColor, backgroundColor: theme.backgroundColor,
+        bannerImage: theme.bannerImage, logoImage: theme.logoImage, icon: theme.icon,
+        promotionalText: theme.promotionalText, ctaText: theme.ctaText,
+      } : null,
+      banners: customerBanners,
+      discounts: settings?.discountsEnabled === false ? [] : discounts,
+      coupons: settings?.couponsEnabled === false ? [] : coupons,
+      offers,
+    } });
+  } catch (error) { next(error); }
+});
+
+app.get('/api/app-icon', async (req, res, next) => {
+  try {
+    const asset = await AppAsset.findOne({ key: 'app-icon' }).select('image contentType updatedAt').lean();
+    if (!asset) return res.status(404).json({ success: false, message: 'App icon has not been uploaded' });
+    const etag = `W/"app-icon-${asset.updatedAt.getTime()}"`;
+    res.set({ 'Content-Type': asset.contentType, 'Content-Length': asset.image.length, 'Cache-Control': 'public, max-age=300', ETag: etag });
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
+    res.send(asset.image);
+  } catch (error) { next(error); }
+});
+
 // Authentication routes (OTP send/verify)
 app.use('/auth', authRoutes);
 
@@ -196,6 +257,7 @@ app.use('/payment', paymentRoutes);
 
 // User routes (profile, bookings)
 app.use('/user', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Bus and flight API proxy routes (hide actual API URLs from browser)
 app.use('/api/airservice/rest', flightRoutes);
@@ -231,10 +293,10 @@ app.use((err, req, res, next) => {
 
   // SECURITY: Generic error response to client
   // Never expose internal error details
-  const statusCode = err.status || 500;
+  const statusCode = err.status || (err.name === 'ValidationError' || err.name === 'CastError' || err.code === 11000 ? 400 : 500);
   res.status(statusCode).json({ 
     success: false, 
-    message: statusCode === 500 ? 'Internal server error' : err.message || 'An error occurred'
+    message: statusCode === 500 ? 'Internal server error' : (err.code === 11000 ? 'A record with this value already exists' : err.message || 'An error occurred')
   });
 });
 

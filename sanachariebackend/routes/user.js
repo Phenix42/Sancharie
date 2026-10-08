@@ -10,16 +10,22 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
+const Referral = require('../models/Referral');
 const { hashReference } = require('../services/paymentSecurity');
 const { reconcileUserBookings } = require('../services/bookingReconciliationService');
+const { ApplicationSettings } = require('../models/AdminResources');
+const PushSubscription = require('../models/PushSubscription');
+const pushNotifications = require('../services/pushNotifications');
 
 const BOOKING_STATUSES = ['confirmed', 'cancelled', 'pending', 'completed', 'failed'];
 const PAYMENT_STATUSES = ['pending', 'completed', 'failed', 'refunded'];
 const SERVICE_TYPES = ['bus', 'flight', 'hotel'];
 
 const cleanText = (value, maxLength = 500) => String(value || '').trim().slice(0, maxLength);
+const newReferralCode = () => `SAN${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
 
 const cleanSeatCoordinate = (value) => {
   const coordinate = Number(value);
@@ -163,15 +169,68 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ success: false, message: 'Access token required' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, async (err, user) => {
     if (err) {
       // SECURITY: Don't reveal specific error details
       return res.status(403).json({ success: false, message: 'Invalid or expired token' });
     }
-    req.user = user;
-    next();
+    try {
+      const account = await User.findById(user.userId).select('accountActive');
+      if (!account || account.accountActive === false) {
+        return res.status(401).json({ success: false, message: 'User account is unavailable' });
+      }
+      req.user = user;
+      next();
+    } catch (error) {
+      next(error);
+    }
   });
 };
+
+router.get('/push/public-key', (req, res) => {
+  if (!pushNotifications.isConfigured()) return res.status(503).json({ success: false, message: 'Push notifications are not configured' });
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.json({ success: true, publicKey: pushNotifications.publicKey });
+});
+
+router.post('/push/subscriptions', authenticateToken, async (req, res, next) => {
+  try {
+    const subscription = req.body?.subscription;
+    const endpoint = String(subscription?.endpoint || '');
+    const p256dh = String(subscription?.keys?.p256dh || '');
+    const auth = String(subscription?.keys?.auth || '');
+    if (!pushNotifications.isConfigured()) return res.status(503).json({ success: false, message: 'Push notifications are not configured' });
+    if (!/^https:\/\//.test(endpoint) || endpoint.length > 2048 || p256dh.length < 20 || auth.length < 10) {
+      return res.status(400).json({ success: false, message: 'Invalid browser push subscription' });
+    }
+    await PushSubscription.findOneAndUpdate({ endpoint }, {
+      $set: { userId: req.user.userId, endpoint, keys: { p256dh, auth }, expirationTime: subscription.expirationTime || null },
+    }, { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true });
+    res.json({ success: true, message: 'Push notifications enabled' });
+  } catch (error) { next(error); }
+});
+
+router.delete('/push/subscriptions', authenticateToken, async (req, res, next) => {
+  try {
+    const endpoint = String(req.body?.endpoint || '');
+    if (!endpoint || endpoint.length > 2048) return res.status(400).json({ success: false, message: 'Valid push endpoint required' });
+    await PushSubscription.deleteOne({ userId: req.user.userId, endpoint });
+    res.json({ success: true, message: 'Push notifications disabled' });
+  } catch (error) { next(error); }
+});
+
+router.get('/referrals/me', authenticateToken, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.userId).select('referralCode');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user.referralCode) { user.referralCode = newReferralCode(); await user.save(); }
+    const [invited, qualified] = await Promise.all([
+      Referral.countDocuments({ referrerUserId: user._id }),
+      Referral.countDocuments({ referrerUserId: user._id, status: { $in: ['qualified', 'rewarded'] } }),
+    ]);
+    res.json({ success: true, code: user.referralCode, invited, qualified });
+  } catch (error) { next(error); }
+});
 
 /**
  * POST /user/login-complete
@@ -194,6 +253,7 @@ router.post('/login-complete', async (req, res) => {
     }
 
     const { phone } = req.body;
+    const requestedReferralCode = cleanText(req.body?.referralCode, 20).toUpperCase();
 
     if (!phone) {
       return res.status(400).json({ success: false, message: 'Phone number required' });
@@ -209,10 +269,20 @@ router.post('/login-complete', async (req, res) => {
     let isNewUser = false;
 
     if (!user) {
+      const settings = await ApplicationSettings.findOne({ key: 'global' }).select('registrationEnabled maintenanceMode').lean();
+      if (settings?.maintenanceMode || settings?.registrationEnabled === false) {
+        return res.status(403).json({ success: false, message: 'New account registration is temporarily unavailable' });
+      }
       // Create new user
       try {
-        user = new User({ phone });
+        let referrer = null;
+        if (/^SAN[A-F0-9]{10}$/.test(requestedReferralCode)) {
+          referrer = await User.findOne({ referralCode: requestedReferralCode, accountActive: true }).select('_id phone');
+          if (referrer?.phone === phone) referrer = null;
+        }
+        user = new User({ phone, referralCode: newReferralCode(), referredBy: referrer?._id || null });
         await user.save();
+        if (referrer) await Referral.create({ referrerUserId: referrer._id, referredUserId: user._id, code: requestedReferralCode });
         isNewUser = true;
         console.log(`✅ New user created: ${phone}`);
       } catch (saveError) {
@@ -228,8 +298,12 @@ router.post('/login-complete', async (req, res) => {
         }
       }
     } else {
+      if (!user.accountActive) {
+        return res.status(403).json({ success: false, message: 'This account is currently disabled' });
+      }
       // Update last login
       user.lastLogin = new Date();
+      if (!user.referralCode) user.referralCode = newReferralCode();
       await user.save();
       console.log(`✅ User logged in: ${phone}`);
     }
@@ -571,10 +645,15 @@ router.put('/bookings/:id', authenticateToken, async (req, res) => {
       userId: req.user.userId
     });
 
-    if (!booking) {
+  if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
+    const previousBookingState = {
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      refundStatus: booking.refundStatus,
+    };
     const {
       status, paymentStatus, paymentId, paymentOrderId, paymentMethod,
       externalBookingId, ticketNo, pnr, providerStatus,
@@ -617,6 +696,25 @@ router.put('/bookings/:id', authenticateToken, async (req, res) => {
     }
 
     await booking.save();
+
+    let notification = null;
+    if (booking.refundStatus && booking.refundStatus !== previousBookingState.refundStatus) {
+      notification = {
+        title: 'Refund update',
+        body: `Your refund status is now ${booking.refundStatus.replace(/[_-]/g, ' ')}.${booking.refundAmount > 0 ? ` Amount: ₹${booking.refundAmount}.` : ''}`,
+        url: '/my-bookings',
+        tag: `refund-${booking._id}-${booking.refundStatus}`,
+      };
+    } else if (booking.status !== previousBookingState.status || booking.paymentStatus !== previousBookingState.paymentStatus) {
+      const state = booking.status === 'confirmed' ? 'confirmed' : booking.status === 'failed' ? 'needs attention' : booking.status.replace(/[_-]/g, ' ');
+      notification = {
+        title: booking.status === 'confirmed' ? 'Booking confirmed' : 'Booking update',
+        body: `Your ${booking.serviceType} booking ${booking.bookingId} ${state}.`,
+        url: '/my-bookings',
+        tag: `booking-${booking._id}-${booking.status}-${booking.paymentStatus}`,
+      };
+    }
+    if (notification) pushNotifications.sendUserNotification(booking.userId, notification).catch(() => {});
 
     console.log(`✅ Booking updated: ${booking.bookingId} → status: ${booking.status}`);
 

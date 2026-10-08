@@ -20,6 +20,7 @@ const express = require('express');
 const router = express.Router();
 const paymentService = require('../services/paymentService');
 const { hashReference } = require('../services/paymentSecurity');
+const { requireBookingAvailability } = require('../middleware/runtimeSettings');
 
 // ============================================
 // INPUT VALIDATION MIDDLEWARE
@@ -150,7 +151,7 @@ router.get('/config', (req, res) => {
  * - Only order_id returned to frontend
  * - Amount validated server-side
  */
-router.post('/create-order', validateCreateOrder, async (req, res) => {
+router.post('/create-order', requireBookingAvailability, validateCreateOrder, async (req, res) => {
   try {
     const { amount, currency, receipt, notes, bookingDetails } = req.body;
 

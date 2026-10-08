@@ -25,7 +25,7 @@ import {
   X
 } from 'lucide-react'
 
-function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
+function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange, runtimeTheme }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showAccountDropdown, setShowAccountDropdown] = useState(false)
@@ -159,7 +159,7 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
           <div className="brand-cluster">
             <button className="logo" onClick={handleLogoClick} type="button" aria-label="Sancharie home">
               <span className="logo-mark" aria-hidden="true">
-                <img src={SancharieLogo} alt="" />
+                <img src={runtimeTheme?.logoImage || SancharieLogo} alt="" />
               </span>
               <span className="logo-copy">
                 <span className="logo-text">Sancharie</span>
@@ -268,7 +268,7 @@ function Header({ onBackToHome, travelMode = 'bus', onTravelModeChange }) {
               {/* Drawer header */}
               <div className="nav-drawer-header">
                 <span className="nav-drawer-logo">
-                  <img src={SancharieLogo} alt="" aria-hidden="true" />
+                  <img src={runtimeTheme?.logoImage || SancharieLogo} alt="" aria-hidden="true" />
                   Sancharie
                 </span>
                 <button className="nav-close-btn" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" type="button">

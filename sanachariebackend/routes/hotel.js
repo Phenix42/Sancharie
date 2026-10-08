@@ -18,6 +18,7 @@ const {
 } = require('../services/hotelService');
 
 const router = express.Router();
+const { requireBookingAvailability } = require('../middleware/runtimeSettings');
 
 const read = (object, ...keys) => {
   for (const key of keys) {
@@ -350,7 +351,7 @@ router.post('/rooms', asyncRoute(async (req, res) => {
   });
 }));
 
-router.post('/block-room', asyncRoute(async (req, res) => {
+router.post('/block-room', requireBookingAvailability, asyncRoute(async (req, res) => {
   const providerPayload = await requestHotelProvider('blockroom', buildSelectedRoomPayload(req));
   const blockedRooms = getBlockedRoomDetails(providerPayload);
   const requiredAmount = getTotalSelectedPrice(blockedRooms);
@@ -362,7 +363,7 @@ router.post('/block-room', asyncRoute(async (req, res) => {
   });
 }));
 
-router.post('/book', asyncRoute(async (req, res) => {
+router.post('/book', requireBookingAvailability, asyncRoute(async (req, res) => {
   const selectedPayload = buildSelectedRoomPayload(req);
   const blockPayload = await requestHotelProvider('blockroom', selectedPayload);
   const blockError = getProviderError(blockPayload);
