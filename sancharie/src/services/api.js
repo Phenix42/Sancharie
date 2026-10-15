@@ -186,6 +186,16 @@ export const user = {
   /**
    * Get user's bookings
    */
+  getWallet: () => apiRequest('/user/wallet'),
+
+  createWalletTopUpOrder: (amount) => apiRequest('/user/wallet/top-up-order', {
+    method: 'POST', body: JSON.stringify({ amount }),
+  }),
+
+  creditWallet: (paymentResponse) => apiRequest('/user/wallet/credit', {
+    method: 'POST', body: JSON.stringify(paymentResponse),
+  }),
+
   getBookings: () =>
     apiRequest('/user/bookings'),
 

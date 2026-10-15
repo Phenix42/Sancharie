@@ -223,6 +223,7 @@ export default function SearchResult({ searchParams, onSearch, onBackToHome, mod
   const [searchTokenId, setSearchTokenId] = useState(null);
   const [visibleCount, setVisibleCount] = useState(6); // Show 6 buses initially
   const [bookingFlightId, setBookingFlightId] = useState(null);
+  const [seatPreviewBusId, setSeatPreviewBusId] = useState(null);
   const [flightBookingError, setFlightBookingError] = useState('');
   const [flightSort, setFlightSort] = useState('best');
   const [flightStopsFilter, setFlightStopsFilter] = useState('any');
@@ -1699,15 +1700,27 @@ export default function SearchResult({ searchParams, onSearch, onBackToHome, mod
                     </div>
                   </div>
 
-                  {/* Compact real-time seat layout; full layout opens on selection */}
-                  <div className="seat-preview">
-                    <div className="seat-preview-heading">
-                      <span><Armchair size={15} /> Seat availability</span>
-                      <small>{seatsAvailable} available</small>
+                  <div className="seat-preview-trigger">
+                    <span><Armchair size={15} /> {seatsAvailable} seats available</span>
+                    <button
+                      type="button"
+                      className="seat-preview-toggle"
+                      aria-expanded={seatPreviewBusId === bus.ResultIndex}
+                      onClick={() => setSeatPreviewBusId((current) => current === bus.ResultIndex ? null : bus.ResultIndex)}
+                    >
+                      {seatPreviewBusId === bus.ResultIndex ? 'Hide seat preview' : 'Preview seats'}
+                    </button>
+                    {seatPreviewBusId === bus.ResultIndex && (
+                    <div className="seat-preview">
+                      <div className="seat-preview-heading">
+                        <span><Armchair size={15} /> Seat availability</span>
+                        <small>{seatsAvailable} available</small>
+                      </div>
+                      <div className="seat-preview-map-viewport">
+                        <MiniSeatPreview bus={bus} searchTokenId={searchTokenId} />
+                      </div>
                     </div>
-                    <div className="seat-preview-map-viewport">
-                      <MiniSeatPreview bus={bus} searchTokenId={searchTokenId} />
-                    </div>
+                    )}
                   </div>
 
                   {/* Vertical Divider */}

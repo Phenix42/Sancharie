@@ -65,6 +65,14 @@ export default function MyAccount({ onClose }) {
         </div>
       </div>
 
+      <div className="menu-item" onClick={() => handleNavigate('/wallet')}>
+        <div className="menu-icon" aria-hidden="true">₹</div>
+        <div className="menu-content">
+          <span className="menu-title">Sancharie Wallet</span>
+          <span className="menu-subtitle">Balance & transactions</span>
+        </div>
+      </div>
+
       {/* My Bookings */}
       <div className="menu-item" onClick={() => handleNavigate('/my-bookings')}>
         <div className="menu-icon">

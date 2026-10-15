@@ -6625,3 +6625,29 @@
     display: none;
   }
 }
+
+/* Seat map is fetched and shown only after the user asks to preview it. */
+.seat-preview-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 160px;
+  color: #52707d;
+  font-size: 13px;
+  font-weight: 600;
+}
+.seat-preview-trigger > span { display: inline-flex; align-items: center; gap: 7px; }
+.seat-preview-trigger .seat-preview { display: flex; width: 100%; box-sizing: border-box; }
+.seat-preview-toggle {
+  border: 1px solid #c8d8de;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: #fff;
+  color: #174b5e;
+  font: inherit;
+  cursor: pointer;
+}
+.seat-preview-toggle:hover { background: #f1f7f8; border-color: #174b5e; }
+.seat-preview-toggle:focus-visible { outline: 3px solid #9cc9d6; outline-offset: 2px; }

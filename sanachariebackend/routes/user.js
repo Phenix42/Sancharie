@@ -341,6 +341,67 @@ router.post('/login-complete', async (req, res) => {
  * GET /user/profile
  * Get user profile (requires auth)
  */
+router.get('/wallet', authenticateToken, async (req, res) => {
+  try {
+    const account = await User.findById(req.user.userId).select('walletBalance walletTransactions');
+    if (!account) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, balance: account.walletBalance || 0, transactions: (account.walletTransactions || []).slice(-50).reverse() });
+  } catch (error) {
+    console.error('Get wallet error:', error);
+    res.status(500).json({ success: false, message: 'Could not load your wallet' });
+  }
+});
+
+router.post('/wallet/top-up-order', authenticateToken, async (req, res) => {
+  try {
+    const amount = Number(req.body.amount);
+    if (!Number.isFinite(amount) || amount < 100 || amount > 50000 || Math.round(amount * 100) !== amount * 100) {
+      return res.status(400).json({ success: false, message: 'Add an amount between ₹100 and ₹50,000' });
+    }
+    const paymentService = require('../services/paymentService');
+    if (!paymentService.isConfigured()) return res.status(503).json({ success: false, message: 'Payment service is not configured' });
+    const order = await paymentService.createOrder(amount, 'INR', undefined, { purpose: 'wallet_topup', user_id: String(req.user.userId) });
+    res.json({ success: true, order: { id: order.id, amount: order.amount, currency: order.currency }, keyId: paymentService.getPublicKeyId() });
+  } catch (error) {
+    console.error('Wallet top-up order error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not start wallet top-up' });
+  }
+});
+
+router.post('/wallet/credit', authenticateToken, async (req, res) => {
+  try {
+    const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = req.body;
+    const paymentService = require('../services/paymentService');
+    if (!paymentService.verifyPaymentSignature(orderId, paymentId, signature)) {
+      return res.status(400).json({ success: false, message: 'Payment verification failed' });
+    }
+    const [order, paid] = await Promise.all([
+      paymentService.fetchOrderDetails(orderId),
+      paymentService.fetchPaymentDetails(paymentId),
+    ]);
+    if (order.notes?.purpose !== 'wallet_topup' || order.notes?.user_id !== String(req.user.userId) ||
+        order.currency !== 'INR' || paid.order_id !== orderId || paid.status !== 'captured' || paid.captured !== true ||
+        paid.amount !== order.amount || order.amount < 10000 || order.amount > 5000000) {
+      return res.status(400).json({ success: false, message: 'Payment does not match this wallet top-up' });
+    }
+    const amount = order.amount / 100;
+    const account = await User.findOneAndUpdate(
+      { _id: req.user.userId, walletProcessedOrders: { $ne: orderId } },
+      { $inc: { walletBalance: amount }, $addToSet: { walletProcessedOrders: orderId }, $push: { walletTransactions: { $each: [{ type: 'credit', amount, orderId, paymentId, description: 'Wallet top-up', createdAt: new Date() }], $slice: -100 } } },
+      { new: true, projection: { walletBalance: 1, walletTransactions: { $slice: -50 } } }
+    );
+    if (!account) {
+      const existing = await User.findById(req.user.userId).select('walletBalance walletTransactions walletProcessedOrders');
+      if (existing?.walletProcessedOrders?.includes(orderId)) return res.json({ success: true, balance: existing.walletBalance, transactions: (existing.walletTransactions || []).slice(-50).reverse() });
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, balance: account.walletBalance, transactions: (account.walletTransactions || []).slice(-50).reverse() });
+  } catch (error) {
+    console.error('Wallet credit error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not credit your wallet' });
+  }
+});
+
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);

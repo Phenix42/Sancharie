@@ -42,6 +42,10 @@ const userSchema = new mongoose.Schema({
   referralCode: { type: String, unique: true, sparse: true, uppercase: true, trim: true, minlength: 6, maxlength: 20 },
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
   
+  walletBalance: { type: Number, default: 0, min: 0 },
+  walletProcessedOrders: { type: [String], default: [] },
+  walletTransactions: { type: [mongoose.Schema.Types.Mixed], default: [] },
+
   // Timestamps
   createdAt: {
     type: Date,

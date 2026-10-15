@@ -16,6 +16,7 @@ import Payment from "./components/payment";
 import MyBookings from "./components/MyBookings";
 import BookingDetails from "./components/BookingDetails";
 import Profile from "./components/Profile";
+import Wallet from "./components/Wallet";
 import Travellers from "./components/Travellers";
 import { ToastProvider } from "./components/Toast";
 import MobileBottomNav from "./components/MobileBottomNav";
@@ -149,6 +150,7 @@ function App() {
         <Route path="/my-bookings" element={<><MyBookings /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
         <Route path="/ticket/:ticketNumber" element={<><BookingDetails /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
         <Route path="/profile" element={<><Profile /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
+        <Route path="/wallet" element={<><Wallet /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
         <Route path="/travellers" element={<><Travellers /><MobileBottomNav onHomeClick={handleBackToHome} /></>} />
         <Route path="/flight-booking" element={
           <>
