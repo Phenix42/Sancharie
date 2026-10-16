@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema({
   
   walletBalance: { type: Number, default: 0, min: 0 },
   walletProcessedOrders: { type: [String], default: [] },
+  walletProcessedDebits: { type: [String], default: [] },
+  walletProcessedAdjustments: { type: [String], default: [] },
+  walletPromotionClaims: { type: [String], default: [] },
+  walletMinimumBookingAmount: { type: Number, default: 0, min: 0 },
   walletTransactions: { type: [mongoose.Schema.Types.Mixed], default: [] },
 
   // Timestamps

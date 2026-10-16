@@ -9,6 +9,7 @@ const PERMISSIONS = Object.freeze({
   banners: ['banners:read', 'banners:manage'],
   notifications: ['notifications:read', 'notifications:send'],
   payments: ['payments:read'],
+  wallets: ['wallets:read', 'wallets:manage'],
   settings: ['settings:read', 'settings:manage'],
   admins: ['admins:manage'],
   audit: ['audit:read'],
@@ -16,8 +17,8 @@ const PERMISSIONS = Object.freeze({
 
 const ROLE_PERMISSIONS = Object.freeze({
   super_admin: Object.values(PERMISSIONS).flat(),
-  admin: ['dashboard:read', 'users:read', 'users:manage', 'bookings:read', 'bookings:manage', 'discounts:read', 'discounts:manage', 'coupons:read', 'coupons:manage', 'offers:read', 'offers:manage', 'themes:read', 'themes:manage', 'banners:read', 'banners:manage', 'notifications:read', 'notifications:send', 'payments:read'],
-  support: ['dashboard:read', 'users:read', 'bookings:read', 'payments:read'],
+  admin: ['dashboard:read', 'users:read', 'users:manage', 'bookings:read', 'bookings:manage', 'discounts:read', 'discounts:manage', 'coupons:read', 'coupons:manage', 'offers:read', 'offers:manage', 'themes:read', 'themes:manage', 'banners:read', 'banners:manage', 'notifications:read', 'notifications:send', 'payments:read', 'wallets:read', 'wallets:manage'],
+  support: ['dashboard:read', 'users:read', 'bookings:read', 'payments:read', 'wallets:read'],
 });
 
 const hasPermission = (admin, permission) => admin?.role === 'super_admin' ||

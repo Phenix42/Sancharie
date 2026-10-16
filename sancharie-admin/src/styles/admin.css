@@ -11,3 +11,10 @@
 .banner-preview-wrap{grid-column:1/-1}.banner-preview{display:flex;align-items:center;gap:14px;margin-top:10px;padding:15px;border:1px dashed #d7e1e1;border-radius:8px;background:#f7faf9}.banner-preview img{width:112px;height:72px;object-fit:cover;border-radius:5px}.banner-preview h3{margin:5px 0;color:#1c3e51;font:700 15px Manrope}.banner-preview p{margin:0 0 6px;color:#71838e;font-size:10px}.banner-preview b{color:#26735d;font-size:10px}
 .table-pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid #edf0f1;color:#89969e;font-size:10px}.table-pagination>div{display:flex;gap:6px}.table-pagination .button{padding:7px 10px;font-size:10px}.table-pagination .button:disabled{opacity:.4;cursor:not-allowed}
 .app-icon-upload-row{display:flex;align-items:center;gap:16px;margin:15px 0 18px}.app-icon-preview{width:92px;height:92px;border:1px solid #e5ebed;border-radius:15px;object-fit:cover;background:#f7faf9}.app-icon-empty{display:grid;place-items:center;padding:10px;color:#98a5ac;text-align:center;font-size:9px}.app-icon-file{display:grid;gap:8px;min-width:0}.app-icon-file small{color:#8998a1;font-size:10px}@media(max-width:560px){.app-icon-upload-row{align-items:flex-start;flex-direction:column}}
+
+.wallet-promo-panel h2,.wallet-promo-panel h3 { margin-top: 0; }
+.wallet-promo-panel > p,.wallet-promo-status p { color: #657681; }
+.wallet-promo-status { padding: 14px 0 20px; }
+.wallet-promo-progress { height: 8px; background: #edf1f2; border-radius: 10px; overflow: hidden; max-width: 520px; margin: 12px 0 18px; }
+.wallet-promo-progress span { display: block; height: 100%; background: #26735d; border-radius: inherit; }
+.wallet-promo-form { border-top: 1px solid #edf0f2; margin-top: 18px; padding-top: 20px; }

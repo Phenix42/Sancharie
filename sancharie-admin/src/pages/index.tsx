@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { api, errorMessage } from '../api/client';
 import ResourcePage, { type Field } from '../components/ResourcePage';
+import { useAuth } from '../auth';
+import { ArrowDownLeft, ArrowUpRight, WalletCards } from 'lucide-react';
 import type { DashboardData } from '../types';
 import './record-details.css';
 
@@ -120,5 +122,74 @@ export function NotificationsPage() {
   return <section className="page-stack"><div className="page-heading"><div><div className="eyebrow">CUSTOMER MESSAGING</div><h1>Push notifications</h1><p>Send offer announcements and campaigns to customers who opted in.</p></div></div>
     <div className="metric-grid"><article className="metric-card"><span>Push service</span><strong>{query.data?.configured ? 'Ready' : 'Not configured'}</strong><small>Requires backend VAPID keys and HTTPS for customers.</small></article><article className="metric-card"><span>Subscribed devices</span><strong>{query.data?.subscriptions ?? '—'}</strong><small>Browser devices that enabled notifications.</small></article><article className="metric-card"><span>Subscribed customers</span><strong>{query.data?.users ?? '—'}</strong><small>Unique customer accounts opted in.</small></article></div>
     <form className="panel settings-form" onSubmit={(event) => void sendCampaign(event)}><div className="dialog-heading"><div><span className="eyebrow">CAMPAIGN</span><h2>Send a notification</h2></div></div><p>Booking status and refund changes are sent automatically. Promotional messages go only to customers who enabled notifications.</p>{message && <div className="notice" role="status">{message}</div>}<div className="form-grid settings-fields"><label className="form-field"><span>Title</span><input required maxLength={100} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="A new offer for your next trip" /></label><label className="form-field"><span>Open this page</span><input required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="/offers" /></label><label className="form-field"><span>Message</span><textarea required maxLength={240} rows={4} value={body} onChange={(event) => setBody(event.target.value)} placeholder="Tell customers what is new." /></label></div><button className="button button-primary" type="submit" disabled={sending || !query.data?.configured || !query.data?.subscriptions}>{sending ? 'Sending…' : 'Send campaign'}</button></form>
+  </section>;
+}
+
+
+export function WalletsPage() {
+  const { admin } = useAuth();
+  const canAdjust = admin?.role === 'super_admin' || admin?.role === 'admin';
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [direction, setDirection] = useState<'credit' | 'debit'>('credit');
+  const [reason, setReason] = useState('');
+  const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  const client = useQueryClient();
+  const params = { q: q || undefined, page, limit: 50 };
+  const query = useQuery({ queryKey: ['wallets', params], queryFn: async () => (await api.get('/wallets', { params })).data });
+  const promotionQuery = useQuery({ queryKey: ['wallet-promotions'], queryFn: async () => (await api.get('/wallet-promotions')).data.data });
+  const [rewardAmount, setRewardAmount] = useState('500');
+  const [minimumBookingAmount, setMinimumBookingAmount] = useState('200');
+  const [recipientLimit, setRecipientLimit] = useState('100');
+  const [promotionSaving, setPromotionSaving] = useState(false);
+  const detail = useQuery({ queryKey: ['wallets', 'detail', selectedId], enabled: Boolean(selectedId), queryFn: async () => (await api.get(`/wallets/${selectedId}`)).data.data });
+  const selected = query.data?.data?.find((wallet: any) => wallet._id === selectedId);
+  const savePromotion = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); if (!canAdjust) return;
+    setPromotionSaving(true); setMessage('');
+    try {
+      await api.post('/wallet-promotions', { rewardAmount: Number(rewardAmount), minimumBookingAmount: Number(minimumBookingAmount), recipientLimit: Number(recipientLimit) });
+      setMessage('Wallet bonus campaign started.');
+      await Promise.all([client.invalidateQueries({ queryKey: ['wallet-promotions'] }), client.invalidateQueries({ queryKey: ['wallets'] })]);
+    } catch (error) { setMessage(errorMessage(error)); }
+    finally { setPromotionSaving(false); }
+  };
+  const togglePromotion = async () => {
+    const promotion = promotionQuery.data; if (!promotion || !canAdjust) return;
+    setPromotionSaving(true); setMessage('');
+    try { await api.patch(`/wallet-promotions/${promotion._id}`, { enabled: !promotion.enabled }); setMessage(promotion.enabled ? 'Wallet bonus campaign paused.' : 'Wallet bonus campaign resumed.'); await client.invalidateQueries({ queryKey: ['wallet-promotions'] }); }
+    catch (error) { setMessage(errorMessage(error)); } finally { setPromotionSaving(false); }
+  };
+  const submitAdjustment = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); if (!selectedId || !canAdjust) return;
+    setSaving(true); setMessage('');
+    try {
+      await api.post(`/wallets/${selectedId}/adjust`, { amount: Number(amount), direction, reason, requestId: crypto.randomUUID() });
+      setMessage(`Wallet ${direction} applied successfully.`);
+      setAmount(''); setReason('');
+      await Promise.all([client.invalidateQueries({ queryKey: ['wallets'] }), client.invalidateQueries({ queryKey: ['wallets', 'detail', selectedId] })]);
+    } catch (error) { setMessage(errorMessage(error)); }
+    finally { setSaving(false); }
+  };
+  const currency = (value: unknown) => `₹${Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return <section className="page-stack">
+    <div className="page-heading"><div><div className="eyebrow">CUSTOMER FINANCE</div><h1>Wallets</h1><p>Review customer wallet balances and transaction history. Admin credits and debits are recorded in the audit log.</p></div></div>
+    {message && <div className="notice" role="status">{message}</div>}
+    <div className="panel settings-form wallet-promo-panel"><div className="dialog-heading"><div><span className="eyebrow">CUSTOMER BONUS RULE</span><h2>Wallet promotion</h2></div></div>
+      {promotionQuery.isLoading ? <div className="loading-line">Loading promotion…</div> : promotionQuery.data ? <div className="wallet-promo-status"><p><strong>{promotionQuery.data.enabled ? 'Active' : 'Paused'}</strong> · First {promotionQuery.data.recipientLimit} customers receive {currency(promotionQuery.data.rewardAmount)}.</p><p>Minimum booking to use wallet bonus: {currency(promotionQuery.data.minimumBookingAmount)} · {promotionQuery.data.claimedCount} claimed</p><div className="wallet-promo-progress"><span style={{ width: `${Math.min(100, promotionQuery.data.claimedCount / promotionQuery.data.recipientLimit * 100)}%` }} /></div>{canAdjust && <button type="button" className="button button-quiet" disabled={promotionSaving} onClick={() => void togglePromotion()}>{promotionSaving ? 'Saving…' : promotionQuery.data.enabled ? 'Pause campaign' : 'Resume campaign'}</button>}</div> : <p>No wallet bonus rule has been created.</p>}
+      {canAdjust && <form className="settings-form wallet-promo-form" onSubmit={(event) => void savePromotion(event)}><h3>Start a new rule</h3><div className="form-grid settings-fields"><label className="form-field"><span>Bonus credit (₹)</span><input required type="number" min="0.01" max="50000" step="0.01" value={rewardAmount} onChange={(event) => setRewardAmount(event.target.value)} /></label><label className="form-field"><span>Minimum booking to use wallet (₹)</span><input required type="number" min="0" max="500000" step="0.01" value={minimumBookingAmount} onChange={(event) => setMinimumBookingAmount(event.target.value)} /></label><label className="form-field"><span>Number of customers</span><input required type="number" min="1" max="100000" step="1" value={recipientLimit} onChange={(event) => setRecipientLimit(event.target.value)} /></label></div><button className="button button-primary" type="submit" disabled={promotionSaving}>{promotionSaving ? 'Starting…' : 'Start wallet bonus campaign'}</button></form>}
+    </div>
+    <div className="metric-grid"><article className="metric-card"><span>Wallet balances</span><strong>{currency(query.data?.summary?.totalBalance)}</strong><small>Across all customer accounts</small></article><article className="metric-card"><span>Funded wallets</span><strong>{query.data?.summary?.fundedWallets ?? '—'}</strong><small>Customers with a positive balance</small></article></div>
+    <div className="panel"><div className="panel-toolbar"><div className="filter-controls"><input className="search-input" placeholder="Search by name, email or phone…" value={q} onChange={(event) => { setQ(event.target.value); setPage(1); }} /></div></div>
+      {query.isLoading ? <div className="loading-line">Loading wallets…</div> : query.error ? <div className="empty-state">{errorMessage(query.error)}</div> : !query.data?.data?.length ? <div className="empty-state">No customer wallets found.</div> : <div className="table-wrap"><table><thead><tr><th>Customer</th><th>Phone</th><th>Balance</th><th>Updated</th></tr></thead><tbody>{query.data.data.map((wallet: any) => <tr key={wallet._id} onClick={() => { setSelectedId(wallet._id); setMessage(''); }} className="click-row"><td>{wallet.name || wallet.email || 'Sancharie customer'}</td><td>{wallet.phone || '—'}</td><td>{currency(wallet.walletBalance)}</td><td>{wallet.updatedAt ? new Date(wallet.updatedAt).toLocaleString() : '—'}</td></tr>)}</tbody></table></div>}
+      {query.data?.pagination?.pages > 1 && <div className="table-pagination"><span>Page {page} of {query.data.pagination.pages} · {query.data.pagination.total} wallets</span><div><button className="button button-quiet" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button><button className="button button-quiet" disabled={page >= query.data.pagination.pages} onClick={() => setPage((current) => current + 1)}>Next</button></div></div>}
+    </div>
+    {selectedId && <div className="modal-backdrop" onClick={() => setSelectedId('')}><div className="detail-card" onClick={(event) => event.stopPropagation()}><div className="dialog-heading"><div><span className="eyebrow">CUSTOMER WALLET</span><h2>{selected?.name || selected?.phone || 'Wallet details'}</h2></div><button className="icon-button" onClick={() => setSelectedId('')}>×</button></div>
+      {detail.isLoading ? <div className="loading-line">Loading transactions…</div> : detail.error ? <div className="inline-error">{errorMessage(detail.error)}</div> : <><div className="metric-card"><span>Current balance</span><strong>{currency(detail.data?.balance)}</strong><small>{detail.data?.phone || detail.data?.email || ''}</small></div><h3>Recent transactions</h3>{detail.data?.transactions?.length ? <div className="table-wrap"><table><thead><tr><th>Type</th><th>Amount</th><th>Description</th><th>Date</th></tr></thead><tbody>{detail.data.transactions.map((transaction: any, index: number) => <tr key={`${transaction.requestId || transaction.orderId || transaction.paymentId || index}`}><td>{transaction.type?.includes('debit') ? <><ArrowUpRight size={14}/> Debit</> : <><ArrowDownLeft size={14}/> Credit</>}</td><td>{currency(transaction.amount)}</td><td>{transaction.description || 'Wallet top-up'}</td><td>{transaction.createdAt ? new Date(transaction.createdAt).toLocaleString() : '—'}</td></tr>)}</tbody></table></div> : <div className="empty-state">No transactions yet.</div>}</>}
+      {canAdjust && <form className="settings-form" onSubmit={(event) => void submitAdjustment(event)}><div className="dialog-heading"><div><span className="eyebrow">ADMIN ADJUSTMENT</span><h2>Credit or debit wallet</h2></div><WalletCards size={22}/></div><p>Use adjustments for documented support corrections. Each adjustment is recorded in the admin audit log.</p><div className="form-grid settings-fields"><label className="form-field"><span>Adjustment</span><select value={direction} onChange={(event) => setDirection(event.target.value as 'credit' | 'debit')}><option value="credit">Credit wallet</option><option value="debit">Debit wallet</option></select></label><label className="form-field"><span>Amount (₹)</span><input required type="number" min="0.01" max="50000" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></label><label className="form-field"><span>Reason</span><input required minLength={4} maxLength={200} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Support adjustment reference" /></label></div><button className="button button-primary" type="submit" disabled={saving}>{saving ? 'Applying…' : direction === 'credit' ? 'Apply credit' : 'Apply debit'}</button></form>}
+    </div></div>}
   </section>;
 }

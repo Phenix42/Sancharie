@@ -1,9 +1,9 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Activity, BadgePercent, Banknote, Bell, BusFront, ChevronDown, CircleUserRound, ClipboardList, Gift, LayoutDashboard, LogOut, Megaphone, Settings2, Shield, TicketPercent, Users, type LucideIcon } from 'lucide-react';
+import { Activity, BadgePercent, Banknote, Bell, BusFront, ChevronDown, CircleUserRound, ClipboardList, Gift, LayoutDashboard, LogOut, Megaphone, Settings2, Shield, TicketPercent, Users, WalletCards, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../auth';
 
 const navigation: { label: string; path: string; icon: LucideIcon; roles?: string[] }[] = [
-  { label: 'Dashboard', path: '/', icon: LayoutDashboard }, { label: 'Users', path: '/users', icon: Users }, { label: 'Bookings', path: '/bookings', icon: BusFront },
+  { label: 'Dashboard', path: '/', icon: LayoutDashboard }, { label: 'Users', path: '/users', icon: Users }, { label: 'Bookings', path: '/bookings', icon: BusFront }, { label: 'Wallets', path: '/wallets', icon: WalletCards },
   { label: 'Discounts', path: '/discounts', icon: BadgePercent }, { label: 'Coupons', path: '/coupons', icon: TicketPercent }, { label: 'Offers', path: '/offers', icon: Gift },
   { label: 'Festival themes', path: '/themes', icon: Activity }, { label: 'Banners & CMS', path: '/banners', icon: Megaphone }, { label: 'Payments', path: '/payments', icon: Banknote },
   { label: 'Push notifications', path: '/notifications', icon: Bell, roles: ['super_admin', 'admin'] },

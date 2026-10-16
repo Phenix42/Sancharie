@@ -8,10 +8,12 @@
  */
 
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
+const WalletPromotion = require('../models/WalletPromotion');
 const Booking = require('../models/Booking');
 const Referral = require('../models/Referral');
 const { hashReference } = require('../services/paymentSecurity');
@@ -343,12 +345,48 @@ router.post('/login-complete', async (req, res) => {
  */
 router.get('/wallet', authenticateToken, async (req, res) => {
   try {
-    const account = await User.findById(req.user.userId).select('walletBalance walletTransactions');
+    const [account, promotion] = await Promise.all([
+      User.findById(req.user.userId).select('walletBalance walletTransactions walletMinimumBookingAmount walletPromotionClaims'),
+      WalletPromotion.findOne({ enabled: true }).sort({ createdAt: -1 }).select('rewardAmount minimumBookingAmount recipientLimit claimedCount _id'),
+    ]);
     if (!account) return res.status(404).json({ success: false, message: 'User not found' });
-    res.json({ success: true, balance: account.walletBalance || 0, transactions: (account.walletTransactions || []).slice(-50).reverse() });
+    res.json({ success: true, balance: account.walletBalance || 0, minimumBookingAmount: account.walletMinimumBookingAmount || 0, transactions: (account.walletTransactions || []).slice(-50).reverse(), promotion: promotion ? { rewardAmount: promotion.rewardAmount, minimumBookingAmount: promotion.minimumBookingAmount, recipientLimit: promotion.recipientLimit, claimedCount: promotion.claimedCount, available: promotion.claimedCount < promotion.recipientLimit, claimed: account.walletPromotionClaims?.includes(String(promotion._id)) || false } : null });
   } catch (error) {
     console.error('Get wallet error:', error);
     res.status(500).json({ success: false, message: 'Could not load your wallet' });
+  }
+});
+
+router.post('/wallet/promotion/claim', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const promotion = await WalletPromotion.findOneAndUpdate(
+      { enabled: true, claimedUserIds: { $ne: userId }, $expr: { $lt: ['$claimedCount', '$recipientLimit'] } },
+      { $inc: { claimedCount: 1 }, $addToSet: { claimedUserIds: userId } },
+      { new: true, sort: { createdAt: -1 } }
+    );
+
+    if (!promotion) {
+      const [account, current] = await Promise.all([
+        User.findById(userId).select('walletBalance walletMinimumBookingAmount walletPromotionClaims'),
+        WalletPromotion.findOne({ enabled: true }).sort({ createdAt: -1 }).select('_id recipientLimit claimedCount'),
+      ]);
+      if (!account) return res.status(404).json({ success: false, message: 'User not found' });
+      const alreadyClaimedPromotion = current ? account.walletPromotionClaims?.includes(String(current._id)) : false;
+      return res.json({ success: true, claimed: false, alreadyClaimed: alreadyClaimedPromotion, exhausted: Boolean(current && current.claimedCount >= current.recipientLimit), balance: account.walletBalance || 0, minimumBookingAmount: account.walletMinimumBookingAmount || 0 });
+    }
+
+    const promotionId = String(promotion._id);
+    const account = await User.findOneAndUpdate(
+      { _id: userId, walletPromotionClaims: { $ne: promotionId } },
+      { $inc: { walletBalance: promotion.rewardAmount }, $max: { walletMinimumBookingAmount: promotion.minimumBookingAmount }, $addToSet: { walletPromotionClaims: promotionId }, $push: { walletTransactions: { $each: [{ type: 'promotion_credit', amount: promotion.rewardAmount, promotionId, minimumBookingAmount: promotion.minimumBookingAmount, description: 'Wallet welcome bonus', createdAt: new Date() }], $slice: -100 } } },
+      { new: true, projection: { walletBalance: 1, walletMinimumBookingAmount: 1, walletTransactions: { $slice: -50 } } }
+    );
+    if (!account) return res.status(404).json({ success: false, message: 'Customer account could not be updated' });
+    res.json({ success: true, claimed: true, balance: account.walletBalance, minimumBookingAmount: account.walletMinimumBookingAmount, rewardAmount: promotion.rewardAmount, transactions: (account.walletTransactions || []).slice(-50).reverse() });
+  } catch (error) {
+    console.error('Wallet promotion claim error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not claim the wallet promotion' });
   }
 });
 
@@ -365,6 +403,56 @@ router.post('/wallet/top-up-order', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Wallet top-up order error:', error.message);
     res.status(500).json({ success: false, message: 'Could not start wallet top-up' });
+  }
+});
+
+router.post('/wallet/debit', authenticateToken, async (req, res) => {
+  try {
+    const amount = Number(req.body?.amount);
+    const bookingId = cleanText(req.body?.bookingId, 100);
+    const description = cleanText(req.body?.description || 'Wallet payment', 200);
+    const requestId = cleanText(req.body?.requestId, 100);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 500000 || Math.round(amount * 100) !== amount * 100) {
+      return res.status(400).json({ success: false, message: 'Amount must be between ₹0.01 and ₹500,000 with at most two decimal places' });
+    }
+    if (!mongoose.isValidObjectId(bookingId)) return res.status(400).json({ success: false, message: 'A valid pending bookingId is required' });
+    if (!/^[A-Za-z0-9._:-]{8,100}$/.test(requestId)) return res.status(400).json({ success: false, message: 'A unique requestId (8–100 letters, numbers, dots, underscores, colons or hyphens) is required' });
+    const previousAccount = await User.findById(req.user.userId).select('walletBalance walletTransactions walletProcessedDebits');
+    if (!previousAccount) return res.status(404).json({ success: false, message: 'User not found' });
+    if (previousAccount.walletProcessedDebits?.includes(requestId)) {
+      const previousTransaction = previousAccount.walletTransactions?.find((item) => item.requestId === requestId);
+      if (previousTransaction && (previousTransaction.amount !== amount || String(previousTransaction.bookingId) !== bookingId)) {
+        return res.status(409).json({ success: false, message: 'requestId was already used for a different wallet debit' });
+      }
+      return res.json({ success: true, idempotent: true, balance: previousAccount.walletBalance || 0, transaction: previousTransaction || null });
+    }
+    const booking = await Booking.findOne({ _id: bookingId, userId: req.user.userId }).select('bookingId totalFare status paymentStatus');
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.status !== 'pending' || booking.paymentStatus !== 'pending') return res.status(409).json({ success: false, message: 'Wallet debit is only available for an unpaid pending booking' });
+    if (amount > Number(booking.totalFare || 0)) return res.status(400).json({ success: false, message: 'Wallet debit cannot exceed the booking amount' });
+    const reference = `booking_${booking.bookingId}`;
+    const accountRules = await User.findById(req.user.userId).select('walletMinimumBookingAmount');
+    const minimumBookingAmount = accountRules?.walletMinimumBookingAmount || 0;
+    if (minimumBookingAmount > 0 && Number(booking.totalFare || 0) < minimumBookingAmount) {
+      return res.status(409).json({ success: false, code: 'MINIMUM_BOOKING_NOT_MET', minimumBookingAmount, message: `Wallet use requires a booking of at least ₹${minimumBookingAmount}` });
+    }
+
+    const transaction = { requestId, type: 'debit', amount, reference, bookingId: String(booking._id), bookingAmount: booking.totalFare, description, createdAt: new Date() };
+    const account = await User.findOneAndUpdate(
+      { _id: req.user.userId, walletProcessedDebits: { $ne: requestId }, $expr: { $gte: [{ $ifNull: ['$walletBalance', 0] }, amount] } },
+      { $inc: { walletBalance: -amount }, $addToSet: { walletProcessedDebits: requestId }, $push: { walletTransactions: { $each: [transaction], $slice: -100 } } },
+      { new: true, projection: { walletBalance: 1, walletTransactions: { $slice: -50 } } }
+    );
+    if (!account) {
+      const existing = await User.findById(req.user.userId).select('walletBalance walletTransactions walletProcessedDebits');
+      if (!existing) return res.status(404).json({ success: false, message: 'User not found' });
+      if (existing.walletProcessedDebits?.includes(requestId)) return res.json({ success: true, idempotent: true, balance: existing.walletBalance || 0, transaction: existing.walletTransactions?.find((item) => item.requestId === requestId) || null });
+      return res.status(409).json({ success: false, message: 'Insufficient wallet balance' });
+    }
+    res.json({ success: true, idempotent: false, balance: account.walletBalance, transaction: account.walletTransactions?.slice(-1)[0] });
+  } catch (error) {
+    console.error('Wallet debit error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not debit your wallet' });
   }
 });
 

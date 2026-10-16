@@ -3,14 +3,14 @@ import { bus as busApi } from "../services/api";
 import "./MiniSeatPreview.css";
 
 /**
- * Global Seat Layout Prefetch Manager
- * Prefetches all seat layouts immediately when search results come in
- * Uses batch processing with rate limiting to avoid 429 errors
+ * Lazy seat layout manager
+ * Requests layouts only after the user opens a preview or the seat selector.
+ * Uses a shared cache and in-flight queue to prevent duplicate requests.
  */
 const seatLayoutManager = {
   cache: new Map(),
   pendingCallbacks: new Map(), // Callbacks waiting for specific seat layouts
-  prefetchQueue: [],
+  requestQueue: [],
   inFlight: new Map(),
   isProcessing: false,
   generation: 0,
@@ -20,14 +20,6 @@ const seatLayoutManager = {
   retryDelay: 5000, // 5s retry delay
   maxRetries: 3,
 
-  getBusFare(bus) {
-    const fare = Number(
-      bus?.BusPrice?.BasePrice ??
-      bus?.BusPrice?.PublishedPrice ??
-      bus?.fare
-    );
-    return Number.isFinite(fare) && fare > 0 ? fare : Number.MAX_SAFE_INTEGER;
-  },
 
   // Get cached seat layout instantly (use ResultIndex as key)
   getCached(resultIndex) {
@@ -70,57 +62,20 @@ const seatLayoutManager = {
     };
   },
 
-  // Prefetch all seat layouts for search results (called once after search)
-  async prefetchAll(buses) {
-    if (!buses?.length) return;
-    const generation = this.generation;
-
-    // The results page initially shows the cheapest buses. Queue layouts in the
-    // same order so those cards become interactive first instead of following
-    // the provider's arbitrary response order.
-    [...buses]
-      .sort((a, b) => this.getBusFare(a) - this.getBusFare(b))
-      .forEach(bus => {
-        if (!this.cache.has(bus.ResultIndex)) {
-          // Check if not already in queue
-          const alreadyQueued = this.prefetchQueue.some(
-            item => item.bus.ResultIndex === bus.ResultIndex
-          );
-          if (!alreadyQueued && this.inFlight.get(bus.ResultIndex) !== generation) {
-            this.prefetchQueue.push({
-              bus,
-              cacheKey: bus.ResultIndex,
-              retries: 0,
-              generation,
-            });
-          }
-        }
-      });
-
-    // Keep newly added results correctly ordered if prefetchAll is called while
-    // another layout request is already running.
-    this.prefetchQueue.sort(
-      (a, b) => this.getBusFare(a.bus) - this.getBusFare(b.bus)
-    );
-
-    // Start processing
-    this.processPrefetchQueue();
-  },
-
-  // Move a bus to the front when the customer explicitly opens its seats.
-  prioritize(bus) {
+  // Queue a layout only after an explicit preview or seat selection.
+  request(bus) {
     if (!bus?.ResultIndex || this.cache.has(bus.ResultIndex)) return;
     const generation = this.generation;
 
-    const queuedIndex = this.prefetchQueue.findIndex(
+    const queuedIndex = this.requestQueue.findIndex(
       item => item.bus.ResultIndex === bus.ResultIndex
     );
 
     if (queuedIndex > 0) {
-      const [queuedItem] = this.prefetchQueue.splice(queuedIndex, 1);
-      this.prefetchQueue.unshift(queuedItem);
+      const [queuedItem] = this.requestQueue.splice(queuedIndex, 1);
+      this.requestQueue.unshift(queuedItem);
     } else if (queuedIndex === -1 && this.inFlight.get(bus.ResultIndex) !== generation) {
-      this.prefetchQueue.unshift({
+      this.requestQueue.unshift({
         bus,
         cacheKey: bus.ResultIndex,
         retries: 0,
@@ -128,19 +83,19 @@ const seatLayoutManager = {
       });
     }
 
-    this.processPrefetchQueue();
+    this.processRequestQueue();
   },
 
-  async processPrefetchQueue() {
+  async processRequestQueue() {
     if (this.isProcessing) return;
     this.isProcessing = true;
     const generation = this.generation;
 
-    while (generation === this.generation && this.prefetchQueue.length > 0) {
+    while (generation === this.generation && this.requestQueue.length > 0) {
       // Process batch of concurrent requests
       const batch = [];
-      while (batch.length < this.maxConcurrent && this.prefetchQueue.length > 0) {
-        batch.push(this.prefetchQueue.shift());
+      while (batch.length < this.maxConcurrent && this.requestQueue.length > 0) {
+        batch.push(this.requestQueue.shift());
       }
 
       // Execute batch in parallel
@@ -150,7 +105,7 @@ const seatLayoutManager = {
       if (generation !== this.generation) return;
 
       // Small delay between batches to avoid rate limiting
-      if (this.prefetchQueue.length > 0) {
+      if (this.requestQueue.length > 0) {
         await new Promise(resolve => setTimeout(resolve, this.delayBetweenBatches));
       }
     }
@@ -178,7 +133,7 @@ const seatLayoutManager = {
         // Exponential backoff: 5s, 10s, 20s
         const backoffDelay = this.retryDelay * Math.pow(2, retries);
         // Re-add to END of queue with incremented retry (lower priority)
-        this.prefetchQueue.push({ ...item, retries: retries + 1 });
+        this.requestQueue.push({ ...item, retries: retries + 1 });
         // Wait with exponential backoff
         await new Promise(resolve => setTimeout(resolve, backoffDelay));
       } else if (!is429) {
@@ -203,7 +158,7 @@ const seatLayoutManager = {
   clearCache() {
     this.generation += 1;
     this.cache.clear();
-    this.prefetchQueue = [];
+    this.requestQueue = [];
     this.pendingCallbacks.clear();
     this.isProcessing = false;
   }
@@ -471,14 +426,9 @@ export const setCachedSeatLayout = (resultIndex, seatLayout) => {
   seatLayoutManager.setCache(resultIndex, null, seatLayout);
 };
 
-// Export function to prefetch all seat layouts (call after search results come in)
-export const prefetchAllSeatLayouts = (buses) => {
-  seatLayoutManager.prefetchAll(buses);
-};
-
-// Export function to promote a selected bus ahead of background prefetch work.
-export const prioritizeSeatLayout = (bus) => {
-  seatLayoutManager.prioritize(bus);
+// Request a layout on demand. The manager shares cached and in-flight requests.
+export const requestSeatLayout = (bus) => {
+  seatLayoutManager.request(bus);
 };
 
 // Export subscribe function for SelectSeat to use

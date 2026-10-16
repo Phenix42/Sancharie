@@ -31,3 +31,11 @@ Booking status and refund-status changes send transactional notifications. Promo
 ## Referral tracking
 
 New customer accounts receive a referral code. A new account created through a `/?ref=SAN…` invite link is attributed to its referrer; signed-in customers can share the link from Profile. Referral reward values and qualification rules still need business configuration before automatic rewards are issued.
+
+
+## Wallets
+
+The admin portal exposes wallet review and adjustment endpoints. See [wallet-api.md](./wallet-api.md) for the complete customer and admin API contract.
+
+- `GET /api/admin/wallets` and `GET /api/admin/wallets/:customerId` require `wallets:read`.
+- `POST /api/admin/wallets/:customerId/adjust` requires `wallets:manage`, a reason, and an idempotency request ID. All adjustments are recorded in the wallet ledger and admin audit log.

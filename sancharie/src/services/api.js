@@ -188,12 +188,18 @@ export const user = {
    */
   getWallet: () => apiRequest('/user/wallet'),
 
+  claimWalletPromotion: () => apiRequest('/user/wallet/promotion/claim', { method: 'POST' }),
+
   createWalletTopUpOrder: (amount) => apiRequest('/user/wallet/top-up-order', {
     method: 'POST', body: JSON.stringify({ amount }),
   }),
 
   creditWallet: (paymentResponse) => apiRequest('/user/wallet/credit', {
     method: 'POST', body: JSON.stringify(paymentResponse),
+  }),
+
+  debitWallet: (purchase) => apiRequest('/user/wallet/debit', {
+    method: 'POST', body: JSON.stringify(purchase),
   }),
 
   getBookings: () =>

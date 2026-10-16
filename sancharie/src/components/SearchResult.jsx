@@ -48,8 +48,7 @@ import NoResult from "./noresult";
 import MiniSeatPreview, {
   clearSeatLayoutCache,
   getMinBaseFareFromCache,
-  prefetchAllSeatLayouts,
-  prioritizeSeatLayout,
+  requestSeatLayout,
   subscribeSeatLayout,
 } from "./MiniSeatPreview";
 import Logo from "../assets/logosan.svg";
@@ -397,11 +396,6 @@ export default function SearchResult({ searchParams, onSearch, onBackToHome, mod
         
         setBuses(result.results || []);
         
-        // PREFETCH all seat layouts immediately for instant loading
-        if (result.results?.length > 0) {
-          console.log("Starting seat layout prefetch for", result.results.length, "buses");
-          prefetchAllSeatLayouts(result.results);
-        }
       } catch (err) {
         console.error("Search error:", err);
         setError(err.message || "Failed to search buses");
@@ -757,11 +751,6 @@ export default function SearchResult({ searchParams, onSearch, onBackToHome, mod
           actions.setSearchResults(result.results);
           setBuses(result.results || []);
           
-          // PREFETCH all seat layouts immediately for instant loading
-          if (result.results?.length > 0) {
-            console.log("Starting seat layout prefetch for", result.results.length, "buses");
-            prefetchAllSeatLayouts(result.results);
-          }
         } catch (err) {
           console.error("Search error:", err);
           setError(err.message || "Failed to search buses");
@@ -785,7 +774,7 @@ export default function SearchResult({ searchParams, onSearch, onBackToHome, mod
 
   const handleBusSelect = (bus) => {
     const isClosing = selectedBus === bus.ResultIndex;
-    if (!isClosing) prioritizeSeatLayout(bus);
+    if (!isClosing) requestSeatLayout(bus);
     setSelectedBus(isClosing ? null : bus.ResultIndex);
     actions.setSelectedBus(bus);
   };
@@ -1706,7 +1695,11 @@ export default function SearchResult({ searchParams, onSearch, onBackToHome, mod
                       type="button"
                       className="seat-preview-toggle"
                       aria-expanded={seatPreviewBusId === bus.ResultIndex}
-                      onClick={() => setSeatPreviewBusId((current) => current === bus.ResultIndex ? null : bus.ResultIndex)}
+                      onClick={() => {
+                        const isOpen = seatPreviewBusId === bus.ResultIndex;
+                        if (!isOpen) requestSeatLayout(bus);
+                        setSeatPreviewBusId(isOpen ? null : bus.ResultIndex);
+                      }}
                     >
                       {seatPreviewBusId === bus.ResultIndex ? 'Hide seat preview' : 'Preview seats'}
                     </button>

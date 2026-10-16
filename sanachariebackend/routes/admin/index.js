@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const Admin = require('../../models/Admin');
 const AuditLog = require('../../models/AuditLog');
 const User = require('../../models/User');
+const WalletPromotion = require('../../models/WalletPromotion');
 const Booking = require('../../models/Booking');
 const { Discount, Coupon, Offer, FestivalTheme, Banner, ApplicationSettings, AppAsset } = require('../../models/AdminResources');
 const PushSubscription = require('../../models/PushSubscription');
@@ -194,6 +195,103 @@ router.patch('/users/:id/status', requirePermission('users:manage'), asyncRoute(
   if (!user) return res.status(404).json({ success: false, message: 'User not found' });
   await recordAdminAction(req, { action: req.body.active ? 'enable' : 'disable', resource: 'users', resourceId: user._id, summary: `${req.body.active ? 'Enabled' : 'Disabled'} customer account` });
   res.json({ success: true, data: user });
+}));
+
+router.get('/wallet-promotions', requirePermission('wallets:read'), asyncRoute(async (_req, res) => {
+  const promotion = await WalletPromotion.findOne().sort({ createdAt: -1 }).select('-claimedUserIds').populate('createdBy', 'name email').lean();
+  res.json({ success: true, data: promotion });
+}));
+
+router.post('/wallet-promotions', requirePermission('wallets:manage'), asyncRoute(async (req, res) => {
+  const rewardAmount = Number(req.body?.rewardAmount);
+  const minimumBookingAmount = Number(req.body?.minimumBookingAmount);
+  const recipientLimit = Number(req.body?.recipientLimit);
+  if (!Number.isFinite(rewardAmount) || rewardAmount < 0.01 || rewardAmount > 50000 || Math.round(rewardAmount * 100) !== rewardAmount * 100) {
+    return res.status(400).json({ success: false, message: 'Reward must be between ₹0.01 and ₹50,000 with at most two decimal places' });
+  }
+  if (!Number.isFinite(minimumBookingAmount) || minimumBookingAmount < 0 || minimumBookingAmount > 500000 || Math.round(minimumBookingAmount * 100) !== minimumBookingAmount * 100) {
+    return res.status(400).json({ success: false, message: 'Minimum booking amount must be between ₹0 and ₹500,000' });
+  }
+  if (!Number.isInteger(recipientLimit) || recipientLimit < 1 || recipientLimit > 100000) {
+    return res.status(400).json({ success: false, message: 'Recipient limit must be a whole number from 1 to 100,000' });
+  }
+  await WalletPromotion.updateMany({ enabled: true }, { $set: { enabled: false } });
+  const promotion = await WalletPromotion.create({ rewardAmount, minimumBookingAmount, recipientLimit, enabled: true, createdBy: req.admin._id });
+  await recordAdminAction(req, { action: 'wallet_promotion_create', resource: 'wallets', resourceId: promotion._id, summary: `Started wallet bonus: ₹${rewardAmount} for first ${recipientLimit} customers`, changes: { rewardAmount, minimumBookingAmount, recipientLimit } });
+  res.status(201).json({ success: true, data: { _id: promotion._id, rewardAmount: promotion.rewardAmount, minimumBookingAmount: promotion.minimumBookingAmount, recipientLimit: promotion.recipientLimit, claimedCount: promotion.claimedCount, enabled: promotion.enabled, createdAt: promotion.createdAt } });
+}));
+
+router.patch('/wallet-promotions/:id', requirePermission('wallets:manage'), asyncRoute(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid promotion ID' });
+  if (typeof req.body?.enabled !== 'boolean') return res.status(400).json({ success: false, message: 'enabled must be a boolean' });
+  const promotion = await WalletPromotion.findById(req.params.id);
+  if (!promotion) return res.status(404).json({ success: false, message: 'Wallet promotion not found' });
+  promotion.enabled = req.body.enabled;
+  await promotion.save();
+  await recordAdminAction(req, { action: promotion.enabled ? 'wallet_promotion_enable' : 'wallet_promotion_disable', resource: 'wallets', resourceId: promotion._id, summary: `${promotion.enabled ? 'Enabled' : 'Paused'} wallet bonus campaign`, changes: { enabled: promotion.enabled, claimedCount: promotion.claimedCount, recipientLimit: promotion.recipientLimit } });
+  res.json({ success: true, data: { _id: promotion._id, rewardAmount: promotion.rewardAmount, minimumBookingAmount: promotion.minimumBookingAmount, recipientLimit: promotion.recipientLimit, claimedCount: promotion.claimedCount, enabled: promotion.enabled, updatedAt: promotion.updatedAt } });
+}));
+
+router.get('/wallets', requirePermission('wallets:read'), asyncRoute(async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+  const q = String(req.query.q || '').trim().slice(0, 100);
+  const filter = q ? { $or: [
+    { name: { $regex: escapeRegex(q), $options: 'i' } },
+    { email: { $regex: escapeRegex(q), $options: 'i' } },
+    { phone: { $regex: escapeRegex(q), $options: 'i' } },
+    ...(mongoose.isValidObjectId(q) ? [{ _id: q }] : []),
+  ] } : {};
+  const [data, total, balanceSummary] = await Promise.all([
+    User.find(filter).select('name email phone walletBalance updatedAt').sort({ updatedAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    User.countDocuments(filter),
+    User.aggregate([
+      { $match: filter },
+      { $group: {
+        _id: null,
+        totalBalance: { $sum: { $ifNull: ['$walletBalance', 0] } },
+        fundedWallets: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$walletBalance', 0] }, 0] }, 1, 0] } },
+      } },
+    ]),
+  ]);
+  res.json({ success: true, data, summary: balanceSummary[0] || { totalBalance: 0, fundedWallets: 0 }, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+}));
+
+router.get('/wallets/:id', requirePermission('wallets:read'), asyncRoute(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid customer ID' });
+  const user = await User.findById(req.params.id).select('name email phone walletBalance walletTransactions updatedAt').lean();
+  if (!user) return res.status(404).json({ success: false, message: 'Customer not found' });
+  res.json({ success: true, data: { id: user._id, name: user.name, email: user.email, phone: user.phone, balance: user.walletBalance || 0, transactions: (user.walletTransactions || []).slice(-100).reverse(), updatedAt: user.updatedAt } });
+}));
+
+router.post('/wallets/:id/adjust', requirePermission('wallets:manage'), asyncRoute(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid customer ID' });
+  const amount = Number(req.body?.amount);
+  const direction = String(req.body?.direction || '').toLowerCase();
+  const reason = String(req.body?.reason || '').trim().slice(0, 200);
+  const requestId = String(req.body?.requestId || '').trim().slice(0, 100);
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 50000 || Math.round(amount * 100) !== amount * 100) {
+    return res.status(400).json({ success: false, message: 'Amount must be between ₹0.01 and ₹50,000 with at most two decimal places' });
+  }
+  if (!['credit', 'debit'].includes(direction)) return res.status(400).json({ success: false, message: 'direction must be credit or debit' });
+  if (reason.length < 4) return res.status(400).json({ success: false, message: 'A reason of at least 4 characters is required' });
+  if (!/^[A-Za-z0-9._:-]{8,100}$/.test(requestId)) return res.status(400).json({ success: false, message: 'A unique requestId (8–100 letters, numbers, dots, underscores, colons or hyphens) is required' });
+
+  const transaction = { requestId, type: `admin_${direction}`, amount, description: reason, adminId: String(req.admin._id), adminEmail: req.admin.email, createdAt: new Date() };
+  const conditions = { _id: req.params.id, walletProcessedAdjustments: { $ne: requestId } };
+  if (direction === 'debit') conditions.$expr = { $gte: [{ $ifNull: ['$walletBalance', 0] }, amount] };
+  const update = { $inc: { walletBalance: direction === 'credit' ? amount : -amount }, $addToSet: { walletProcessedAdjustments: requestId }, $push: { walletTransactions: { $each: [transaction], $slice: -100 } } };
+  const updated = await User.findOneAndUpdate(conditions, update, { new: true }).select('name email phone walletBalance');
+  if (!updated) {
+    const existing = await User.findById(req.params.id).select('name walletBalance walletTransactions walletProcessedAdjustments');
+    if (!existing) return res.status(404).json({ success: false, message: 'Customer not found' });
+    if (existing.walletProcessedAdjustments?.includes(requestId)) {
+      return res.json({ success: true, idempotent: true, balance: existing.walletBalance || 0, message: 'This wallet adjustment was already applied' });
+    }
+    return res.status(409).json({ success: false, message: 'Wallet balance is too low for this debit' });
+  }
+  await recordAdminAction(req, { action: direction === 'credit' ? 'wallet_credit' : 'wallet_debit', resource: 'wallets', resourceId: updated._id, summary: `Admin ${direction} of ₹${amount.toFixed(2)} for ${updated.phone}`, changes: { amount, direction, reason, requestId, balance: updated.walletBalance } });
+  res.json({ success: true, idempotent: false, data: { userId: updated._id, balance: updated.walletBalance } });
 }));
 
 router.get('/bookings', requirePermission('bookings:read'), asyncRoute(async (req, res) => {
