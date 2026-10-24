@@ -456,6 +456,36 @@ router.post('/wallet/debit', authenticateToken, async (req, res) => {
   }
 });
 
+router.post('/wallet/restore-debit', authenticateToken, async (req, res) => {
+  try {
+    const requestId = cleanText(req.body?.requestId, 100);
+    if (!/^[A-Za-z0-9._:-]{8,100}$/.test(requestId)) return res.status(400).json({ success: false, message: 'A valid wallet debit requestId is required' });
+    const bookingId = requestId.startsWith('wallet-') ? requestId.slice('wallet-'.length) : '';
+    if (!mongoose.isValidObjectId(bookingId)) return res.status(400).json({ success: false, message: 'Wallet debit reference is invalid' });
+    const booking = await Booking.findOne({ _id: bookingId, userId: req.user.userId }).select('bookingId status paymentStatus');
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.status !== 'pending' || booking.paymentStatus !== 'pending') return res.status(409).json({ success: false, message: 'Wallet funds can only be restored before payment is completed' });
+
+    const refundKey = `refund-${requestId}`;
+    const account = await User.findById(req.user.userId).select('walletBalance walletTransactions walletProcessedAdjustments');
+    if (!account) return res.status(404).json({ success: false, message: 'User not found' });
+    if (account.walletProcessedAdjustments?.includes(refundKey)) return res.json({ success: true, idempotent: true, balance: account.walletBalance || 0 });
+    const debit = account.walletTransactions?.find((transaction) => transaction.requestId === requestId && transaction.type === 'debit' && String(transaction.bookingId) === bookingId);
+    if (!debit) return res.status(404).json({ success: false, message: 'Wallet debit not found' });
+
+    const restored = await User.findOneAndUpdate(
+      { _id: req.user.userId, walletProcessedAdjustments: { $ne: refundKey } },
+      { $inc: { walletBalance: debit.amount }, $addToSet: { walletProcessedAdjustments: refundKey }, $push: { walletTransactions: { $each: [{ type: 'credit', amount: debit.amount, requestId: refundKey, bookingId, description: 'Wallet payment reversed', createdAt: new Date() }], $slice: -100 } } },
+      { new: true, projection: { walletBalance: 1 } }
+    );
+    if (!restored) return res.status(409).json({ success: false, message: 'Wallet debit was already restored' });
+    return res.json({ success: true, balance: restored.walletBalance });
+  } catch (error) {
+    console.error('Wallet debit restore error:', error.message);
+    return res.status(500).json({ success: false, message: 'Could not restore wallet funds' });
+  }
+});
+
 router.post('/wallet/credit', authenticateToken, async (req, res) => {
   try {
     const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = req.body;

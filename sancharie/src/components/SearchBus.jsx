@@ -9,7 +9,7 @@ import fromIcon from "../assets/searchbar/from.svg";
 import toIcon from "../assets/searchbar/to.svg";
 
 const MAX_RECENT_SEARCHES = 5;
-const STATION_CACHE_KEY = 'sancharie_bus_stations_cache_v2';
+const STATION_CACHE_KEY = 'sancharie_bus_stations_cache_v3';
 const STATION_CACHE_TTL_MS = 15 * 60 * 1000;
 
 const normalizeText = (value) => String(value || '').trim().replace(/\s+/g, ' ');
@@ -86,7 +86,8 @@ const localityCityMap = [
 ];
 
 const getCorrectedCity = (name) => {
-  const cleaned = normalizeText(name).replace(/\s*\([^)]*\)\s*/g, '');
+  // ETS uses parenthetical qualifiers as part of some exact city names, e.g. "Rajkot (gujarat)".
+  const cleaned = normalizeText(name);
   const key = normalizeKey(cleaned);
   return cityCorrections[key] || cleaned;
 };
@@ -106,6 +107,9 @@ const createStationOption = (station, source = 'api') => {
   const state = normalizeText(station.state || station.stateName || station.StateName || station.region || '');
   const city = normalizeText(station.searchCity || station.parentCity || station.cityName || station.city || '');
   const correctedCity = getCorrectedCity(city || rawName);
+  const searchCity = source === 'api'
+    ? rawName
+    : correctedCity;
   const displayName = normalizeText(station.displayName || rawName);
   const kind = station.kind || (displayName.includes('All boarding points') ? 'city' : 'station');
   const subtitle = station.subtitle || (kind === 'city' ? state : correctedCity);
@@ -114,6 +118,7 @@ const createStationOption = (station, source = 'api') => {
     rawName,
     displayName,
     correctedCity,
+    searchCity,
     state,
   ].filter(Boolean);
 
@@ -121,12 +126,12 @@ const createStationOption = (station, source = 'api') => {
     displayName,
     name: rawName,
     stationId,
-    searchCity: correctedCity,
+    searchCity,
     state,
     kind,
     subtitle,
     source,
-    searchText: `${displayName} ${rawName} ${correctedCity} ${state} ${aliases.join(' ')}`.toLowerCase(),
+    searchText: `${displayName} ${rawName} ${correctedCity} ${searchCity} ${state} ${aliases.join(' ')}`.toLowerCase(),
   };
 };
 
@@ -577,8 +582,8 @@ const SearchBus = ({ onSearch, initialValues, mode = 'bus', compact = false }) =
       const typedToCode = extractIataCode(formData.to);
       const fromId = formData.fromId || fromStationInfo?.stationId || (mode === 'flight' ? typedFromCode : '');
       const toId = formData.toId || toStationInfo?.stationId || (mode === 'flight' ? typedToCode : '');
-      const fromSearchCity = formData.fromSearchCity || fromStationInfo?.searchCity || getCorrectedCity(formData.from);
-      const toSearchCity = formData.toSearchCity || toStationInfo?.searchCity || getCorrectedCity(formData.to);
+      const fromSearchCity = fromStationInfo?.searchCity || formData.fromSearchCity || getCorrectedCity(formData.from);
+      const toSearchCity = toStationInfo?.searchCity || formData.toSearchCity || getCorrectedCity(formData.to);
 
       if (mode === 'flight') {
         if (!fromId || !toId) {

@@ -27,7 +27,7 @@ import {
   AlertTriangle,
   RefreshCw
 } from "lucide-react";
-import { bus, payment } from "../services/api";
+import { bus, payment, user as userApi } from "../services/api";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import { generateTicketPDF } from "../utils/ticketGenerator";
@@ -77,7 +77,7 @@ export default function Payment() {
   const { sessionExpired } = bookingState;
 
   // Get data from navigation state
-  const { fareData, seatLayout, selectedSeats, boardingPoint, droppingPoint, bus: busData, passengers, contactDetails, assurance, blockSeatData } = location.state || {};
+  const { fareData, seatLayout, selectedSeats, boardingPoint, droppingPoint, bus: busData, passengers, contactDetails, assurance, blockSeatData, promotion, walletPayment } = location.state || {};
   
   // Get city names from booking context search params
   const fromCity = bookingState?.searchParams?.from || busData?.source || 'Origin';
@@ -193,7 +193,11 @@ export default function Payment() {
     : selectedSeatDetails.some((seat) => seat.zIndex === 1);
   const assuranceTotal = assurance === 'yes' ? 24 * selectedSeats.length : 0;
   const displayGrandTotal = (fareData?.totalFare || 0) + assuranceTotal;
-  const grandTotal = Number(serverRequiredAmount || blockSeatData?.requiredAmount || displayGrandTotal);
+  const providerFare = Number(serverRequiredAmount || blockSeatData?.requiredAmount || displayGrandTotal);
+  const discountAmount = Math.min(providerFare, Number(promotion?.discountAmount || 0));
+  const fareAfterPromo = Math.max(0, providerFare - discountAmount);
+  const walletAmount = Math.min(fareAfterPromo, Number(walletPayment?.amount || 0));
+  const grandTotal = Math.max(0, fareAfterPromo - walletAmount);
   const rawJourneyDate = busData?.dateOfJourney || busData?.date || busData?.DepartureTime;
   const parsedJourneyDate = rawJourneyDate ? new Date(rawJourneyDate) : null;
   const journeyDateLabel = parsedJourneyDate && !Number.isNaN(parsedJourneyDate.getTime())
@@ -205,7 +209,7 @@ export default function Payment() {
       toast.error("Invalid booking data. Please try again.");
       return false;
     }
-    if (grandTotal <= 0) {
+    if (grandTotal <= 0 && walletAmount <= 0) {
       toast.error("Invalid payment amount.");
       return false;
     }
@@ -229,6 +233,9 @@ export default function Payment() {
     let bookingRecordId = '';
     let lifecycleStage = 'fare_check';
     let paymentVerified = false;
+    let walletDebitRequestId = '';
+    let walletDebitApplied = false;
+    let appliedWalletAmount = walletAmount;
 
     try {
       const blockTicketKey = blockSeatData?.blockTicketKey;
@@ -269,7 +276,7 @@ export default function Payment() {
         })),
         baseFare: fareData?.baseFare || fareData?.totalFare || payableAmount,
         serviceTax: fareData?.serviceTax || 0,
-        totalFare: payableAmount,
+        totalFare: fareAfterPromo,
         paymentStatus: 'pending',
         paymentMethod: 'razorpay',
       });
@@ -284,9 +291,22 @@ export default function Payment() {
         const rtcFareData = await bus.getRtcUpdatedFare(blockTicketKey);
         const refreshedAmount = Number(rtcFareData.requiredAmount || 0);
         if (refreshedAmount > 0) {
-          payableAmount = refreshedAmount;
+          const refreshedFareAfterPromo = Math.max(0, refreshedAmount - discountAmount);
+          appliedWalletAmount = Math.min(appliedWalletAmount, refreshedFareAfterPromo);
+          payableAmount = Math.max(0, refreshedFareAfterPromo - appliedWalletAmount);
           setServerRequiredAmount(refreshedAmount);
         }
+      }
+
+      if (appliedWalletAmount > 0) {
+        walletDebitRequestId = `wallet-${bookingRecordId}`;
+        walletDebitApplied = true;
+        await userApi.debitWallet({
+          amount: appliedWalletAmount,
+          bookingId: bookingRecordId,
+          requestId: walletDebitRequestId,
+          description: `Wallet payment for ${busData?.TravelName || busData?.name || 'bus booking'}`,
+        });
       }
 
       const bookingDetails = {
@@ -297,6 +317,11 @@ export default function Payment() {
         seats: seatNames.join(", "),
         passengerCount: passengers?.length || selectedSeats.length,
         description: `Bus Ticket - ${boardingPoint?.name || 'Origin'} to ${droppingPoint?.name || 'Destination'}`,
+        promo_code: promotion?.code || '',
+        promotion_id: promotion?.promotionId || '',
+        discount_amount: discountAmount,
+        wallet_booking_id: bookingRecordId,
+        wallet_amount: appliedWalletAmount,
       };
 
       const customerInfo = {
@@ -306,33 +331,41 @@ export default function Payment() {
       };
 
       lifecycleStage = 'payment';
-      const paymentResult = await payment.initiatePayment({
-        amount: payableAmount,
-        customerInfo,
-        bookingDetails,
-        onStart: () => {
-          console.log('Payment initiated...');
-        },
-        onSuccess: async (verification) => {
-          console.log('Payment verified successfully:', verification.data?.payment_id);
-          setPaymentId(verification.data?.payment_id);
-        },
-        onFailure: (error) => {
-          console.error('Payment failed:', error);
-        },
-        onDismiss: () => {
-          console.log('Payment modal closed by user');
-        },
-      });
+      let paymentResult = {
+        verified: payableAmount <= 0,
+        data: { payment_id: payableAmount <= 0 ? `WALLET-${bookingRecordId}` : '', method: payableAmount <= 0 ? 'wallet' : '' },
+      };
+      if (payableAmount > 0) {
+        paymentResult = await payment.initiatePayment({
+          amount: payableAmount,
+          customerInfo,
+          bookingDetails,
+          onStart: () => {
+            console.log('Payment initiated...');
+          },
+          onSuccess: async (verification) => {
+            console.log('Payment verified successfully:', verification.data?.payment_id);
+            setPaymentId(verification.data?.payment_id);
+          },
+          onFailure: (error) => {
+            console.error('Payment failed:', error);
+          },
+          onDismiss: () => {
+            console.log('Payment modal closed by user');
+          },
+        });
+        if (!paymentResult.verified) throw new Error('Payment cancelled');
+      }
 
       if (paymentResult.verified) {
         paymentVerified = true;
+        setPaymentId(paymentResult.data?.payment_id || '');
         await persistBookingUpdate(updateBooking, bookingRecordId, {
           status: 'pending',
           paymentStatus: 'completed',
           paymentId: paymentResult.data?.payment_id || '',
           paymentOrderId: paymentResult.data?.order_id || '',
-          paymentMethod: paymentResult.data?.method || 'razorpay',
+          paymentMethod: appliedWalletAmount > 0 && payableAmount > 0 ? 'wallet+razorpay' : appliedWalletAmount > 0 ? 'wallet' : 'razorpay',
           providerStatus: 'payment_verified',
           failureStage: '',
           failureReason: '',
@@ -343,7 +376,12 @@ export default function Payment() {
         
         // Call seatBooking to complete reservation
         console.log('[Booking Flow] Calling seatBooking...');
-        const bookingResult = await bus.bookTicket(blockTicketKey, paymentResult.data?.payment_id);
+        const bookingResult = await bus.bookTicket(blockTicketKey, paymentResult.data?.payment_id, {
+          bookingId: bookingRecordId,
+          amount: appliedWalletAmount,
+          promoCode: promotion?.code || '',
+          promotionId: promotion?.promotionId || '',
+        });
         console.log('[Booking Flow] Booking successful:', bookingResult);
         
         setBookingResponse({
@@ -358,7 +396,7 @@ export default function Payment() {
           paymentStatus: 'completed',
           paymentId: paymentResult.data?.payment_id || '',
           paymentOrderId: paymentResult.data?.order_id || '',
-          paymentMethod: paymentResult.data?.method || 'razorpay',
+          paymentMethod: appliedWalletAmount > 0 && payableAmount > 0 ? 'wallet+razorpay' : appliedWalletAmount > 0 ? 'wallet' : 'razorpay',
           externalBookingId: bookingResult?.etsTicketNumber || bookingResult?.bookingId || '',
           ticketNo: bookingResult?.etsTicketNumber || bookingResult?.ticketNo || '',
           pnr: bookingResult?.opPNR || bookingResult?.travelOperatorPNR || '',
@@ -403,6 +441,15 @@ export default function Payment() {
       }
     } catch (error) {
       console.error("Payment/Booking error:", error);
+
+      if (walletDebitApplied && !paymentVerified) {
+        try {
+          await userApi.restoreWalletDebit(walletDebitRequestId);
+          walletDebitApplied = false;
+        } catch (restoreError) {
+          console.error('Could not restore wallet payment after failed checkout:', restoreError);
+        }
+      }
 
       if (bookingRecordId) {
         await persistBookingUpdate(updateBooking, bookingRecordId, {
@@ -501,7 +548,7 @@ export default function Payment() {
                   </div>
                   <div className="total-paid-badge">
                     <span className="paid-label">TOTAL PAID</span>
-                    <span className="paid-amount">₹{grandTotal}</span>
+                  <span className="paid-amount">₹{fareAfterPromo}</span>
                   </div>
                 </div>
 
@@ -599,7 +646,7 @@ export default function Payment() {
                 seatLayout: Array.isArray(seatLayout) && seatLayout.length ? seatLayout : selectedSeatDetails,
                 hasUpperDeck,
                 passengers: passengers,
-                totalFare: grandTotal,
+                totalFare: fareAfterPromo,
                 paymentId: paymentId,
                 contactPhone: contactDetails?.phone,
                 contactEmail: contactDetails?.email
@@ -797,6 +844,14 @@ export default function Payment() {
                   <span>Service Charge</span>
                   <span>₹{fareData?.serviceCharge || 0}</span>
                 </div>
+                {discountAmount > 0 && <div className="fare-item promo-discount-row">
+                  <span>Promo discount · {promotion?.code || promotion?.name}</span>
+                  <span>−₹{discountAmount.toLocaleString('en-IN')}</span>
+                </div>}
+                {walletAmount > 0 && <div className="fare-item wallet-payment-row">
+                  <span>Wallet balance</span>
+                  <span>−₹{walletAmount.toLocaleString('en-IN')}</span>
+                </div>}
                 {assurance === 'yes' && (
                   <div className="fare-item assurance">
                     <span>
@@ -892,14 +947,14 @@ export default function Payment() {
             <button 
               className="pay-button" 
               onClick={handlePayNow}
-              disabled={isProcessing || !razorpayLoaded}
+              disabled={isProcessing || (grandTotal > 0 && !razorpayLoaded)}
             >
               {isProcessing ? (
                 <>
                   <Loader2 size={20} className="spinner" />
                   Processing...
                 </>
-              ) : !razorpayLoaded ? (
+              ) : grandTotal > 0 && !razorpayLoaded ? (
                 <>
                   <Loader2 size={20} className="spinner" />
                   Preparing secure payment...
@@ -907,7 +962,7 @@ export default function Payment() {
               ) : (
                 <>
                   <Lock size={20} />
-                  Pay Securely ₹{grandTotal}
+                  {grandTotal > 0 ? `Pay Securely ₹${grandTotal}` : `Confirm booking with wallet ₹${walletAmount}`}
                 </>
               )}
             </button>

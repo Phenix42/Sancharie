@@ -1905,3 +1905,219 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.details-page .promo-discount-row { color: #21805f; font-weight: 750; }
+.details-page .promo-discount-row > span:first-child { display: inline-flex; align-items: center; gap: 5px; }
+.details-page .promo-trigger { display: flex; width: 100%; align-items: center; gap: 12px; margin: 14px 0 18px; padding: 13px 14px; border: 1px dashed #c6d9d7; border-radius: 12px; background: #f7fbfa; color: #17664e; text-align: left; cursor: pointer; }
+.details-page .promo-trigger > span:nth-child(2) { display: grid; flex: 1; gap: 3px; }
+.details-page .promo-trigger strong { color: #174b3d; font-size: 13px; }
+.details-page .promo-trigger small { color: #71827c; font-size: 11px; }
+.details-page .promo-trigger-action { color: #a24242; font-size: 12px; font-weight: 700; }
+.details-page .promo-modal-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(8, 27, 34, .56); backdrop-filter: blur(4px); }
+.details-page .promo-modal { position: relative; width: min(100%, 420px); padding: 30px; border: 1px solid #e2e9e8; border-radius: 20px; background: #fff; box-shadow: 0 24px 70px rgba(0, 26, 38, .25); }
+.details-page .promo-modal-close { position: absolute; top: 12px; right: 15px; border: 0; background: transparent; color: #65777c; font-size: 27px; cursor: pointer; }
+.details-page .promo-modal-icon { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 14px; background: #f8f0d7; color: #987625; }
+.details-page .promo-modal h3 { margin: 16px 0 5px; color: #17313b; font-size: 21px; }
+.details-page .promo-modal p { margin: 0 0 19px; color: #718087; font-size: 13px; }
+.details-page .promo-modal form { display: grid; gap: 10px; }
+.details-page .promo-modal input { width: 100%; padding: 13px 14px; border: 1px solid #d5e0e1; border-radius: 10px; color: #17313b; font: inherit; text-transform: uppercase; }
+.details-page .promo-modal form button { min-height: 45px; border: 0; border-radius: 10px; background: #002c3f; color: #fff; font: inherit; font-weight: 750; cursor: pointer; }
+.details-page .promo-modal form button:disabled { opacity: .65; cursor: wait; }
+.details-page .promo-error { color: #bc3945; font-size: 12px; }
+.details-page .wallet-use-row { align-items: center; color: #17664e; cursor: pointer; }
+.details-page .wallet-use-row > span { display: flex; align-items: center; gap: 9px; }
+.details-page .wallet-use-row input { width: 17px; height: 17px; accent-color: #21805f; }
+.details-page .wallet-use-row > span > span { display: grid; gap: 3px; }
+.details-page .wallet-use-row small { color: #71827c; font-size: 11px; }
+.details-page .wallet-use-row > strong { color: #21805f; }
+.details-page .wallet-use-row.unavailable { color: #687b80; cursor: not-allowed; }
+.details-page .wallet-use-row.unavailable input { cursor: not-allowed; }
+
+.details-page .fare-cancellation-summary {
+  margin: 0 20px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(206, 180, 95, 0.58);
+  border-radius: 13px;
+  background: linear-gradient(135deg, #fffdf7, #fbf6e8);
+}
+.details-page .fare-cancellation-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border: 0;
+  background: transparent;
+  color: var(--details-navy);
+  text-align: left;
+  cursor: pointer;
+}
+.details-page .fare-cancellation-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border: 1px solid rgba(206, 180, 95, 0.5);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--details-gold-deep);
+}
+.details-page .fare-cancellation-title {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+.details-page .fare-cancellation-title strong { color: var(--details-navy); font-size: 12px; }
+.details-page .fare-cancellation-title small { color: var(--details-muted); font-size: 10px; }
+.details-page .fare-cancellation-toggle > svg { color: var(--details-gold-deep); }
+.details-page .fare-cancellation-rules {
+  display: grid;
+  gap: 10px;
+  padding: 0 10px 10px;
+}
+.details-page .fare-cancellation-rule {
+  padding: 12px;
+  border: 1px solid var(--details-border);
+  border-radius: 11px;
+  background: #fff;
+}
+.details-page .fare-cancellation-rule h4 {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #edf1f1;
+  color: var(--details-ink);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.details-page .fare-cancellation-rule h4 svg { flex: 0 0 auto; margin-top: 1px; color: var(--details-gold-deep); }
+.details-page .fare-cancellation-charge,
+.details-page .fare-cancellation-no-refund {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+  padding: 8px 9px;
+  border: 1px solid rgba(206, 180, 95, 0.55);
+  border-radius: 8px;
+  background: #fffaf0;
+  color: #775f20;
+  font-size: 10px;
+  font-weight: 700;
+}
+.details-page .fare-cancellation-no-refund { border-color: #f2c5c8; background: #fff5f5; color: #b9363f; }
+.details-page .fare-cancellation-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  color: #64767c;
+  font-size: 10px;
+}
+.details-page .fare-cancellation-line strong { color: #324950; font-weight: 700; text-align: right; }
+.details-page .fare-cancellation-line.discount,
+.details-page .fare-cancellation-line.discount strong { color: #21805f; }
+.details-page .fare-cancellation-line.charge strong,
+.details-page .fare-cancellation-line.total-deducted strong { color: #bd3c43; }
+.details-page .fare-cancellation-line.total-deducted {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #e8eeee;
+  color: var(--details-ink);
+  font-weight: 800;
+}
+.details-page .fare-cancellation-refund {
+  display: grid;
+  gap: 3px;
+  margin-top: 9px;
+  padding: 10px;
+  border: 1px solid #d9e9dd;
+  border-radius: 9px;
+  background: #f3f8f3;
+  color: #4d7258;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.details-page .fare-cancellation-refund strong { color: #245d37; font-size: 18px; letter-spacing: 0; }
+.details-page .fare-cancellation-unavailable { margin: 0; padding: 8px; color: var(--details-muted); font-size: 11px; }
+
+.details-page .promo-accordion {
+  display: grid;
+  gap: 10px;
+  margin: -7px 20px 16px;
+  padding: 13px;
+  border: 1px solid var(--details-border);
+  border-radius: 13px;
+  background: #fbfcfc;
+}
+.details-page .promo-accordion h4 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--details-navy);
+  font-size: 12px;
+}
+.details-page .promo-accordion h4 svg { color: var(--details-gold-deep); }
+.details-page .promo-code-form { display: flex; gap: 7px; }
+.details-page .promo-code-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid #d5e0e1;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--details-ink);
+  font: inherit;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.details-page .promo-code-form button {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--details-navy);
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.details-page .promo-code-form button:disabled,
+.details-page .promo-available-card:disabled { opacity: .6; cursor: wait; }
+.details-page .promo-code-form button.applied:disabled { background: #d9dfe1; color: #65777d; opacity: 1; cursor: not-allowed; }
+.details-page .promo-accordion .promo-error { color: #bc3945; font-size: 11px; }
+.details-page .promo-available-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+.details-page .promo-available-heading strong { color: #465c63; font-size: 10px; }
+.details-page .promo-available-heading small { color: var(--details-muted); font-size: 10px; }
+.details-page .promo-empty { margin: 0; color: var(--details-muted); font-size: 10px; line-height: 1.5; }
+.details-page .promo-available-list { display: grid; gap: 7px; max-height: 250px; overflow-y: auto; }
+.details-page .promo-available-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 8px;
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #e2e9e9;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--details-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.details-page .promo-available-card.selected { border-color: var(--details-gold); background: #fffdf7; }
+.details-page .promo-available-badge { grid-row: span 2; padding: 6px 7px; border-radius: 7px; background: var(--details-gold-pale); color: #856b26; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.details-page .promo-available-copy { display: grid; min-width: 0; gap: 2px; }
+.details-page .promo-available-copy strong { overflow: hidden; color: var(--details-navy); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.details-page .promo-available-copy small { overflow: hidden; color: var(--details-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.details-page .promo-available-action { color: var(--details-gold-deep); font-size: 10px; font-weight: 800; }
+.details-page .promo-available-terms { grid-column: 2 / 4; color: #7a898d; font-size: 9px; }

@@ -202,6 +202,10 @@ export const user = {
     method: 'POST', body: JSON.stringify(purchase),
   }),
 
+  restoreWalletDebit: (requestId) => apiRequest('/user/wallet/restore-debit', {
+    method: 'POST', body: JSON.stringify({ requestId }),
+  }),
+
   getBookings: () =>
     apiRequest('/user/bookings'),
 
@@ -338,9 +342,9 @@ export const bus = {
    * @param {string} dateOfJourney - Journey date (yyyy-MM-dd)
    */
   search: async (sourceCity, destinationCity, dateOfJourney) => {
-    const params = `sourceCity=${sourceCity}&destinationCity=${destinationCity}&doj=${dateOfJourney}`;
+    const params = new URLSearchParams({ sourceCity, destinationCity, doj: dateOfJourney });
 
-    const data = await apiRequest(`/api/ets/getAvailableBuses?${params}`);
+    const data = await apiRequest(`/api/ets/getAvailableBuses?${params.toString()}`);
 
     if (data.apiStatus && !data.apiStatus.success) {
       throw new Error(data.apiStatus.message || 'Search failed');
@@ -725,9 +729,13 @@ export const bus = {
    * Book seat (confirm booking after payment)
    * @param {string} blockTicketKey - Block ticket key from blockTicket response
    */
-  bookTicket: async (blockTicketKey, paymentId) => {
+  bookTicket: async (blockTicketKey, paymentId, walletPayment = {}) => {
     const params = new URLSearchParams({ blockTicketKey });
     if (paymentId) params.set('paymentId', paymentId);
+    if (walletPayment.bookingId) params.set('walletBookingId', walletPayment.bookingId);
+    if (Number(walletPayment.amount) > 0) params.set('walletAmount', String(walletPayment.amount));
+    if (walletPayment.promoCode) params.set('promoCode', walletPayment.promoCode);
+    if (walletPayment.promotionId) params.set('promotionId', walletPayment.promotionId);
     const data = await apiRequest(`/api/ets/seatBooking?${params}`);
 
     if (data.apiStatus?.success !== true || !data.etstnumber) {
@@ -1046,6 +1054,20 @@ export const hotels = {
 // ============================================
 // PAYMENT API
 // ============================================
+
+export const promotions = {
+  available: async () => {
+    const data = await apiRequest('/api/config');
+    return data.data?.discounts || [];
+  },
+  validate: async (payload) => {
+    const data = await apiRequest('/api/promotions/validate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return data.data;
+  },
+};
 
 export const payment = {
   /**

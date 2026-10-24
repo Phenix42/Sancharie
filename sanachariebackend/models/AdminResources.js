@@ -40,7 +40,7 @@ const couponSchema = new mongoose.Schema({
 const offerSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 120 },
   description: { type: String, default: '', maxlength: 1000 },
-  type: { type: String, enum: ['first_booking', 'weekend', 'new_user', 'festival', 'route', 'referral', 'payment_method', 'custom'], default: 'custom' },
+  type: { type: String, enum: ['first_booking', 'weekend', 'new_user', 'festival', 'route', 'referral', 'payment_method', 'custom'], default: 'custom', set: (value) => typeof value === 'string' && value.trim() ? value.trim() : 'custom' },
   discountType: { type: String, enum: ['percentage', 'fixed'], required: true },
   discountValue: { type: Number, required: true, min: 0.01, validate: { validator(value) { return this.discountType !== 'percentage' || value <= 100; }, message: 'Percentage offer cannot exceed 100' } },
   maximumDiscount: { type: Number, min: 0, default: null },
@@ -50,6 +50,8 @@ const offerSchema = new mongoose.Schema({
   perUserLimit: { type: Number, min: 0, default: null },
   applicableRoutes: routeTargets,
   bannerImage: { type: String, default: '', maxlength: 2000, match: /^(|https:\/\/|\/(?!\/))/ },
+  ctaText: { type: String, default: 'Explore offer', trim: true, maxlength: 80 },
+  ctaUrl: { type: String, default: '', maxlength: 2000, match: /^(|https:\/\/|\/(?!\/))/ },
   priority: { type: Number, min: 0, default: 0 },
   ...datePair,
 }, common);
@@ -95,8 +97,8 @@ const settingsSchema = new mongoose.Schema({
 }, common);
 
 const appAssetSchema = new mongoose.Schema({
-  key: { type: String, required: true, unique: true, enum: ['app-icon'] },
-  contentType: { type: String, required: true, enum: ['image/png', 'image/jpeg', 'image/webp'] },
+  key: { type: String, required: true, unique: true, match: /^(app-icon|offer-[a-f\d]{24})$/i },
+  contentType: { type: String, required: true, enum: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/x-ms-bmp'] },
   image: { type: Buffer, required: true },
 }, { timestamps: true });
 

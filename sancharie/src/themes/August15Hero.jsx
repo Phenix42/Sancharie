@@ -48,14 +48,14 @@ function IndianFlag({ className = '' }) {
   );
 }
 
-function August15Hero() {
+function August15Hero({ bannerImage }) {
   return (
     <section className="hero august15-hero">
       <div className="hero-background">
         <picture>
-          <source media="(max-width: 768px)" srcSet={mobileBgImage} type="image/webp" />
+          {!bannerImage && <source media="(max-width: 768px)" srcSet={mobileBgImage} type="image/webp" />}
           <img
-            src={bgImage}
+            src={bannerImage || bgImage}
             alt="Travellers discovering India together"
             className="hero-bg-image"
             fetchPriority="high"

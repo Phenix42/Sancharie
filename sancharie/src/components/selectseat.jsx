@@ -13,6 +13,15 @@ import { AlertTriangle, Home, RefreshCw } from "lucide-react";
 import { getBoardingPointsByInventoryType, getDroppingPointsByInventoryType } from "../utils/seatLayoutParser";
 import { useToast } from "./Toast";
 
+const formatRupees = (value, decimals = 0) => `₹${(Number(value) || 0).toLocaleString('en-IN', {
+  minimumFractionDigits: decimals,
+  maximumFractionDigits: decimals,
+})}`;
+
+const getSeatFareExcludingTax = (seat) => Number(seat.fullData?.totalFareWithTaxes) > 0
+  ? Math.max(0, seat.price - (seat.serviceTaxAmount || 0))
+  : seat.baseFare || seat.price;
+
 export default function SelectSeat({ bus, searchTokenId, onClose }) {
   const navigate = useNavigate();
   const { state: bookingState, actions } = useBooking();
@@ -353,6 +362,37 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
     };
   };
 
+  const getSelectedFareSummary = () => {
+    const baseFare = selectedSeats.reduce((sum, seat) => sum + (Number(seat.baseFare) || Number(seat.price) || 0), 0);
+    const taxes = selectedSeats.reduce((sum, seat) => sum + (Number(seat.serviceTaxAmount) || 0), 0);
+    const hasProviderTotal = selectedSeats.some((seat) => Number(seat.fullData?.totalFareWithTaxes) > 0);
+    const providerTotal = selectedSeats.reduce((sum, seat) => {
+      const seatTotal = Number(seat.fullData?.totalFareWithTaxes);
+      return sum + (seatTotal > 0 ? seatTotal : (Number(seat.baseFare) || Number(seat.price) || 0) + (Number(seat.serviceTaxAmount) || 0));
+    }, 0);
+    const discount = hasProviderTotal ? selectedSeats.reduce((sum, seat) => {
+      const seatTotal = Number(seat.fullData?.totalFareWithTaxes);
+      if (!(seatTotal > 0)) return sum;
+      const seatGross = (Number(seat.baseFare) || Number(seat.price) || 0) + (Number(seat.serviceTaxAmount) || 0);
+      return sum + Math.max(0, seatGross - seatTotal);
+    }, 0) : 0;
+    const fareAfterDiscount = Math.max(0, baseFare - discount);
+    const total = hasProviderTotal ? providerTotal : fareAfterDiscount + taxes;
+    const taxRates = selectedSeats
+      .map((seat) => Number(seat.serviceTaxPer))
+      .filter((rate) => Number.isFinite(rate) && rate > 0)
+      .map((rate) => rate < 1 ? rate * 100 : rate);
+
+    return {
+      baseFare,
+      discount,
+      fareAfterDiscount,
+      taxes,
+      total,
+      cancellationGstRate: taxRates.length ? taxRates.reduce((sum, rate) => sum + rate, 0) / taxRates.length : 5,
+    };
+  };
+
   // Format time - handles both ETS format ("HH:MM AM/PM") and date strings
   const formatTime = (timeString) => {
     if (!timeString) return "";
@@ -502,6 +542,7 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
           const isHorizontalSleeper = seat.length > 1;
           const isVerticalSleeper = seat.width > 1;
           const isSleeper = seat.seatType === 2 || isHorizontalSleeper || isVerticalSleeper;
+          const displayedFare = getSeatFareExcludingTax(seat);
           const seatClass = isHorizontalSleeper ? 'sleeper horizontal-sleeper'
             : isVerticalSleeper ? 'sleeper vertical-sleeper'
             : isSleeper ? 'sleeper' : 'seat';
@@ -527,10 +568,10 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
                   ${selectedSeats.some(sel => sel.id === seat.id) ? 'active' : ''}
                 `}
                 onClick={() => toggleSeat(seat)}
-                title={`${seat.seatName} - ₹${Math.round(seat.price)} ${seat.isLadiesSeat ? '(Ladies Only)' : seat.isMalesSeat ? '(Gents Only)' : ''}`}
+                title={`${seat.seatName} - ₹${Math.round(displayedFare)} base fare, excluding taxes ${seat.isLadiesSeat ? '(Ladies Only)' : seat.isMalesSeat ? '(Gents Only)' : ''}`}
               >
                 <div className="seat-tooltip">{seat.seatName}</div>
-                <span className="seat-price">₹{Math.round(seat.price)}</span>
+                <span className="seat-price">₹{Math.round(displayedFare)}</span>
               </div>
             </div>
           );
@@ -630,6 +671,7 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
             <span><i className={`legend-icon ${busTypeInfo.hasSleeper ? 'sleeper-icon' : 'seat-icon'} selected`} /> Selected</span>
             <span><i className={`legend-icon ${busTypeInfo.hasSleeper ? 'sleeper-icon' : 'seat-icon'} female`} /> Female</span>
             <span><i className={`legend-icon ${busTypeInfo.hasSleeper ? 'sleeper-icon' : 'seat-icon'} booked`} /> Booked</span>
+            <span className="seat-fare-legend-note">Seat prices exclude taxes</span>
           </div>
 
           {/* SEAT LAYOUT FROM API */}
@@ -752,14 +794,48 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
             )}
           </div>
 
+          {selectedSeats.length > 0 && (
+            <section className="seat-fare-policy-card" aria-label="Fare and cancellation policy">
+              <div className="seat-fare-card-heading">
+                <strong>{selectedSeats.length} seat{selectedSeats.length === 1 ? '' : 's'}</strong>
+                <button type="button" onClick={() => setSelectedSeats([])}>Clear all</button>
+              </div>
+
+              <div className="seat-fare-selected-list">
+                {selectedSeats.map((seat) => (
+                  <div className="seat-fare-selected-row" key={seat.id}>
+                    <span className="seat-fare-seat-name">{seat.seatName}</span>
+                    <span>{seat.seatType === 2 ? (seat.isUpper ? 'Upper Sleeper' : 'Sleeper') : (seat.isUpper ? 'Upper Seat' : 'Seat')}</span>
+                    <strong>{formatRupees(getSeatFareExcludingTax(seat))}</strong>
+                    <button type="button" aria-label={`Remove seat ${seat.seatName}`} onClick={() => setSelectedSeats((seats) => seats.filter((item) => item.id !== seat.id))}>×</button>
+                  </div>
+                ))}
+              </div>
+
+              {(() => {
+                const fare = getSelectedFareSummary();
+                return (
+                  <div className="seat-fare-breakdown">
+                    <div><span>Fare</span><strong>{formatRupees(fare.baseFare)}</strong></div>
+                    {fare.discount > 0 && <div className="seat-fare-discount"><span>Discount</span><strong>−{formatRupees(fare.discount)}</strong></div>}
+                    <div><span>Taxes</span><strong>{formatRupees(fare.taxes)}</strong></div>
+                    <div className="seat-fare-total"><span>Total</span><strong>{formatRupees(fare.total)}</strong></div>
+                    <small>Including taxes</small>
+                  </div>
+                );
+              })()}
+
+            </section>
+          )}
+
           {/* FARE ACTION BAR - Only show when seats are selected */}
           {selectedSeats.length > 0 && (
             <div className="fare-action-bar">
               <div className="fare-summary">
                 <div className="fare-amount">
-                  <span className="final-price">₹{calculateFare().baseFare}</span>
+                  <span className="final-price">{formatRupees(getSelectedFareSummary().total)}</span>
                 </div>
-                <span className="fare-note">Excl. of taxes</span>
+                <span className="fare-note">Including taxes</span>
               </div>
               <div className="seat-count">
                 <span className="count">{selectedSeats.length}</span>
@@ -770,7 +846,7 @@ export default function SelectSeat({ bus, searchTokenId, onClose }) {
                 onClick={handleGetFare}
                 disabled={!boardingId || !droppingId}
               >
-                Proceed
+                Continue · {formatRupees(getSelectedFareSummary().total)}
               </button>
             </div>
           )}

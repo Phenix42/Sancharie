@@ -82,9 +82,9 @@ export const getStations = async () => {
  */
 export const searchBuses = async (sourceCity, destinationCity, dateOfJourney) => {
   try {
-    const params = `sourceCity=${sourceCity}&destinationCity=${destinationCity}&doj=${dateOfJourney}`;
+    const params = new URLSearchParams({ sourceCity, destinationCity, doj: dateOfJourney });
 
-    const response = await fetch(`${BASE_URL}/api/ets/getAvailableBuses?${params}`, {
+    const response = await fetch(`${BASE_URL}/api/ets/getAvailableBuses?${params.toString()}`, {
       method: "GET",
       headers: getHeaders(),
     });

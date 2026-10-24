@@ -3613,3 +3613,368 @@
     font-size: 12px;
   }
 }
+.seat-fare-policy-card {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #e1e8e5;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(24, 51, 39, 0.06);
+}
+
+.seat-fare-card-heading,
+.seat-fare-selected-row,
+.seat-fare-breakdown > div,
+.seat-cancellation-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.seat-fare-card-heading {
+  margin-bottom: 10px;
+  color: #192331;
+  font-size: 14px;
+}
+
+.seat-fare-card-heading button,
+.seat-fare-selected-row button {
+  border: 0;
+  background: transparent;
+  color: #718092;
+  cursor: pointer;
+}
+
+.seat-fare-selected-list {
+  display: grid;
+  gap: 7px;
+}
+
+.seat-fare-selected-row {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #edf0f2;
+  border-radius: 10px;
+  color: #566274;
+  font-size: 12px;
+}
+
+.seat-fare-seat-name {
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: #159447;
+  color: #fff;
+  font-weight: 800;
+}
+
+.seat-fare-selected-row strong {
+  margin-left: auto;
+  color: #192331;
+  font-size: 14px;
+}
+
+.seat-fare-selected-row button {
+  padding: 0 3px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.seat-fare-breakdown {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 14px;
+  color: #5b6675;
+  font-size: 13px;
+}
+
+.seat-fare-breakdown strong {
+  color: #192331;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.seat-fare-breakdown .seat-fare-discount,
+.seat-fare-breakdown .seat-fare-discount strong {
+  color: #16823d;
+}
+
+.seat-fare-breakdown .seat-fare-total {
+  padding-top: 9px;
+  border-top: 1px solid #e7ebed;
+  color: #192331;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.seat-fare-breakdown .seat-fare-total strong {
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.seat-fare-breakdown small {
+  color: #9aa3af;
+  font-size: 11px;
+}
+
+.seat-cancellation-policy {
+  border-top: 1px solid #edf0f2;
+  padding-top: 12px;
+}
+
+.seat-cancellation-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #a8dfb5;
+  border-radius: 12px;
+  background: #f0faf2;
+  color: #13813d;
+  cursor: pointer;
+  text-align: left;
+}
+
+.seat-cancellation-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+}
+
+.seat-cancellation-heading {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+
+.seat-cancellation-heading strong {
+  color: #176632;
+  font-size: 14px;
+}
+
+.seat-cancellation-heading small {
+  color: #617467;
+  font-size: 11px;
+}
+
+.seat-cancellation-rules {
+  display: grid;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.seat-cancellation-rule {
+  padding: 12px;
+  border: 1px solid #e2e8ed;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.seat-cancellation-rule h4 {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #edf0f2;
+  color: #1b2432;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.seat-cancellation-rule h4 svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #2473dc;
+}
+
+.seat-cancellation-deduction,
+.seat-cancellation-no-refund {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  padding: 8px 9px;
+  border: 1px solid #ffc36d;
+  border-radius: 9px;
+  background: #fff7ea;
+  color: #b65309;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.seat-cancellation-no-refund {
+  margin-bottom: 0;
+  border-color: #ffb8b8;
+  background: #fff1f1;
+  color: #cf2929;
+}
+
+.seat-cancellation-line {
+  padding: 4px 0;
+  color: #667181;
+  font-size: 12px;
+}
+
+.seat-cancellation-line strong {
+  color: #263142;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.seat-cancellation-line.discount,
+.seat-cancellation-line.discount strong {
+  color: #16823d;
+}
+
+.seat-cancellation-line.charge,
+.seat-cancellation-line.charge strong,
+.seat-cancellation-line.total-deducted strong {
+  color: #d92f2f;
+}
+
+.seat-cancellation-line.total-deducted {
+  margin-top: 3px;
+  padding-top: 9px;
+  border-top: 1px solid #e7ebed;
+  color: #1b2432;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.seat-cancellation-refund {
+  display: grid;
+  gap: 4px;
+  margin-top: 9px;
+  padding: 10px;
+  border: 1px solid #a8dfb5;
+  border-radius: 10px;
+  background: #eff9f0;
+  color: #327244;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.seat-cancellation-refund strong {
+  color: #176632;
+  font-size: 20px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.seat-cancellation-unavailable {
+  padding: 14px;
+  border: 1px solid #e6eaed;
+  border-radius: 10px;
+  color: #697586;
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .seat-fare-policy-card {
+    margin-top: 14px;
+    padding: 11px;
+    border-radius: 13px;
+  }
+
+  .seat-cancellation-rule {
+    padding: 10px;
+  }
+}
+
+.selectseat-body {
+  align-items: start;
+}
+
+.selectseat-body > .bus-view,
+.selectseat-body > .points-panel {
+  align-self: start;
+  height: fit-content;
+}
+
+.seat-fare-policy-card {
+  margin-top: 12px;
+}
+
+.points-panel.selection-ready .fare-action-bar {
+  margin-top: 12px;
+}
+
+.seat.active,
+.seat.active::before,
+.sleeper.active {
+  border-color: var(--gold-color, #ceb45f);
+  background: #e9f0f2;
+  box-shadow: 0 0 0 2px rgba(0, 44, 63, 0.14);
+}
+
+.seat.active .seat-price,
+.sleeper.active .seat-price {
+  color: var(--primary-color, #002c3f);
+}
+
+.seat.female.active,
+.seat.female.active::before,
+.sleeper.female.active {
+  border-color: var(--gold-color, #ceb45f);
+  background: #fffaf0;
+}
+
+.seat.female.active .seat-price,
+.sleeper.female.active .seat-price {
+  color: var(--primary-color, #002c3f);
+}
+
+.legend-icon.selected,
+.box.selected {
+  border-color: var(--gold-color, #ceb45f);
+  background: #e9f0f2;
+}
+
+.seat-fare-seat-name {
+  background: var(--primary-color, #002c3f);
+  box-shadow: inset 0 -2px 0 var(--gold-color, #ceb45f);
+}
+
+.seat-cancellation-toggle {
+  border-color: rgba(206, 180, 95, 0.64);
+  background: #fffaf0;
+  color: var(--primary-color, #002c3f);
+}
+
+.seat-cancellation-icon,
+.seat-cancellation-toggle > svg:last-child {
+  color: var(--gold-color, #96702c);
+}
+
+.seat-cancellation-heading strong {
+  color: var(--primary-color, #002c3f);
+}
+
+.seat-cancellation-heading small {
+  color: #687984;
+}
+
+.seat-cancellation-rule h4 svg {
+  color: var(--primary-color, #002c3f);
+}
+
+.seat-cancellation-rule {
+  border-color: #e2e8eb;
+}
+
+@media (max-width: 900px) {
+  .selectseat-body {
+    align-items: stretch;
+  }
+
+  .selectseat-body > .bus-view,
+  .selectseat-body > .points-panel {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

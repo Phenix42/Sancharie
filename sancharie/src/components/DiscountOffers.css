@@ -76,7 +76,10 @@
   box-shadow: 0 9px 25px rgba(24, 52, 66, .08);
   isolation: isolate;
   scroll-snap-align: start;
+  cursor: pointer;
 }
+
+.discount-offer-card:focus-visible { outline: 3px solid #17664e; outline-offset: 3px; }
 
 .discount-offer-card.sunrise { background-color: #ffedcd; background-image: radial-gradient(circle at 88% 15%, rgba(247, 176, 87, .38), transparent 29%), linear-gradient(115deg, #fff4dc, #ffe1ad); color: #462817; }
 .discount-offer-card.sky { background-image: radial-gradient(circle at 88% 18%, rgba(103, 169, 240, .25), transparent 32%), linear-gradient(115deg, #e5f3ff, #cfe7ff); color: #183863; }
@@ -113,6 +116,9 @@
   border: 1px dashed currentColor;
   border-radius: 8px;
   background: rgba(255, 255, 255, .72);
+  color: currentColor;
+  font: inherit;
+  cursor: copy;
 }
 
 .discount-offer-code small { font-size: 9px; font-weight: 800; letter-spacing: .08em; }

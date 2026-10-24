@@ -131,6 +131,37 @@ router.post('/notifications/campaign', requirePermission('notifications:send'), 
   res.json({ success: true, ...result });
 }));
 
+router.put('/offers/:id/banner-image', requirePermission('offers:manage'), express.raw({ type: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/x-ms-bmp'], limit: '5mb' }), asyncRoute(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid offer ID' });
+  const image = req.body;
+  const contentType = req.get('content-type');
+  if (!Buffer.isBuffer(image) || image.length === 0) return res.status(400).json({ success: false, message: 'Select a PNG, JPG, or WebP banner image first' });
+  const isPng = image.length >= 8 && image.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const isJpeg = image.length >= 3 && image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff;
+  const isWebp = image.length >= 12 && image.toString('ascii', 0, 4) === 'RIFF' && image.toString('ascii', 8, 12) === 'WEBP';
+  const isGif = image.length >= 6 && ['GIF87a', 'GIF89a'].includes(image.toString('ascii', 0, 6));
+  const isAvif = image.length >= 12 && image.toString('ascii', 4, 8) === 'ftyp' && ['avif', 'avis'].includes(image.toString('ascii', 8, 12));
+  const isBmp = image.length >= 2 && image.toString('ascii', 0, 2) === 'BM';
+  const validImage = (contentType === 'image/png' && isPng)
+    || (contentType === 'image/jpeg' && isJpeg)
+    || (contentType === 'image/webp' && isWebp)
+    || (contentType === 'image/gif' && isGif)
+    || (contentType === 'image/avif' && isAvif)
+    || (['image/bmp', 'image/x-ms-bmp'].includes(contentType) && isBmp);
+  if (!validImage) {
+    return res.status(400).json({ success: false, message: 'Image content must match PNG, JPG, WebP, GIF, AVIF, or BMP format' });
+  }
+  const offer = await Offer.findById(req.params.id);
+  if (!offer) return res.status(404).json({ success: false, message: 'Offer not found' });
+  const before = { bannerImage: offer.bannerImage };
+  const key = `offer-${offer._id}`;
+  const asset = await AppAsset.findOneAndUpdate({ key }, { $set: { image, contentType }, $setOnInsert: { key } }, { upsert: true, new: true, runValidators: true }).select('updatedAt').lean();
+  offer.bannerImage = `/api/offer-images/${offer._id}?v=${asset.updatedAt.getTime()}`;
+  await offer.save();
+  await recordAdminAction(req, { action: 'update', resource: 'offers', resourceId: offer._id, summary: `Uploaded banner image for ${offer.name}`, changes: { before, after: { bannerImage: offer.bannerImage } } });
+  res.json({ success: true, data: { bannerImage: offer.bannerImage } });
+}));
+
 for (const [path, config] of Object.entries(modelRegistry)) {
   const { model, permission, label } = config;
   router.get(`/${path}`, requirePermission(`${permission}:read`), asyncRoute(async (req, res) => {
@@ -172,6 +203,7 @@ for (const [path, config] of Object.entries(modelRegistry)) {
   router.delete(`/${path}/:id`, requirePermission(`${permission}:manage`), asyncRoute(async (req, res) => {
     const item = await model.findByIdAndDelete(req.params.id);
     if (!item) return res.status(404).json({ success: false, message: `${label} not found` });
+    if (path === 'offers') await AppAsset.deleteOne({ key: `offer-${item._id}` });
     await recordAdminAction(req, { action: 'delete', resource: path, resourceId: item._id, summary: `Deleted ${label}`, changes: item.toObject() });
     res.json({ success: true });
   }));

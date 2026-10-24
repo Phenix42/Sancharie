@@ -182,6 +182,10 @@ router.post('/create-order', requireBookingAvailability, validateCreateOrder, as
         : bookingDetails.seats || '';
       orderNotes.rooms = bookingDetails.rooms || '';
       orderNotes.passenger_count = bookingDetails.passengerCount || '';
+      if (bookingDetails.wallet_booking_id) orderNotes.wallet_booking_id = String(bookingDetails.wallet_booking_id).slice(0, 100);
+      if (Number.isFinite(Number(bookingDetails.wallet_amount)) && Number(bookingDetails.wallet_amount) > 0) orderNotes.wallet_amount = String(Number(bookingDetails.wallet_amount));
+      if (bookingDetails.promo_code) orderNotes.promo_code = String(bookingDetails.promo_code).trim().toUpperCase().slice(0, 40);
+      if (bookingDetails.promotion_id) orderNotes.promotion_id = String(bookingDetails.promotion_id).slice(0, 100);
     }
 
     // Create Razorpay order

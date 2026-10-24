@@ -465,6 +465,8 @@
   color: var(--color-success);
 }
 
+.fare-item.wallet-payment-row { color: #21805f; font-weight: 700; }
+
 .fare-item.assurance span:first-child {
   display: flex;
   align-items: center;

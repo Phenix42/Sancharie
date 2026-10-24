@@ -6,18 +6,22 @@ import { BadgeCheck, IndianRupee, TicketCheck } from 'lucide-react'
 import August15Hero from '../themes/August15Hero'
 import { THEME_FLAGS } from '../themes/themeConfig'
 
-function Hero() {
+function Hero({ runtimeTheme }) {
+  const themeBanner = /^(https:\/\/|\/(?!\/))/.test(String(runtimeTheme?.bannerImage || ''))
+    ? runtimeTheme.bannerImage
+    : null
+
   if (THEME_FLAGS.AUGUST_15) {
-    return <August15Hero />
+    return <August15Hero bannerImage={themeBanner} />
   }
 
   return (
     <section className="hero">
       <div className="hero-background">
         <picture>
-          <source media="(max-width: 768px)" srcSet={mobileBgImage} type="image/webp" />
+          {!themeBanner && <source media="(max-width: 768px)" srcSet={mobileBgImage} type="image/webp" />}
           <img 
-            src={bgImage}
+            src={themeBanner || bgImage}
             alt="Travellers beginning a bus journey across India"
             className="hero-bg-image"
             fetchPriority="high"

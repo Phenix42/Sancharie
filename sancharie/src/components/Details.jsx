@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./Details.css";
 import { 
@@ -10,6 +10,7 @@ import {
   Shield, 
   CreditCard, 
   Bus, 
+  Check,
   CheckCircle2,
   ChevronRight,
   Armchair,
@@ -17,11 +18,13 @@ import {
   Lock,
   CalendarDays,
   MapPinned,
-  Sparkles
+  Sparkles,
+  Ticket
 } from "lucide-react";
-import { bus as busApi } from "../services/api";
+import { bus as busApi, promotions, user as userApi } from "../services/api";
 import { useBooking } from "../context/BookingContext";
 import { useToast } from "./Toast";
+import CancellationPolicySummary from "./CancellationPolicySummary";
 
 const ASSURANCE_AVAILABLE = false;
 
@@ -37,6 +40,15 @@ export default function Details() {
   
   // Loading state for block seat
   const [isBlocking, setIsBlocking] = useState(false);
+  const [promoExpanded, setPromoExpanded] = useState(false);
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromotion, setAppliedPromotion] = useState(null);
+  const [promoError, setPromoError] = useState('');
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [availablePromotions, setAvailablePromotions] = useState([]);
+  const [loadingPromotions, setLoadingPromotions] = useState(true);
+  const [wallet, setWallet] = useState({ balance: 0, minimumBookingAmount: 0, loading: true });
+  const [useWallet, setUseWallet] = useState(false);
   
   // Initialize passenger details for each selected seat
   const [passengers, setPassengers] = useState(() => {
@@ -83,7 +95,68 @@ export default function Details() {
   const droppingName = droppingPoint?.name || droppingPoint?.CityPointName || 'Dropping point';
   const assuranceTotal = assurancePrice * (selectedSeats?.length || 0);
   const assuranceSelected = ASSURANCE_AVAILABLE && assurance === 'yes';
-  const payableTotal = Number(fareData?.totalFare || 0) + (assuranceSelected ? assuranceTotal : 0);
+  const originalFare = Number(fareData?.totalFare || 0);
+  const totalAfterPromotion = Math.max(0, originalFare - Number(appliedPromotion?.discountAmount || 0)) + (assuranceSelected ? assuranceTotal : 0);
+  const walletEligible = wallet.balance > 0 && totalAfterPromotion >= wallet.minimumBookingAmount;
+  const walletAmount = walletEligible && useWallet ? Math.min(wallet.balance, totalAfterPromotion) : 0;
+  const payableTotal = Math.max(0, totalAfterPromotion - walletAmount);
+
+  useEffect(() => {
+    let active = true;
+    userApi.getWallet()
+      .then((result) => { if (active) setWallet({ balance: Number(result.balance) || 0, minimumBookingAmount: Number(result.minimumBookingAmount) || 0, loading: false }); })
+      .catch(() => { if (active) setWallet((current) => ({ ...current, loading: false })); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    promotions.available()
+      .then((discounts = []) => {
+        if (!active) return;
+        setAvailablePromotions(discounts.map((discount) => ({ ...discount, promotionType: 'discount' })));
+      })
+      .catch(() => { if (active) setAvailablePromotions([]); })
+      .finally(() => { if (active) setLoadingPromotions(false); });
+    return () => { active = false; };
+  }, []);
+
+  const applyPromoCode = useCallback(async (promo = promoInput, discountId = '') => {
+    const code = String(promo || '').trim().toUpperCase();
+    if (!code && !discountId) {
+      setPromoError('Enter a promo code to continue.');
+      return;
+    }
+    setPromoError('');
+    setIsApplyingPromo(true);
+    try {
+      const result = await promotions.validate({
+        code,
+        discountId,
+        amount: originalFare,
+      });
+      setAppliedPromotion(result);
+      setPromoInput(result.code || code);
+      setPromoExpanded(false);
+    } catch (error) {
+      setPromoError(error.message || 'This promo code could not be applied.');
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  }, [originalFare, promoInput]);
+
+  useEffect(() => {
+    try {
+      const pending = JSON.parse(sessionStorage.getItem('pendingBusPromotion') || 'null');
+      if (!pending) return;
+      sessionStorage.removeItem('pendingBusPromotion');
+      setPromoInput(pending.code || '');
+      setPromoExpanded(true);
+      applyPromoCode(pending.code || '', pending.discountId || '');
+    } catch {
+      sessionStorage.removeItem('pendingBusPromotion');
+    }
+  }, [applyPromoCode]);
 
   // Validation errors state
   const [passengerErrors, setPassengerErrors] = useState(() => {
@@ -294,6 +367,8 @@ export default function Details() {
           passengers: passengersWithContact,
           contactDetails,
           assurance: assuranceSelected ? 'yes' : 'no',
+          promotion: appliedPromotion,
+          walletPayment: { amount: walletAmount },
           blockSeatData: blockSeatResponse,
         }
       });
@@ -746,6 +821,16 @@ export default function Details() {
                 <span>GST/Service Tax</span>
                 <span>₹{fareData.serviceTax || fareData.gst || 0}</span>
               </div>
+              {appliedPromotion && <div className="fare-row promo-discount-row">
+                <span><Check size={14} /> Discount · {appliedPromotion.code || appliedPromotion.name}</span>
+                <span>−₹{Number(appliedPromotion.discountAmount).toLocaleString('en-IN')}</span>
+              </div>}
+              <label className={`fare-row wallet-use-row ${!walletEligible ? 'unavailable' : ''}`}>
+                <span><input type="checkbox" checked={useWallet && walletEligible} disabled={!walletEligible || wallet.loading} onChange={(event) => setUseWallet(event.target.checked)} />
+                  <span><strong>Use wallet balance</strong><small>{wallet.loading ? 'Checking available balance…' : wallet.balance <= 0 ? 'No wallet balance available' : walletEligible ? `Available: ₹${wallet.balance.toLocaleString('en-IN')}` : `Wallet can be used on bookings from ₹${wallet.minimumBookingAmount.toLocaleString('en-IN')}`}</small></span>
+                </span>
+                <strong>{walletAmount > 0 ? `−₹${walletAmount.toLocaleString('en-IN')}` : ''}</strong>
+              </label>
               {(fareData.operatorCharge > 0 || fareData.serviceCharge > 0) && (
                 <div className="fare-row">
                   <span>Service Charge</span>
@@ -766,6 +851,55 @@ export default function Details() {
                 <span>₹{payableTotal}</span>
               </div>
             </div>
+
+            <button type="button" className="promo-trigger" aria-expanded={promoExpanded} onClick={() => { setPromoError(''); setPromoExpanded((expanded) => !expanded); }}>
+              <Ticket size={17} />
+              {appliedPromotion ? <><span><strong>{appliedPromotion.code || appliedPromotion.name}</strong><small>Promo applied · save ₹{Number(appliedPromotion.discountAmount).toLocaleString('en-IN')}</small></span><span className="promo-trigger-action" onClick={(event) => { event.stopPropagation(); setAppliedPromotion(null); setPromoInput(''); setPromoError(''); }}>Remove</span></> : <><span><strong>Have a promo code?</strong><small>Enter a code or choose an offer</small></span><ChevronRight size={17} /> </>}
+            </button>
+
+            {promoExpanded && <section className="promo-accordion" aria-label="Apply a promo code">
+              <h4><Ticket size={16} /> Apply promo code</h4>
+              <form className="promo-code-form" onSubmit={(event) => { event.preventDefault(); applyPromoCode(); }}>
+                <input aria-label="Promo code" placeholder="Enter promo code" value={promoInput} onChange={(event) => { setPromoInput(event.target.value.toUpperCase()); setPromoError(''); }} />
+                <button type="submit" className={appliedPromotion ? 'applied' : ''} disabled={isApplyingPromo || Boolean(appliedPromotion)}>{isApplyingPromo ? 'Checking…' : appliedPromotion ? 'Applied' : 'Apply code'}</button>
+              </form>
+              {promoError && <span className="promo-error" role="alert">{promoError}</span>}
+
+              <div className="promo-available-heading"><strong>Available discounts</strong>{loadingPromotions && <small>Loading…</small>}</div>
+              {!loadingPromotions && availablePromotions.length === 0 && <p className="promo-empty">No active discount offers right now. You can still enter a promo code above.</p>}
+              <div className="promo-available-list">
+                {availablePromotions.map((promotion, index) => {
+                  const isPercentage = promotion.promotionType === 'discount' || promotion.type === 'percentage';
+                  const discountLabel = isPercentage ? `${Number(promotion.percentage ?? promotion.value) || 0}% OFF` : `₹${Number(promotion.value) || 0} OFF`;
+                  const code = promotion.code || '';
+                  const selected = Boolean(appliedPromotion && ((code && appliedPromotion.code === code) || (promotion._id && appliedPromotion.promotionId === String(promotion._id))));
+                  return <button
+                    type="button"
+                    className={`promo-available-card ${selected ? 'selected' : ''}`}
+                    key={promotion._id || `${code}-${index}`}
+                    onClick={() => {
+                      setPromoInput(code);
+                      applyPromoCode(code, code ? '' : promotion._id);
+                    }}
+                    disabled={isApplyingPromo}
+                  >
+                    <span className="promo-available-badge">{discountLabel}</span>
+                    <span className="promo-available-copy"><strong>{promotion.name || code || 'Special offer'}</strong><small>{promotion.description || (code ? `Use code ${code}` : 'Offer applied automatically')}</small></span>
+                    <span className="promo-available-action">{selected ? 'Applied' : 'Apply'}</span>
+                    {Number(promotion.maximumDiscount) > 0 && <small className="promo-available-terms">Up to ₹{Number(promotion.maximumDiscount).toLocaleString('en-IN')} off</small>}
+                    {Number(promotion.minimumBooking) > 0 && <small className="promo-available-terms">Min. booking ₹{Number(promotion.minimumBooking).toLocaleString('en-IN')}</small>}
+                  </button>;
+                })}
+              </div>
+            </section>}
+
+            <CancellationPolicySummary
+              bus={bus}
+              selectedSeats={selectedSeats}
+              fareData={fareData}
+              originalFare={originalFare}
+              promotion={appliedPromotion}
+            />
 
             <button 
               className="proceed-btn" 
@@ -796,6 +930,7 @@ export default function Details() {
           </div>
         </div>
       </div>
+
     </div>
     </div>
   );

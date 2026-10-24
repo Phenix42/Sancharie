@@ -81,6 +81,18 @@ function App() {
     window.scrollTo(0, 0);
   };
 
+  const handleSelectOffer = (offer) => {
+    sessionStorage.setItem('pendingBusPromotion', JSON.stringify({
+      code: offer.code || '',
+      discountId: offer._id || '',
+      name: offer.name || 'Bus offer',
+    }));
+    setShowSearchResult(false);
+    setSearchParams(null);
+    navigate('/');
+    window.setTimeout(() => document.getElementById('book-bus')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+  };
+
   const handleBackToHome = () => {
     setShowSearchResult(false);
     setSearchParams(null);
@@ -95,6 +107,9 @@ function App() {
     navigate(getModePath(mode));
   };
   const customerBanner = runtimeConfig?.banners?.[0];
+  const customerAssetUrl = (url) => /^https:\/\//.test(String(url || ''))
+    ? url
+    : String(url || '').startsWith('/') ? `${API_BASE_URL.replace(/\/$/, '')}${url}` : '';
   const runtimeBrandTheme = runtimeConfig?.appIconUrl
     ? { ...runtimeConfig.theme, logoImage: `${API_BASE_URL.replace(/\/$/, '')}${runtimeConfig.appIconUrl}` }
     : runtimeConfig?.theme;
@@ -103,8 +118,8 @@ function App() {
   return (
     <ToastProvider>
       <div className={`app ${THEME_FLAGS.AUGUST_15 ? 'theme-august-15' : ''}`}>
-        {(runtimeConfig?.settings?.announcement || customerBanner || runtimeConfig?.theme?.promotionalText) && <a className="runtime-announcement" href={safeCustomerUrl(customerBanner?.ctaUrl)}>
-          {customerBanner?.image && /^(https:\/\/|\/(?!\/))/.test(customerBanner.image) && <img src={customerBanner.image} alt="" />}
+        {(runtimeConfig?.settings?.announcement || customerBanner || runtimeConfig?.theme?.promotionalText) && <a className={`runtime-announcement ${customerBanner?.image ? 'has-banner-image' : ''}`} href={safeCustomerUrl(customerBanner?.ctaUrl)}>
+          {customerBanner?.image && customerAssetUrl(customerBanner.image) && <img src={customerAssetUrl(customerBanner.image)} alt="" />}
           <strong>{customerBanner?.title || runtimeConfig?.theme?.name || 'Announcement'}</strong>
           <span>{runtimeConfig?.settings?.announcement || customerBanner?.description || runtimeConfig?.theme?.promotionalText}</span>
           {(customerBanner?.ctaText || runtimeConfig?.theme?.ctaText) && <b>{customerBanner?.ctaText || runtimeConfig?.theme?.ctaText}</b>}
@@ -185,9 +200,9 @@ function App() {
               <HotelHome />
             ) : (
               <>
-                <Hero />
+                <Hero runtimeTheme={runtimeBrandTheme} />
                 <SearchBus onSearch={handleSearch} mode="bus" />
-                <DiscountOffers discounts={runtimeConfig?.settings?.discountsEnabled === false ? [] : runtimeConfig?.discounts || []} />
+                <DiscountOffers discounts={runtimeConfig?.settings?.discountsEnabled === false ? [] : runtimeConfig?.discounts || []} onSelectOffer={handleSelectOffer} />
                 <OurService />
                 <BookingSteps />
                 <BusResults />

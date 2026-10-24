@@ -1,14 +1,20 @@
 import { useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, TicketPercent } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Copy, TicketPercent } from 'lucide-react';
 import './DiscountOffers.css';
 
 const palettes = ['sunrise', 'sky', 'rose', 'lavender'];
-const safeImage = (value) => /^(https:\/\/|\/(?!\/))/.test(String(value || '')) ? value : '';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const safeImage = (value) => {
+  const url = String(value || '');
+  if (/^https:\/\//.test(url)) return url;
+  return url.startsWith('/') && !url.startsWith('//') ? `${API_BASE_URL.replace(/\/$/, '')}${url}` : '';
+};
 
-export default function DiscountOffers({ discounts = [] }) {
+export default function DiscountOffers({ discounts = [], onSelectOffer }) {
   const railRef = useRef(null);
   const [showAll, setShowAll] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [copiedCode, setCopiedCode] = useState('');
   if (!discounts.length) return null;
 
   const scrollToCard = (index) => {
@@ -30,6 +36,17 @@ export default function DiscountOffers({ discounts = [] }) {
     setActiveIndex(nearest);
   };
 
+  const copyOfferCode = async (event, code) => {
+    event.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      window.setTimeout(() => setCopiedCode(''), 1800);
+    } catch {
+      setCopiedCode('');
+    }
+  };
+
   return (
     <section id="discount-offers" className="discount-offers-section" aria-labelledby="discount-offers-title">
       <div className="discount-offers-heading">
@@ -46,13 +63,13 @@ export default function DiscountOffers({ discounts = [] }) {
         {discounts.map((discount, index) => {
           const image = safeImage(discount.bannerImage);
           const style = image ? { backgroundImage: `linear-gradient(90deg, rgba(7, 34, 47, .82), rgba(7, 34, 47, .14)), url("${image.replace(/["\\]/g, '')}")` } : undefined;
-          return <article className={`discount-offer-card ${palettes[index % palettes.length]} ${image ? 'has-image' : ''}`} style={style} key={discount._id || `${discount.name}-${index}`}>
+          return <article className={`discount-offer-card ${palettes[index % palettes.length]} ${image ? 'has-image' : ''}`} style={style} key={discount._id || `${discount.name}-${index}`} role="button" tabIndex={0} aria-label={`Select ${discount.name || 'offer'} and search for a bus`} onClick={() => onSelectOffer?.(discount)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelectOffer?.(discount); } }}>
             <span className="discount-offer-ribbon">{discount.name || 'Limited time offer'}</span>
             <div className="discount-offer-copy">
               <p className="discount-offer-kicker">Bus booking offer</p>
               <h3><span>{discount.percentage}%</span> OFF</h3>
               <p className="discount-offer-description">{discount.description || 'Save on your next bus journey'}</p>
-              {discount.code ? <div className="discount-offer-code"><small>USE CODE</small><strong>{discount.code}</strong></div> : <div className="discount-offer-auto"><TicketPercent size={17} /> Applied on eligible bookings</div>}
+              {discount.code ? <button type="button" className="discount-offer-code" onClick={(event) => copyOfferCode(event, discount.code)} aria-label={`Copy promo code ${discount.code}`}><small>{copiedCode === discount.code ? 'COPIED' : 'USE CODE'}</small><strong>{discount.code}</strong>{copiedCode === discount.code ? <Check size={14} /> : <Copy size={13} />}</button> : <div className="discount-offer-auto"><TicketPercent size={17} /> Applied on eligible bookings</div>}
             </div>
             <div className="discount-offer-terms">
               {Number(discount.maximumDiscount) > 0 && <span>Up to ₹{Number(discount.maximumDiscount).toLocaleString('en-IN')} off</span>}

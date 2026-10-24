@@ -32,6 +32,11 @@ const { ApplicationSettings, FestivalTheme, Banner, Discount, Coupon, Offer, App
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+const asImageBuffer = (image) => Buffer.isBuffer(image)
+  ? image
+  : image?.buffer
+    ? Buffer.from(image.buffer).subarray(0, image.position ?? image.buffer.length)
+    : Buffer.from(image || '');
 if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 
 // ============================================
@@ -202,14 +207,18 @@ app.get('/api/config', async (req, res, next) => {
       ApplicationSettings.findOne({ key: 'global' }).lean(),
       FestivalTheme.findOne({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).sort({ priority: -1, startDate: -1 }).lean(),
       Banner.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).sort({ priority: -1 }).limit(20).lean(),
-      Discount.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('name description code bannerImage percentage maximumDiscount minimumBooking applicableRoutes startDate endDate').sort({ startDate: 1 }).lean(),
-      Coupon.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('code name type value maximumDiscount minimumBooking applicableRoutes endDate').sort({ createdAt: -1 }).limit(50).lean(),
-      Offer.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('name description type discountType discountValue maximumDiscount minimumBooking applicableRoutes bannerImage priority startDate endDate').sort({ priority: -1 }).limit(20).lean(),
+      Discount.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('name description code bannerImage percentage maximumDiscount minimumBooking startDate endDate').sort({ startDate: 1 }).lean(),
+      Coupon.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('code name type value maximumDiscount minimumBooking endDate').sort({ createdAt: -1 }).limit(50).lean(),
+      Offer.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('name description type discountType discountValue maximumDiscount minimumBooking bannerImage ctaText ctaUrl priority startDate endDate').sort({ priority: -1 }).limit(20).lean(),
       AppAsset.findOne({ key: 'app-icon' }).select('updatedAt').lean(),
     ]);
     const customerBanners = [
       ...banners.filter((banner) => banner.kind !== 'notification').map(({ title, description, image, ctaText, ctaUrl, kind, priority }) => ({ title, description, image, ctaText, ctaUrl, kind, priority })),
-      ...offers.filter((offer) => offer.bannerImage).map((offer) => ({ title: offer.name, description: offer.description, image: offer.bannerImage, ctaText: 'Explore offer', ctaUrl: '/', kind: 'promotion', priority: offer.priority })),
+      ...offers.filter((offer) => offer.bannerImage).map((offer) => {
+        const offerDiscount = offer.discountType === 'percentage' ? `${offer.discountValue}% off` : `₹${offer.discountValue} off`;
+        const description = [offerDiscount, offer.description].filter(Boolean).join(' · ');
+        return { title: offer.name, description, image: offer.bannerImage, ctaText: offer.ctaText || 'Explore offer', ctaUrl: offer.ctaUrl || '/', kind: 'promotion', priority: offer.priority };
+      }),
     ].sort((left, right) => right.priority - left.priority).slice(0, 20);
     res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.json({ success: true, data: {
@@ -238,14 +247,80 @@ app.get('/api/config', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// Validate a booking promotion against the active server-side campaign data.
+app.post('/api/promotions/validate', async (req, res, next) => {
+  try {
+    const { code, discountId, amount } = req.body || {};
+    const normalizedCode = String(code || '').trim().toUpperCase();
+    const bookingAmount = Number(amount);
+    if ((!normalizedCode && !discountId) || !Number.isFinite(bookingAmount) || bookingAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Enter a valid promo code and booking amount.' });
+    }
+
+    const settings = await ApplicationSettings.findOne({ key: 'global' }).lean();
+    const now = new Date();
+    let promotion = null;
+    let type = '';
+    if (normalizedCode && settings?.couponsEnabled !== false) {
+      promotion = await Coupon.findOne({ code: normalizedCode, enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).lean();
+      if (promotion) type = 'coupon';
+    }
+    if (!promotion && settings?.discountsEnabled !== false) {
+      const filter = { enabled: true, startDate: { $lte: now }, endDate: { $gte: now } };
+      if (discountId) filter._id = discountId;
+      else filter.code = normalizedCode;
+      promotion = await Discount.findOne(filter).lean();
+      if (promotion) type = 'discount';
+    }
+    if (!promotion) return res.status(404).json({ success: false, message: 'This promo code is invalid or has expired.' });
+
+    const minBooking = Number(promotion.minimumBooking) || 0;
+    if (bookingAmount < minBooking) {
+      return res.status(400).json({ success: false, message: `This offer requires a minimum booking of ₹${minBooking}.` });
+    }
+    const percentage = type === 'discount' || promotion.type === 'percentage';
+    const rawDiscount = percentage ? bookingAmount * Number(promotion.percentage ?? promotion.value) / 100 : Number(promotion.value);
+    const maximumDiscount = Number(promotion.maximumDiscount);
+    const discountAmount = Math.min(bookingAmount, Math.round(maximumDiscount > 0 ? Math.min(rawDiscount, maximumDiscount) : rawDiscount));
+    if (discountAmount <= 0) return res.status(400).json({ success: false, message: 'This promo code does not apply a discount.' });
+
+    res.set('Cache-Control', 'no-store');
+    return res.json({ success: true, data: {
+      promotionId: String(promotion._id),
+      code: promotion.code || normalizedCode,
+      name: promotion.name,
+      discountAmount,
+      discountType: percentage ? 'percentage' : 'fixed',
+      discountValue: Number(promotion.percentage ?? promotion.value),
+      maximumDiscount: promotion.maximumDiscount ?? null,
+      originalAmount: bookingAmount,
+      payableAmount: Math.max(0, bookingAmount - discountAmount),
+    } });
+  } catch (error) { next(error); }
+});
+
 app.get('/api/app-icon', async (req, res, next) => {
   try {
     const asset = await AppAsset.findOne({ key: 'app-icon' }).select('image contentType updatedAt').lean();
     if (!asset) return res.status(404).json({ success: false, message: 'App icon has not been uploaded' });
+    const image = asImageBuffer(asset.image);
     const etag = `W/"app-icon-${asset.updatedAt.getTime()}"`;
-    res.set({ 'Content-Type': asset.contentType, 'Content-Length': asset.image.length, 'Cache-Control': 'public, max-age=300', ETag: etag });
+    res.set({ 'Content-Type': asset.contentType, 'Content-Length': image.length, 'Cache-Control': 'public, max-age=300', ETag: etag });
     if (req.headers['if-none-match'] === etag) return res.status(304).end();
-    res.send(asset.image);
+    res.send(image);
+  } catch (error) { next(error); }
+});
+
+app.get('/api/offer-images/:id', async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid offer ID' });
+    const asset = await AppAsset.findOne({ key: `offer-${req.params.id}` }).select('image contentType updatedAt').lean();
+    if (!asset) return res.status(404).json({ success: false, message: 'Offer image not found' });
+    const image = asImageBuffer(asset.image);
+    const etag = `W/"offer-image-${req.params.id}-${asset.updatedAt.getTime()}"`;
+    res.set({ 'Content-Type': asset.contentType, 'Content-Length': image.length, 'Cache-Control': 'public, max-age=300', ETag: etag });
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
+    res.send(image);
   } catch (error) { next(error); }
 });
 
