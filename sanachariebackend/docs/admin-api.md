@@ -30,7 +30,7 @@ Booking status and refund-status changes send transactional notifications. Promo
 
 ## Referral tracking
 
-New customer accounts receive a referral code. A new account created through a `/?ref=SAN…` invite link is attributed to its referrer; signed-in customers can share the link from Profile. Referral reward values and qualification rules still need business configuration before automatic rewards are issued.
+Customers with a profile name receive a `SANCHARIE-NAME` referral code (the name is normalized to uppercase letters and digits). A new account created through a `/?ref=SANCHARIE-NAME` invite link is attributed to its referrer. Signup itself does not issue wallet credit. After the referred customer completes their first successful bus booking, the referrer receives wallet credit calculated from the booking amount using the admin-configured referral reward percentage. Set the percentage under Admin → Application settings; it defaults to 2% and accepts 0–100%. Existing random `SAN…` referral codes remain accepted for older invite links.
 
 
 ## Wallets

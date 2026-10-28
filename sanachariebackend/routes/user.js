@@ -18,7 +18,7 @@ const Booking = require('../models/Booking');
 const Referral = require('../models/Referral');
 const { hashReference } = require('../services/paymentSecurity');
 const { reconcileUserBookings } = require('../services/bookingReconciliationService');
-const { ApplicationSettings } = require('../models/AdminResources');
+const { ApplicationSettings, Coupon } = require('../models/AdminResources');
 const PushSubscription = require('../models/PushSubscription');
 const pushNotifications = require('../services/pushNotifications');
 
@@ -27,7 +27,19 @@ const PAYMENT_STATUSES = ['pending', 'completed', 'failed', 'refunded'];
 const SERVICE_TYPES = ['bus', 'flight', 'hotel'];
 
 const cleanText = (value, maxLength = 500) => String(value || '').trim().slice(0, maxLength);
+const normalizeRouteCity = (value) => cleanText(value, 120).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const newReferralCode = () => `SAN${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
+const referralCodeForName = async (name, userId) => {
+  const namePart = cleanText(name, 100).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 30) || 'USERNAME';
+  const base = `SANCHARIE-${namePart}`;
+  let candidate = base;
+  let suffix = 2;
+  while (await User.exists({ referralCode: candidate, ...(userId ? { _id: { $ne: userId } } : {}) })) {
+    const suffixText = String(suffix++);
+    candidate = `${base.slice(0, 40 - suffixText.length)}${suffixText}`;
+  }
+  return candidate;
+};
 
 const cleanSeatCoordinate = (value) => {
   const coordinate = Number(value);
@@ -115,6 +127,9 @@ const serializeBooking = (booking) => ({
   baseFare: booking.baseFare,
   serviceTax: booking.serviceTax,
   totalFare: booking.totalFare,
+  promotionCode: booking.promotionCode || '',
+  promotionName: booking.promotionName || '',
+  promotionDiscount: booking.promotionDiscount || 0,
   status: booking.status,
   providerStatus: booking.providerStatus,
   failureStage: booking.failureStage,
@@ -223,14 +238,90 @@ router.delete('/push/subscriptions', authenticateToken, async (req, res, next) =
 
 router.get('/referrals/me', authenticateToken, async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.userId).select('referralCode');
+    const user = await User.findById(req.user.userId).select('referralCode name');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    if (!user.referralCode) { user.referralCode = newReferralCode(); await user.save(); }
-    const [invited, qualified] = await Promise.all([
+    if (!user.name?.trim()) {
+      return res.json({ success: true, code: null, invited: 0, qualified: 0, requiresProfileCompletion: true, message: 'Save your profile details to unlock your referral offer.' });
+    }
+    if (!user.referralCode || !user.referralCode.startsWith('SANCHARIE-') || (user.name && /^SANCHARIE-USERNAME\d*$/.test(user.referralCode))) {
+      user.referralCode = await referralCodeForName(user.name, user._id);
+      await user.save();
+    }
+    const [invited, qualified, settings] = await Promise.all([
       Referral.countDocuments({ referrerUserId: user._id }),
       Referral.countDocuments({ referrerUserId: user._id, status: { $in: ['qualified', 'rewarded'] } }),
+      ApplicationSettings.findOne({ key: 'global' }).select('referralRewardPercentage').lean(),
     ]);
-    res.json({ success: true, code: user.referralCode, invited, qualified });
+    const rewardPercentage = Number(settings?.referralRewardPercentage ?? 2);
+    res.json({ success: true, code: user.referralCode, invited, qualified, rewardPercentage, rewardDescription: `Earn ${rewardPercentage}% of your friend's first successful bus booking as wallet credit.` });
+  } catch (error) { next(error); }
+});
+
+router.get('/return-offers/pending', authenticateToken, async (req, res, next) => {
+  try {
+    const settings = await ApplicationSettings.findOne({ key: 'global' }).select('couponsEnabled').lean();
+    if (settings?.couponsEnabled === false) return res.json({ success: true, offer: null });
+
+    const completedBookings = await Booking.find({ userId: req.user.userId, serviceType: 'bus', status: 'completed', paymentStatus: 'completed', reconciliationSource: 'ets_partner_report' })
+      .sort({ updatedAt: -1, createdAt: -1 }).limit(25)
+      .select('_id fromCity toCity source destination journeyDate').lean();
+    if (!completedBookings.length) return res.json({ success: true, offer: null });
+    const claimed = await Coupon.find({ sourceBookingId: { $in: completedBookings.map((booking) => booking._id) } }).select('sourceBookingId').lean();
+    const claimedIds = new Set(claimed.map((coupon) => String(coupon.sourceBookingId)));
+    const booking = completedBookings.find((item) => !claimedIds.has(String(item._id)));
+    if (!booking) return res.json({ success: true, offer: null });
+
+    res.set('Cache-Control', 'no-store');
+    return res.json({ success: true, offer: {
+      bookingId: String(booking._id),
+      fromCity: booking.fromCity || booking.source,
+      toCity: booking.toCity || booking.destination,
+      journeyDate: booking.journeyDate,
+      discountPercentage: 10,
+    } });
+  } catch (error) { next(error); }
+});
+
+router.post('/return-offers/:bookingId/claim', authenticateToken, async (req, res, next) => {
+  try {
+    const settings = await ApplicationSettings.findOne({ key: 'global' }).select('couponsEnabled').lean();
+    if (settings?.couponsEnabled === false) return res.status(503).json({ success: false, message: 'Return offers are temporarily unavailable.' });
+    const booking = await Booking.findOne({ _id: req.params.bookingId, userId: req.user.userId, serviceType: 'bus', status: 'completed', paymentStatus: 'completed', reconciliationSource: 'ets_partner_report' })
+      .select('_id fromCity toCity source destination').lean();
+    if (!booking) return res.status(404).json({ success: false, message: 'This completed bus journey is not eligible for the return offer.' });
+
+    let coupon = await Coupon.findOne({ sourceBookingId: booking._id, ownerUserId: req.user.userId });
+    if (!coupon) {
+      const fromCity = cleanText(booking.fromCity || booking.source, 120);
+      const toCity = cleanText(booking.toCity || booking.destination, 120);
+      if (!normalizeRouteCity(fromCity) || !normalizeRouteCity(toCity)) return res.status(409).json({ success: false, message: 'Journey route details are unavailable for this offer.' });
+      for (let attempt = 0; attempt < 3 && !coupon; attempt += 1) {
+        const code = `RET${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
+        try {
+          coupon = await Coupon.create({
+            code,
+            ownerUserId: req.user.userId,
+            sourceBookingId: booking._id,
+            returnFrom: toCity,
+            returnTo: fromCity,
+            name: '10% Return Journey Offer',
+            type: 'percentage',
+            value: 10,
+            minimumBooking: 0,
+            usageLimit: 1,
+            perUserLimit: 1,
+            startDate: new Date(),
+            endDate: new Date('9999-12-31T23:59:59.999Z'),
+            enabled: true,
+          });
+        } catch (error) {
+          if (error.code !== 11000) throw error;
+          coupon = await Coupon.findOne({ sourceBookingId: booking._id, ownerUserId: req.user.userId });
+        }
+      }
+    }
+    if (!coupon) return res.status(503).json({ success: false, message: 'Could not create your return offer. Please try again.' });
+    return res.json({ success: true, code: coupon.code, discountPercentage: 10, fromCity: coupon.returnFrom, toCity: coupon.returnTo });
   } catch (error) { next(error); }
 });
 
@@ -255,7 +346,7 @@ router.post('/login-complete', async (req, res) => {
     }
 
     const { phone } = req.body;
-    const requestedReferralCode = cleanText(req.body?.referralCode, 20).toUpperCase();
+    const requestedReferralCode = cleanText(req.body?.referralCode, 40).toUpperCase();
 
     if (!phone) {
       return res.status(400).json({ success: false, message: 'Phone number required' });
@@ -278,13 +369,15 @@ router.post('/login-complete', async (req, res) => {
       // Create new user
       try {
         let referrer = null;
-        if (/^SAN[A-F0-9]{10}$/.test(requestedReferralCode)) {
+        if (/^(?:SAN[A-F0-9]{10}|SANCHARIE-[A-Z0-9]{1,30})$/.test(requestedReferralCode)) {
           referrer = await User.findOne({ referralCode: requestedReferralCode, accountActive: true }).select('_id phone');
           if (referrer?.phone === phone) referrer = null;
         }
         user = new User({ phone, referralCode: newReferralCode(), referredBy: referrer?._id || null });
         await user.save();
-        if (referrer) await Referral.create({ referrerUserId: referrer._id, referredUserId: user._id, code: requestedReferralCode });
+        if (referrer) {
+          await Referral.create({ referrerUserId: referrer._id, referredUserId: user._id, code: requestedReferralCode, status: 'joined' });
+        }
         isNewUser = true;
         console.log(`✅ New user created: ${phone}`);
       } catch (saveError) {
@@ -562,7 +655,12 @@ router.put('/profile', authenticateToken, async (req, res) => {
     }
 
     // Update fields
-    if (name) user.name = name;
+    if (name) {
+      user.name = name;
+      if (!user.referralCode || !user.referralCode.startsWith('SANCHARIE-') || /^SANCHARIE-USERNAME\d*$/.test(user.referralCode)) {
+        user.referralCode = await referralCodeForName(name, user._id);
+      }
+    }
     if (email) user.email = email;
     if (age) user.age = parseInt(age);
     if (gender) user.gender = gender;

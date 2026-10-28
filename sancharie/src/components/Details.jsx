@@ -31,7 +31,7 @@ const ASSURANCE_AVAILABLE = false;
 export default function Details() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { actions } = useBooking();
+  const { state: bookingState, actions } = useBooking();
   const toast = useToast();
   
   // Get data from navigation state
@@ -88,6 +88,8 @@ export default function Details() {
       })
     : 'Travel date';
   const operatorName = bus?.TravelName || bus?.name || "Bus Operator";
+  const routeSource = bookingState?.searchParams?.from || bus?.source || '';
+  const routeDestination = bookingState?.searchParams?.to || bus?.destination || '';
   const busType = bus?.BusType || bus?.type || "A/C Sleeper";
   const boardingTime = boardingPoint?.time || boardingPoint?.Time || '—';
   const droppingTime = droppingPoint?.time || droppingPoint?.Time || '—';
@@ -134,6 +136,8 @@ export default function Details() {
         code,
         discountId,
         amount: originalFare,
+        source: routeSource,
+        destination: routeDestination,
       });
       setAppliedPromotion(result);
       setPromoInput(result.code || code);
@@ -143,7 +147,7 @@ export default function Details() {
     } finally {
       setIsApplyingPromo(false);
     }
-  }, [originalFare, promoInput]);
+  }, [originalFare, promoInput, routeSource, routeDestination]);
 
   useEffect(() => {
     try {

@@ -48,7 +48,7 @@ function App() {
   useEffect(() => {
     let active = true;
     const referralCode = new URLSearchParams(window.location.search).get('ref');
-    if (/^SAN[A-F0-9]{10}$/i.test(referralCode || '')) localStorage.setItem('pendingReferralCode', referralCode.toUpperCase());
+    if (/^(?:SAN[A-F0-9]{10}|SANCHARIE-[A-Z0-9]{1,30})$/i.test(referralCode || '')) localStorage.setItem('pendingReferralCode', referralCode.toUpperCase());
     const loadConfig = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/config`);

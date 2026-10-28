@@ -12,8 +12,11 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  ClipboardCheck,
   Clock3,
+  Copy,
   Download,
+  Gift,
   IndianRupee,
   MapPin,
   Route,
@@ -128,6 +131,10 @@ export default function MyBookings() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
   const [cancelSuccess, setCancelSuccess] = useState('');
+  const [returnOffer, setReturnOffer] = useState(null);
+  const [claimedReturnOffer, setClaimedReturnOffer] = useState(null);
+  const [isClaimingReturnOffer, setIsClaimingReturnOffer] = useState(false);
+  const [returnOfferError, setReturnOfferError] = useState('');
   const [cancellationDetails, setCancellationDetails] = useState(null);
   const [isLoadingCancellation, setIsLoadingCancellation] = useState(false);
 
@@ -181,6 +188,19 @@ export default function MyBookings() {
       document.removeEventListener('visibilitychange', reconcileVisibleDashboard);
     };
   }, [authLoading, fetchBookings, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || authLoading || isLoading || returnOffer || claimedReturnOffer) return undefined;
+    let active = true;
+    userApi.getPendingReturnOffer().then((result) => {
+      const offer = result?.offer;
+      if (!active || !offer?.bookingId) return;
+      if (sessionStorage.getItem(`return-offer-dismissed:${offer.bookingId}`)) return;
+      setReturnOffer(offer);
+      setReturnOfferError('');
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [authLoading, bookings, claimedReturnOffer, isAuthenticated, isLoading, returnOffer]);
 
   useEffect(() => {
     if (!showCancelModal) return undefined;
@@ -250,6 +270,46 @@ export default function MyBookings() {
     setCancellingBooking(null);
     setCancelError('');
     setCancellationDetails(null);
+  };
+
+  const closeReturnOffer = () => {
+    if (returnOffer && !claimedReturnOffer) {
+      sessionStorage.setItem(`return-offer-dismissed:${returnOffer.bookingId}`, '1');
+    }
+    setReturnOffer(null);
+    setClaimedReturnOffer(null);
+    setReturnOfferError('');
+  };
+
+  const claimReturnOffer = async () => {
+    if (!returnOffer?.bookingId || isClaimingReturnOffer) return;
+    setIsClaimingReturnOffer(true);
+    setReturnOfferError('');
+    try {
+      const result = await userApi.claimReturnOffer(returnOffer.bookingId);
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(result.code);
+        copied = true;
+      } catch {
+        copied = false;
+      }
+      setClaimedReturnOffer({ ...result, copied });
+    } catch (claimError) {
+      setReturnOfferError(claimError.message || 'Could not claim your return offer. Please try again.');
+    } finally {
+      setIsClaimingReturnOffer(false);
+    }
+  };
+
+  const copyReturnOfferCode = async () => {
+    if (!claimedReturnOffer?.code) return;
+    try {
+      await navigator.clipboard.writeText(claimedReturnOffer.code);
+      setClaimedReturnOffer((current) => ({ ...current, copied: true }));
+    } catch {
+      setReturnOfferError('Copy is unavailable in this browser. Select the code to copy it.');
+    }
   };
 
   const getCancellationDetails = async (booking) => {
@@ -768,6 +828,44 @@ export default function MyBookings() {
           </section>
         </div>
       </main>
+
+      {returnOffer && (
+        <div className="return-offer-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeReturnOffer(); }}>
+          <section className="return-offer-modal" role="dialog" aria-modal="true" aria-labelledby="return-offer-title">
+            <button className="return-offer-close" type="button" onClick={closeReturnOffer} aria-label="Close return offer"><X size={20} /></button>
+            <div className="return-offer-icon"><Gift size={27} /></div>
+            {claimedReturnOffer ? (
+              <>
+                <span className="return-offer-eyebrow">Offer claimed</span>
+                <h2 id="return-offer-title">Your return trip is 10% off</h2>
+                <p className="return-offer-copy">We {claimedReturnOffer.copied ? 'copied' : 'created'} your personal code. Apply it to your return bus search.</p>
+                <button className="return-offer-code" type="button" onClick={() => void copyReturnOfferCode()} aria-label="Copy your coupon code">
+                  <code>{claimedReturnOffer.code}</code>
+                  {claimedReturnOffer.copied ? <ClipboardCheck size={18} /> : <Copy size={18} />}
+                </button>
+                <div className="return-offer-route">
+                  <span>{claimedReturnOffer.fromCity || returnOffer.toCity}</span><ArrowRight size={16} /><span>{claimedReturnOffer.toCity || returnOffer.fromCity}</span>
+                </div>
+                <button className="return-offer-primary" type="button" onClick={closeReturnOffer}>Continue</button>
+              </>
+            ) : (
+              <>
+                <span className="return-offer-eyebrow">Journey complete · a little something for the way back</span>
+                <h2 id="return-offer-title">Get 10% off your return ticket</h2>
+                <p className="return-offer-copy">Claim your personal coupon for a bus from {returnOffer.toCity} to {returnOffer.fromCity}. We’ll copy the code so you can apply it at checkout.</p>
+                <div className="return-offer-route">
+                  <span>{returnOffer.toCity}</span><ArrowRight size={16} /><span>{returnOffer.fromCity}</span>
+                </div>
+                {returnOfferError && <p className="return-offer-error" role="alert">{returnOfferError}</p>}
+                <button className="return-offer-primary" type="button" onClick={() => void claimReturnOffer()} disabled={isClaimingReturnOffer}>
+                  {isClaimingReturnOffer ? 'Claiming your offer…' : 'Claim 10% off'}
+                </button>
+                <button className="return-offer-later" type="button" onClick={closeReturnOffer}>Maybe later</button>
+              </>
+            )}
+          </section>
+        </div>
+      )}
 
       {showCancelModal && (
         <div className="cancel-modal-overlay" onMouseDown={closeCancelModal}>

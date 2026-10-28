@@ -1749,6 +1749,177 @@
   animation: bookings-spin 0.7s linear infinite;
 }
 
+.return-offer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 30, 43, 0.68);
+  backdrop-filter: blur(8px);
+  animation: cancel-overlay-in 0.2s ease both;
+}
+
+.return-offer-modal {
+  position: relative;
+  width: min(100%, 480px);
+  padding: clamp(28px, 6vw, 42px);
+  border: 1px solid rgba(206, 180, 95, 0.3);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(206, 180, 95, 0.18), transparent 38%),
+    #fff;
+  box-shadow: 0 35px 100px rgba(0, 20, 29, 0.38);
+  text-align: center;
+  animation: cancel-modal-in 0.25s ease both;
+}
+
+.return-offer-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--bookings-border);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--bookings-muted);
+  cursor: pointer;
+}
+
+.return-offer-icon {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  margin: 0 auto 18px;
+  border: 1px solid rgba(206, 180, 95, 0.25);
+  border-radius: 20px;
+  background: var(--bookings-cream);
+  color: var(--bookings-gold-dark);
+}
+
+.return-offer-eyebrow {
+  display: block;
+  color: var(--bookings-gold-dark);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+.return-offer-modal h2 {
+  margin: 9px 0 10px;
+  color: var(--bookings-ink);
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(23px, 5vw, 31px);
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.return-offer-copy {
+  max-width: 360px;
+  margin: 0 auto 18px;
+  color: var(--bookings-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.return-offer-route {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--bookings-border);
+  border-radius: 14px;
+  background: #f8fbfb;
+  color: var(--bookings-ink);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.return-offer-route svg {
+  flex: 0 0 auto;
+  color: var(--bookings-gold-dark);
+}
+
+.return-offer-primary {
+  display: inline-flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--bookings-ink);
+  box-shadow: 0 10px 22px rgba(0, 44, 63, 0.18);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.return-offer-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--bookings-ink-soft);
+}
+
+.return-offer-primary:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.return-offer-later {
+  margin-top: 13px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--bookings-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.return-offer-code {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px dashed rgba(152, 118, 42, 0.55);
+  border-radius: 14px;
+  background: var(--bookings-cream);
+  color: var(--bookings-gold-dark);
+  cursor: pointer;
+}
+
+.return-offer-code code {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 17px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+}
+
+.return-offer-error {
+  margin: -5px 0 12px;
+  color: #b94343;
+  font-size: 12px;
+}
+
 @media (max-width: 1180px) {
   .bookings-shell {
     grid-template-columns: 230px minmax(0, 1fr);
@@ -2117,7 +2288,9 @@
   .booking-card,
   .booking-card-details,
   .cancel-modal-overlay,
-  .cancel-modal {
+  .cancel-modal,
+  .return-offer-overlay,
+  .return-offer-modal {
     animation: none;
   }
 

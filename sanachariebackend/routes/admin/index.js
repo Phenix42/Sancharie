@@ -49,6 +49,7 @@ const publicSettings = (settings) => ({
   couponsEnabled: settings?.couponsEnabled ?? true,
   discountsEnabled: settings?.discountsEnabled ?? true,
   festivalThemeEnabled: settings?.festivalThemeEnabled ?? true,
+  referralRewardPercentage: settings?.referralRewardPercentage ?? 2,
   contactEmail: settings?.contactEmail || '',
   contactPhone: settings?.contactPhone || '',
   supportInformation: settings?.supportInformation || '',
@@ -337,7 +338,7 @@ router.get('/bookings', requirePermission('bookings:read'), asyncRoute(async (re
     if (req.query.to) { const to = new Date(req.query.to); if (Number.isNaN(to.getTime())) return res.status(400).json({ success: false, message: 'Invalid end date' }); if (/^\d{4}-\d{2}-\d{2}$/.test(String(req.query.to))) to.setHours(23, 59, 59, 999); filter.createdAt.$lte = to; }
   }
   if (req.query.q) { const q = String(req.query.q).slice(0, 100); filter.$or = [{ bookingId: { $regex: q, $options: 'i' } }, { userPhone: { $regex: q, $options: 'i' } }, { source: { $regex: q, $options: 'i' } }, { destination: { $regex: q, $options: 'i' } }]; }
-  const [data, total] = await Promise.all([Booking.find(filter).select('bookingId userId userPhone serviceType source destination journeyDate totalFare status paymentStatus paymentId paymentOrderId paymentMethod cancellationReason refundAmount refundStatus paymentIssue createdAt').populate('userId', 'name email phone').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(), Booking.countDocuments(filter)]);
+  const [data, total] = await Promise.all([Booking.find(filter).select('bookingId userId userPhone serviceType source destination journeyDate totalFare promotionCode promotionName promotionDiscount status paymentStatus paymentId paymentOrderId paymentMethod cancellationReason refundAmount refundStatus paymentIssue createdAt').populate('userId', 'name email phone').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(), Booking.countDocuments(filter)]);
   res.json({ success: true, data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
 }));
 router.get('/bookings/:id', requirePermission('bookings:read'), asyncRoute(async (req, res) => {
@@ -379,11 +380,15 @@ router.put('/app-icon', requirePermission('settings:manage'), express.raw({ type
   res.json({ success: true, data: { url: `/api/app-icon?v=${asset.updatedAt.getTime()}`, contentType: asset.contentType, updatedAt: asset.updatedAt } });
 }));
 router.put('/settings', requirePermission('settings:manage'), asyncRoute(async (req, res) => {
-  const allowed = ['maintenanceMode', 'bookingsEnabled', 'registrationEnabled', 'couponsEnabled', 'discountsEnabled', 'festivalThemeEnabled', 'contactEmail', 'contactPhone', 'supportInformation', 'announcement'];
+  const allowed = ['maintenanceMode', 'bookingsEnabled', 'registrationEnabled', 'couponsEnabled', 'discountsEnabled', 'festivalThemeEnabled', 'referralRewardPercentage', 'contactEmail', 'contactPhone', 'supportInformation', 'announcement'];
   const update = {};
   for (const key of allowed) if (req.body?.[key] !== undefined) update[key] = req.body[key];
   const booleanKeys = ['maintenanceMode', 'bookingsEnabled', 'registrationEnabled', 'couponsEnabled', 'discountsEnabled', 'festivalThemeEnabled'];
   if (booleanKeys.some((key) => update[key] !== undefined && typeof update[key] !== 'boolean')) return res.status(400).json({ success: false, message: 'Feature flags must be boolean values' });
+  if (update.referralRewardPercentage !== undefined) {
+    update.referralRewardPercentage = Number(update.referralRewardPercentage);
+    if (!Number.isFinite(update.referralRewardPercentage) || update.referralRewardPercentage < 0 || update.referralRewardPercentage > 100) return res.status(400).json({ success: false, message: 'Referral reward percentage must be between 0 and 100' });
+  }
   if (update.contactEmail !== undefined && update.contactEmail !== '' && !/^\S+@\S+\.\S+$/.test(String(update.contactEmail))) return res.status(400).json({ success: false, message: 'Contact email is invalid' });
   const before = await ApplicationSettings.findOne({ key: 'global' }).lean();
   const data = await ApplicationSettings.findOneAndUpdate({ key: 'global' }, { $set: update, $setOnInsert: { key: 'global' } }, { upsert: true, new: true, runValidators: true }).lean();

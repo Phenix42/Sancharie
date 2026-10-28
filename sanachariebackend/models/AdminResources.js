@@ -25,6 +25,10 @@ const discountSchema = new mongoose.Schema({
 
 const couponSchema = new mongoose.Schema({
   code: { type: String, required: true, trim: true, uppercase: true, unique: true, maxlength: 40 },
+  ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: undefined, index: true },
+  sourceBookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: undefined, index: true },
+  returnFrom: { type: String, default: '', trim: true, maxlength: 120 },
+  returnTo: { type: String, default: '', trim: true, maxlength: 120 },
   name: { type: String, required: true, trim: true, maxlength: 120 },
   type: { type: String, enum: ['percentage', 'fixed'], required: true },
   value: { type: Number, required: true, min: 0.01, validate: { validator(value) { return this.type !== 'percentage' || value <= 100; }, message: 'Percentage coupon cannot exceed 100' } },
@@ -36,6 +40,7 @@ const couponSchema = new mongoose.Schema({
   ...datePair,
   usageCount: { type: Number, min: 0, default: 0 },
 }, common);
+couponSchema.index({ sourceBookingId: 1 }, { unique: true, partialFilterExpression: { sourceBookingId: { $type: 'objectId' } } });
 
 const offerSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 120 },
@@ -90,6 +95,7 @@ const settingsSchema = new mongoose.Schema({
   couponsEnabled: { type: Boolean, default: true },
   discountsEnabled: { type: Boolean, default: true },
   festivalThemeEnabled: { type: Boolean, default: true },
+  referralRewardPercentage: { type: Number, min: 0, max: 100, default: 2 },
   contactEmail: { type: String, default: '', maxlength: 254 },
   contactPhone: { type: String, default: '', maxlength: 30 },
   supportInformation: { type: String, default: '', maxlength: 2000 },

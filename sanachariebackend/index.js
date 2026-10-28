@@ -19,6 +19,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const authRoutes = require('./routes/auth');
 const paymentRoutes = require('./routes/payment');
@@ -37,6 +38,7 @@ const asImageBuffer = (image) => Buffer.isBuffer(image)
   : image?.buffer
     ? Buffer.from(image.buffer).subarray(0, image.position ?? image.buffer.length)
     : Buffer.from(image || '');
+const normalizeRouteCity = (value) => String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 
 // ============================================
@@ -208,7 +210,7 @@ app.get('/api/config', async (req, res, next) => {
       FestivalTheme.findOne({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).sort({ priority: -1, startDate: -1 }).lean(),
       Banner.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).sort({ priority: -1 }).limit(20).lean(),
       Discount.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('name description code bannerImage percentage maximumDiscount minimumBooking startDate endDate').sort({ startDate: 1 }).lean(),
-      Coupon.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('code name type value maximumDiscount minimumBooking endDate').sort({ createdAt: -1 }).limit(50).lean(),
+      Coupon.find({ ownerUserId: { $exists: false }, enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('code name type value maximumDiscount minimumBooking endDate').sort({ createdAt: -1 }).limit(50).lean(),
       Offer.find({ enabled: true, startDate: { $lte: now }, endDate: { $gte: now } }).select('name description type discountType discountValue maximumDiscount minimumBooking bannerImage ctaText ctaUrl priority startDate endDate').sort({ priority: -1 }).limit(20).lean(),
       AppAsset.findOne({ key: 'app-icon' }).select('updatedAt').lean(),
     ]);
@@ -229,6 +231,7 @@ app.get('/api/config', async (req, res, next) => {
         registrationEnabled: settings?.registrationEnabled ?? true,
         couponsEnabled: settings?.couponsEnabled ?? true,
         discountsEnabled: settings?.discountsEnabled ?? true,
+        referralRewardPercentage: settings?.referralRewardPercentage ?? 2,
         festivalThemeEnabled: settings?.festivalThemeEnabled ?? true,
         contactEmail: settings?.contactEmail || '', contactPhone: settings?.contactPhone || '',
         supportInformation: settings?.supportInformation || '', announcement: settings?.announcement || '',
@@ -250,7 +253,7 @@ app.get('/api/config', async (req, res, next) => {
 // Validate a booking promotion against the active server-side campaign data.
 app.post('/api/promotions/validate', async (req, res, next) => {
   try {
-    const { code, discountId, amount } = req.body || {};
+    const { code, discountId, amount, source, destination } = req.body || {};
     const normalizedCode = String(code || '').trim().toUpperCase();
     const bookingAmount = Number(amount);
     if ((!normalizedCode && !discountId) || !Number.isFinite(bookingAmount) || bookingAmount <= 0) {
@@ -273,6 +276,20 @@ app.post('/api/promotions/validate', async (req, res, next) => {
       if (promotion) type = 'discount';
     }
     if (!promotion) return res.status(404).json({ success: false, message: 'This promo code is invalid or has expired.' });
+
+    if (promotion.ownerUserId) {
+      const token = String(req.headers.authorization || '').split(' ')[1];
+      let authenticatedUserId = '';
+      try { authenticatedUserId = token && process.env.JWT_SECRET ? String(jwt.verify(token, process.env.JWT_SECRET).userId || '') : ''; } catch { authenticatedUserId = ''; }
+      const requestedSource = normalizeRouteCity(source);
+      const requestedDestination = normalizeRouteCity(destination);
+      if (authenticatedUserId !== String(promotion.ownerUserId) ||
+          requestedSource !== normalizeRouteCity(promotion.returnFrom) ||
+          requestedDestination !== normalizeRouteCity(promotion.returnTo) ||
+          Number(promotion.usageCount || 0) >= 1) {
+        return res.status(400).json({ success: false, message: 'This return offer is valid only for your return route.' });
+      }
+    }
 
     const minBooking = Number(promotion.minimumBooking) || 0;
     if (bookingAmount < minBooking) {

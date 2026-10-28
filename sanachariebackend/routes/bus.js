@@ -34,6 +34,7 @@ const paymentService = require('../services/paymentService');
 const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
+const Referral = require('../models/Referral');
 const { ApplicationSettings, Coupon, Discount } = require('../models/AdminResources');
 const {
   PaymentSecurityError,
@@ -46,6 +47,7 @@ const {
 } = require('../services/paymentSecurity');
 const router = express.Router();
 const { requireBookingAvailability } = require('../middleware/runtimeSettings');
+const normalizeRouteCity = (value) => String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const getBookingAdjustments = async ({ bookingId, walletAmount = 0, promoCode = '', promotionId = '', blockAmount, blockTicketKey }) => {
   let walletCredit = 0;
@@ -62,6 +64,8 @@ const getBookingAdjustments = async ({ bookingId, walletAmount = 0, promoCode = 
   }
 
   let promotionCredit = 0;
+  let returnCouponId = null;
+  let promotionName = '';
   const normalizedCode = String(promoCode || '').trim().toUpperCase();
   if (normalizedCode || promotionId) {
     const now = new Date();
@@ -79,6 +83,20 @@ const getBookingAdjustments = async ({ bookingId, walletAmount = 0, promoCode = 
       promotion = await Discount.findOne(filter).lean();
     }
     if (!promotion) throw new Error('Promo code is no longer active');
+    promotionName = promotion.name || normalizedCode;
+    if (promotion.ownerUserId) {
+      const booking = mongoose.isValidObjectId(bookingId)
+        ? await Booking.findById(bookingId).select('userId fromCity toCity source destination').lean()
+        : null;
+      const bookingFrom = normalizeRouteCity(booking?.fromCity || booking?.source);
+      const bookingTo = normalizeRouteCity(booking?.toCity || booking?.destination);
+      if (!booking || String(booking.userId) !== String(promotion.ownerUserId) ||
+          bookingFrom !== normalizeRouteCity(promotion.returnFrom) || bookingTo !== normalizeRouteCity(promotion.returnTo) ||
+          Number(promotion.usageCount || 0) >= 1) {
+        throw new Error('This return offer is not valid for this booking');
+      }
+      returnCouponId = promotion._id;
+    }
     const baseAmount = Number(blockAmount) || 0;
     if (baseAmount < (Number(promotion.minimumBooking) || 0)) throw new Error('Promo code minimum booking amount is not met');
     const isPercentage = !isCoupon || promotion.type === 'percentage';
@@ -87,7 +105,46 @@ const getBookingAdjustments = async ({ bookingId, walletAmount = 0, promoCode = 
     const maximum = Number(promotion.maximumDiscount);
     promotionCredit = Math.min(baseAmount, Math.round(maximum > 0 ? Math.min(rawDiscount, maximum) : rawDiscount));
   }
-  return { walletCredit, promotionCredit };
+  return { walletCredit, promotionCredit, returnCouponId, promotionCode: normalizedCode, promotionName };
+};
+
+const rewardReferrerForFirstBooking = async (bookingId, bookingAmount) => {
+  if (!mongoose.isValidObjectId(bookingId)) return;
+  const booking = await Booking.findById(bookingId).select('userId serviceType paymentStatus').lean();
+  if (!booking || booking.serviceType !== 'bus' || booking.paymentStatus !== 'completed') return;
+
+  const settings = await ApplicationSettings.findOne({ key: 'global' }).select('referralRewardPercentage').lean();
+  const percentage = Math.max(0, Math.min(100, Number(settings?.referralRewardPercentage ?? 2)));
+  const eligibleAmount = Math.max(0, Math.round((Number(bookingAmount) || 0) * 100) / 100);
+  const amount = Math.round((eligibleAmount * percentage + Number.EPSILON) * 100) / 100;
+  const referral = await Referral.findOneAndUpdate(
+    { referredUserId: booking.userId, status: 'joined', firstBookingId: null },
+    { $set: { firstBookingId: booking._id, bookingAmount: eligibleAmount, rewardPercentage: percentage, rewardAmount: amount, status: 'qualified', qualifiedAt: new Date() } },
+    { new: true }
+  ) || await Referral.findOne({ referredUserId: booking.userId, status: 'qualified' });
+  if (!referral) return;
+
+  const rewardAmount = Number(referral.rewardAmount) || 0;
+  const requestId = `referral-commission-${referral._id}`;
+  if (rewardAmount > 0) {
+    const account = await User.findOneAndUpdate(
+      { _id: referral.referrerUserId, walletProcessedAdjustments: { $ne: requestId } },
+      {
+        $inc: { walletBalance: rewardAmount },
+        $addToSet: { walletProcessedAdjustments: requestId },
+        $push: { walletTransactions: { $each: [{ type: 'referral_commission', amount: rewardAmount, requestId, bookingId: String(referral.firstBookingId), bookingAmount: Number(referral.bookingAmount), rewardPercentage: Number(referral.rewardPercentage), description: 'Referral commission · first bus booking', createdAt: new Date() }], $slice: -100 } },
+      },
+      { new: true, projection: { walletBalance: 1 } }
+    );
+    if (!account) {
+      const referrer = await User.findById(referral.referrerUserId).select('walletProcessedAdjustments');
+      if (!referrer?.walletProcessedAdjustments?.includes(requestId)) throw new Error('Referrer wallet could not be credited');
+    }
+  }
+  await Referral.updateOne(
+    { _id: referral._id, status: 'qualified' },
+    { $set: { status: 'rewarded', rewardedAt: new Date() } }
+  );
 };
 
 // ============================================
@@ -971,7 +1028,12 @@ router.get('/ets/getRtcUpdatedFare', async (req, res) => {
  * For RTC services, call getRtcUpdatedFare first
  */
 router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
+  let returnCouponReserved = false;
   try {
+    let returnCouponToRedeem = null;
+    let promotionBookingId = '';
+    let appliedPromotion = null;
+    let referralBookingAmount = 0;
     const { blockTicketKey, paymentId } = req.query;
     
     if (!blockTicketKey) {
@@ -1026,6 +1088,10 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
           blockAmount: block.requiredAmount,
           blockTicketKey,
         });
+        promotionBookingId = bookingId;
+        appliedPromotion = adjustments;
+        referralBookingAmount = Math.max(0, toAmount(block.requiredAmount) - adjustments.promotionCredit);
+        returnCouponToRedeem = adjustments.returnCouponId;
         if (adjustments.walletCredit + adjustments.promotionCredit < toAmount(block.requiredAmount)) {
           throw new PaymentSecurityError('Wallet and promotion credit do not cover the bus fare', 402);
         }
@@ -1048,9 +1114,19 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
           blockAmount: block.requiredAmount,
           blockTicketKey,
         });
+        promotionBookingId = String(notes.wallet_booking_id || '');
+        appliedPromotion = adjustments;
+        referralBookingAmount = Math.max(0, toAmount(block.requiredAmount) - adjustments.promotionCredit);
+        returnCouponToRedeem = adjustments.returnCouponId;
         const cardAmountRequired = Math.max(0, toAmount(block.requiredAmount) - adjustments.walletCredit - adjustments.promotionCredit);
         if (cardAmountRequired > 0) assertCapturedPaymentCovers(paymentDetails, cardAmountRequired, 'bus booking');
       }
+    }
+
+    if (returnCouponToRedeem) {
+      const reservation = await Coupon.updateOne({ _id: returnCouponToRedeem, usageCount: { $lt: 1 } }, { $inc: { usageCount: 1 } });
+      if (reservation.modifiedCount !== 1) throw new PaymentSecurityError('This return offer has already been used', 409);
+      returnCouponReserved = true;
     }
 
     const data = await makeETSRequest({
@@ -1061,6 +1137,24 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
 
     // Log successful booking (for audit)
     if (data.apiStatus?.success) {
+      if (mongoose.isValidObjectId(promotionBookingId)) {
+        try {
+          await rewardReferrerForFirstBooking(promotionBookingId, referralBookingAmount);
+        } catch (error) {
+          console.error('[ETS API] Referral commission could not be processed:', error.message);
+        }
+      }
+      if (mongoose.isValidObjectId(promotionBookingId) && appliedPromotion?.promotionCredit > 0) {
+        try {
+          await Booking.updateOne({ _id: promotionBookingId }, { $set: {
+            promotionCode: appliedPromotion.promotionCode || '',
+            promotionName: appliedPromotion.promotionName || '',
+            promotionDiscount: appliedPromotion.promotionCredit,
+          } });
+        } catch (error) {
+          console.error('[ETS API] Could not save the applied promotion to the booking record:', error.message);
+        }
+      }
       if (paymentId) {
         markPaymentConsumed(String(paymentId), {
           serviceType: 'bus',
@@ -1072,6 +1166,9 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         opPNR: data.opPNR,
         timestamp: new Date().toISOString(),
       });
+    } else if (returnCouponReserved) {
+      await Coupon.updateOne({ _id: returnCouponToRedeem, usageCount: { $gt: 0 } }, { $inc: { usageCount: -1 } });
+      returnCouponReserved = false;
     }
     
     res.json(data);

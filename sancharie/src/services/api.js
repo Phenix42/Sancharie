@@ -209,6 +209,13 @@ export const user = {
   getBookings: () =>
     apiRequest('/user/bookings'),
 
+  getPendingReturnOffer: () => apiRequest('/user/return-offers/pending'),
+
+  claimReturnOffer: (bookingId) => apiRequest(`/user/return-offers/${encodeURIComponent(bookingId)}/claim`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }),
+
   /**
    * Save a new booking
    * @param {Object} bookingData - Booking details

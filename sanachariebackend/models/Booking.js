@@ -135,6 +135,9 @@ const bookingSchema = new mongoose.Schema({
   baseFare: { type: Number, required: true },
   serviceTax: { type: Number, default: 0 },
   totalFare: { type: Number, required: true },
+  promotionCode: { type: String, default: '', uppercase: true, trim: true, maxlength: 40 },
+  promotionName: { type: String, default: '', trim: true, maxlength: 120 },
+  promotionDiscount: { type: Number, default: 0, min: 0 },
   
   // Payment details
   paymentId: { type: String, default: '' },

@@ -1,4 +1,4 @@
-import { createElement, useEffect, useMemo, useState } from 'react';
+import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -50,6 +50,7 @@ export default function Profile() {
   const [pushMessage, setPushMessage] = useState('');
   const [referral, setReferral] = useState(null);
   const [referralMessage, setReferralMessage] = useState('');
+  const profileDetailsRef = useRef(null);
   const supportsPush = typeof window !== 'undefined' && window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
   useEffect(() => {
@@ -68,10 +69,16 @@ export default function Profile() {
     fetch(`${API_BASE_URL}/user/referrals/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(async (response) => {
         const payload = await response.json();
-        if (response.ok && payload.success) setReferral(payload);
+        if (response.ok && payload.success) {
+          setReferral(payload);
+          if (payload.requiresProfileCompletion) {
+            setIsEditing(true);
+            window.requestAnimationFrame(() => profileDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+          }
+        }
       })
       .catch(() => {});
-  }, [token]);
+  }, [token, user?.name]);
 
   const togglePushNotifications = async () => {
     setPushBusy(true);
@@ -118,7 +125,7 @@ export default function Profile() {
     if (!referral?.code) return;
     const shareUrl = `${window.location.origin}/?ref=${encodeURIComponent(referral.code)}`;
     try {
-      if (navigator.share) await navigator.share({ title: 'Travel with Sancharie', text: 'Join me on Sancharie.', url: shareUrl });
+      if (navigator.share) await navigator.share({ title: 'Travel with Sancharie', text: 'Join Sancharie with my invite. I earn a wallet reward after your first successful bus booking.', url: shareUrl });
       else { await navigator.clipboard.writeText(shareUrl); setReferralMessage('Your invite link is copied.'); }
     } catch (shareError) {
       if (shareError.name !== 'AbortError') setReferralMessage('Could not share the invite link. Please try again.');
@@ -313,7 +320,7 @@ export default function Profile() {
             </div>
           </aside>
 
-          <section className="profile-content-card" aria-labelledby="personal-details-title">
+          <section className="profile-content-card profile-details-card" aria-labelledby="personal-details-title" ref={profileDetailsRef}>
             <div className="profile-section-header">
               <div className="section-title-wrap">
                 <span className="section-title-icon"><UserRound size={20} /></span>
@@ -330,6 +337,10 @@ export default function Profile() {
                 </button>
               )}
             </div>
+
+            {referral?.requiresProfileCompletion && (
+              <div className="profile-alert" role="status">Save your profile details to unlock your referral offer and invite code.</div>
+            )}
 
             {isEditing ? (
               <form className="profile-form" onSubmit={handleSubmit} noValidate>
@@ -439,15 +450,34 @@ export default function Profile() {
           </section>
         </div>
 
-        <section className="profile-content-card push-settings-card" aria-labelledby="referral-title">
+        <section className={`profile-content-card push-settings-card referral-card${referral?.requiresProfileCompletion ? ' is-incomplete' : ''}`} aria-labelledby="referral-title">
           <div className="profile-section-header">
             <div className="section-title-wrap">
               <span className="section-title-icon"><UsersRound size={20} /></span>
               <div><p>Bring your travel companions</p><h2 id="referral-title">Invite friends</h2></div>
             </div>
-            <button className="profile-save-btn" type="button" disabled={!referral?.code} onClick={() => void shareReferralLink()}>Share invite link</button>
+            <button className="profile-save-btn referral-share-btn" type="button" disabled={!referral?.code} onClick={() => void shareReferralLink()}><ArrowUpRight size={16} /> Share invite link</button>
           </div>
-          <p>Your invite code: <strong>{referral?.code || 'Loading…'}</strong> · Friends joined: <strong>{referral?.invited ?? 0}</strong></p>
+          {referral?.requiresProfileCompletion ? (
+            <div className="referral-completion-prompt">
+              <span className="referral-reward-badge">Referral reward</span>
+              <p>Save your profile details to unlock your invite code and referral offer.</p>
+              <button className="profile-save-btn referral-cta" type="button" onClick={() => { setIsEditing(true); profileDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}>Complete profile <ArrowUpRight size={16} /></button>
+            </div>
+          ) : (
+            <div className="referral-info-grid">
+              <div className="referral-code-block">
+                <span className="referral-label">Your invite code</span>
+                <strong>{referral?.code || 'Loading…'}</strong>
+                <small>Share your personal code with a friend.</small>
+              </div>
+              <div className="referral-reward-block">
+                <span className="referral-reward-badge">{Number(referral?.rewardPercentage ?? 2)}% commission</span>
+                <p>When your friend books their first successful bus ticket with Sancharie, you earn this percentage of the booking amount as wallet credit.</p>
+                <small>{referral?.invited ?? 0} {referral?.invited === 1 ? 'friend' : 'friends'} joined</small>
+              </div>
+            </div>
+          )}
           {referralMessage && <div className="profile-alert" role="status">{referralMessage}</div>}
         </section>
 
