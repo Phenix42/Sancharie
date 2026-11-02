@@ -744,7 +744,7 @@ export const createTicketPDF = async (ticketData) => {
   doc.setTextColor(...COLORS.muted);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
-  doc.text('Your selected seat is highlighted in gold.', 33, 193);
+  doc.text('Your assigned seats are highlighted in gold.', 33, 193);
   drawMiniSeatLayout(doc, seatNames, seatLayout, hasUpperDeck || /sleeper/i.test(busType));
 
   drawDashedLine(doc, 16, 216, 194);

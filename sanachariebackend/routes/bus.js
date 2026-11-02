@@ -34,6 +34,8 @@ const paymentService = require('../services/paymentService');
 const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
+const userRoutes = require('./user');
+const authenticateToken = userRoutes.authenticateToken;
 const Referral = require('../models/Referral');
 const { ApplicationSettings, Coupon, Discount } = require('../models/AdminResources');
 const {
@@ -54,11 +56,13 @@ const getBookingAdjustments = async ({ bookingId, walletAmount = 0, promoCode = 
   const requestedWalletAmount = toAmount(walletAmount);
   if (requestedWalletAmount > 0) {
     if (!mongoose.isValidObjectId(bookingId)) throw new Error('Wallet payment booking reference is invalid');
-    const booking = await Booking.findById(bookingId).select('providerReferenceHash status paymentStatus');
+    const booking = await Booking.findById(bookingId).select('userId providerReferenceHash status paymentStatus');
     if (!booking || booking.providerReferenceHash !== hashReference(String(blockTicketKey))) throw new Error('Wallet payment does not match this bus booking');
     if (!['pending', 'confirmed'].includes(booking.status) || !['pending', 'completed'].includes(booking.paymentStatus)) throw new Error('Wallet payment booking is not valid');
-    const requestId = `wallet-${bookingId}`;
-    const user = await User.findOne({ walletTransactions: { $elemMatch: { requestId, type: 'debit', bookingId: String(bookingId), amount: requestedWalletAmount } } }).select('_id');
+    // Validate the debit by its booking association and exact amount. Older
+    // app versions generated their own idempotency keys, so the request ID is
+    // not a reliable way to determine whether this booking was funded.
+    const user = await User.findOne({ _id: booking.userId, walletTransactions: { $elemMatch: { type: 'debit', bookingId: String(bookingId), amount: requestedWalletAmount } } }).select('_id');
     if (!user) throw new Error('Wallet debit could not be verified');
     walletCredit = requestedWalletAmount;
   }
@@ -66,6 +70,7 @@ const getBookingAdjustments = async ({ bookingId, walletAmount = 0, promoCode = 
   let promotionCredit = 0;
   let returnCouponId = null;
   let promotionName = '';
+  let promotionReservation = null;
   const normalizedCode = String(promoCode || '').trim().toUpperCase();
   if (normalizedCode || promotionId) {
     const now = new Date();
@@ -84,6 +89,7 @@ const getBookingAdjustments = async ({ bookingId, walletAmount = 0, promoCode = 
     }
     if (!promotion) throw new Error('Promo code is no longer active');
     promotionName = promotion.name || normalizedCode;
+    promotionReservation = { id: promotion._id, type: isCoupon ? 'coupon' : 'discount' };
     if (promotion.ownerUserId) {
       const booking = mongoose.isValidObjectId(bookingId)
         ? await Booking.findById(bookingId).select('userId fromCity toCity source destination').lean()
@@ -96,16 +102,96 @@ const getBookingAdjustments = async ({ bookingId, walletAmount = 0, promoCode = 
         throw new Error('This return offer is not valid for this booking');
       }
       returnCouponId = promotion._id;
+      promotionReservation = null;
     }
     const baseAmount = Number(blockAmount) || 0;
+    if (baseAmount <= 0) throw new Error('Bus fare is unavailable; please select seats again');
     if (baseAmount < (Number(promotion.minimumBooking) || 0)) throw new Error('Promo code minimum booking amount is not met');
+    if (Number(promotion.usageLimit) > 0 && Number(promotion.usageCount || 0) >= Number(promotion.usageLimit)) {
+      throw new Error('This promotion has reached its usage limit');
+    }
+    const ownerBooking = mongoose.isValidObjectId(bookingId)
+      ? await Booking.findById(bookingId).select('userId').lean()
+      : null;
+    if (Number(promotion.perUserLimit) > 0 && ownerBooking) {
+      const promotionCode = String(promotion.code || normalizedCode).toUpperCase();
+      const previousUses = await Booking.countDocuments({ userId: ownerBooking.userId, serviceType: 'bus',
+        promotionCode, status: { $in: ['confirmed', 'completed'] }, paymentStatus: 'completed' });
+      if (previousUses >= Number(promotion.perUserLimit)) throw new Error('You have already used this promotion the maximum number of times');
+    }
     const isPercentage = !isCoupon || promotion.type === 'percentage';
     const value = Number(promotion.percentage ?? promotion.value);
     const rawDiscount = isPercentage ? baseAmount * value / 100 : value;
     const maximum = Number(promotion.maximumDiscount);
-    promotionCredit = Math.min(baseAmount, Math.round(maximum > 0 ? Math.min(rawDiscount, maximum) : rawDiscount));
+    promotionCredit = Math.min(baseAmount, Math.round((Math.min(maximum > 0 ? Math.min(rawDiscount, maximum) : rawDiscount, baseAmount) + Number.EPSILON) * 100) / 100);
   }
-  return { walletCredit, promotionCredit, returnCouponId, promotionCode: normalizedCode, promotionName };
+  return { walletCredit, promotionCredit, returnCouponId, promotionReservation,
+    promotionCode: normalizedCode, promotionName };
+};
+
+const releasePromotionReservation = async (reservation) => {
+  if (!reservation?.id || !['coupon', 'discount'].includes(reservation.type)) return;
+  const Model = reservation.type === 'coupon' ? Coupon : Discount;
+  await Model.updateOne({ _id: reservation.id, usageCount: { $gt: 0 } }, { $inc: { usageCount: -1 } });
+};
+
+const reverseWalletDebit = async (bookingId, amount) => {
+  if (!mongoose.isValidObjectId(bookingId) || !(Number(amount) > 0)) return false;
+  const booking = await Booking.findById(bookingId).select('userId');
+  if (!booking) return false;
+  const account = await User.findById(booking.userId).select('walletBalance walletTransactions walletProcessedAdjustments');
+  const debit = account?.walletTransactions?.find((item) => item.type === 'debit' &&
+    String(item.bookingId) === String(bookingId) && Number(item.amount) === Number(amount));
+  if (!debit) return false;
+  const refundKey = `bus-booking-wallet-refund-${bookingId}`;
+  if (account.walletProcessedAdjustments?.includes(refundKey)) return true;
+  const restored = await User.findOneAndUpdate(
+    { _id: booking.userId, walletProcessedAdjustments: { $ne: refundKey } },
+    { $inc: { walletBalance: Number(debit.amount) }, $addToSet: { walletProcessedAdjustments: refundKey },
+      $push: { walletTransactions: { $each: [{ type: 'credit', amount: Number(debit.amount), requestId: refundKey,
+        bookingId: String(bookingId), description: 'Bus booking payment reversed', createdAt: new Date() }], $slice: -100 } } },
+    { new: true, projection: { walletBalance: 1 } }
+  );
+  return Boolean(restored) || Boolean(await User.exists({ _id: booking.userId, walletProcessedAdjustments: refundKey }));
+};
+
+const updateBusBookingFromOperator = async ({ bookingId, data, paymentId, paymentOrderId, paymentMethod,
+  appliedPromotion, refundStatus = '', failure = null }) => {
+  if (!mongoose.isValidObjectId(bookingId)) return;
+  const booking = await Booking.findById(bookingId);
+  if (!booking) return;
+  if (failure) {
+    booking.status = failure.pending ? 'pending' : 'failed';
+    booking.paymentStatus = failure.paymentStatus || (paymentId?.startsWith('WALLET-') ? 'refunded' : 'completed');
+    booking.providerStatus = failure.pending ? 'confirmation_unknown' : 'booking_failed';
+    booking.failureStage = failure.pending ? 'provider_confirmation' : 'provider_booking';
+    booking.failureReason = String(failure.reason || 'The bus operator could not confirm this booking').slice(0, 500);
+    booking.failedAt = failure.pending ? undefined : (booking.failedAt || new Date());
+    booking.paymentId = paymentId || booking.paymentId;
+    booking.paymentOrderId = paymentOrderId || booking.paymentOrderId;
+    booking.paymentMethod = paymentMethod || booking.paymentMethod;
+    if (refundStatus) booking.refundStatus = refundStatus;
+  } else {
+    const ticketNo = String(read(data, 'etstnumber', 'ETSTNumber', 'ticketNo') || '');
+    booking.status = 'confirmed';
+    booking.paymentStatus = 'completed';
+    booking.providerStatus = 'CONFIRMED';
+    booking.failureStage = '';
+    booking.failureReason = '';
+    booking.confirmedAt = booking.confirmedAt || new Date();
+    booking.paymentId = paymentId || '';
+    booking.paymentOrderId = paymentOrderId || '';
+    booking.paymentMethod = paymentMethod || '';
+    booking.ticketNo = ticketNo;
+    booking.externalBookingId = ticketNo;
+    booking.pnr = String(read(data, 'opPNR', 'pnr') || '');
+    booking.promotionCode = appliedPromotion?.promotionCode || '';
+    booking.promotionName = appliedPromotion?.promotionName || '';
+    booking.promotionDiscount = appliedPromotion?.promotionCredit || 0;
+  }
+  booking.statusHistory.push({ status: booking.status, paymentStatus: booking.paymentStatus,
+    stage: booking.failureStage || 'operator_confirmed', message: booking.failureReason || '', createdAt: new Date() });
+  await booking.save();
 };
 
 const rewardReferrerForFirstBooking = async (bookingId, bookingAmount) => {
@@ -1029,9 +1115,18 @@ router.get('/ets/getRtcUpdatedFare', async (req, res) => {
  */
 router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
   let returnCouponReserved = false;
+  let providerCallStarted = false;
+  let settlementValidated = false;
+  let bookingClaimed = false;
+  let settlement = null;
+  let providerResponse = null;
+  let cardRefundAttempted = false;
+  let cardRefundSucceeded = null;
+  let returnCouponToRedeem = null;
+  let promotionReservation = null;
+  let promotionReserved = false;
+  let promotionBookingId = '';
   try {
-    let returnCouponToRedeem = null;
-    let promotionBookingId = '';
     let appliedPromotion = null;
     let referralBookingAmount = 0;
     const { blockTicketKey, paymentId } = req.query;
@@ -1057,9 +1152,7 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
 
       const block = getBusBlock(blockTicketKey);
       if (!block) {
-        return res.status(409).json({
-          apiStatus: { success: false, message: 'Bus booking session expired. Please block the seats again.' }
-        });
+        throw new PaymentSecurityError('Bus booking session expired. Any captured payment is being reversed; please select seats again.', 409);
       }
 
       if (block.isRTC && !block.rtcFareUpdatedAt) {
@@ -1076,10 +1169,25 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         }
       }
 
-      assertPaymentNotConsumed(String(paymentId));
       if (String(paymentId).startsWith('WALLET-')) {
         const bookingId = String(req.query.walletBookingId || '');
         if (String(paymentId) !== `WALLET-${bookingId}`) throw new PaymentSecurityError('Wallet payment reference is invalid', 400);
+        const requestedWalletAmount = toAmount(req.query.walletAmount);
+        settlement = { bookingId, paymentId: String(paymentId), paymentOrderId: '', paymentMethod: 'wallet',
+          walletAmount: requestedWalletAmount, cardAmount: 0 };
+        // Once the debit is tied to this booking and block, an invalid or
+        // expired coupon must not strand wallet funds.
+        const booking = await Booking.findById(bookingId).select('providerReferenceHash status ticketNo pnr paymentId refundStatus paymentStatus failureReason');
+        if (booking?.status === 'confirmed' && booking.ticketNo && booking.paymentId === String(paymentId)) {
+          return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: booking.ticketNo,
+            opPNR: booking.pnr, idempotent: true });
+        }
+        if (booking?.status === 'failed' && booking.paymentId === String(paymentId)) {
+          return res.status(409).json({ apiStatus: { success: false, code: 'BOOKING_FAILED',
+            message: booking.failureReason || 'This booking already failed; any applicable refund has already been started.' },
+            paymentStatus: booking.paymentStatus, refundStatus: booking.refundStatus });
+        }
+        if (booking?.providerReferenceHash === hashReference(String(blockTicketKey))) settlementValidated = true;
         const adjustments = await getBookingAdjustments({
           bookingId,
           walletAmount: req.query.walletAmount,
@@ -1090,11 +1198,14 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         });
         promotionBookingId = bookingId;
         appliedPromotion = adjustments;
+        promotionReservation = adjustments.promotionReservation;
         referralBookingAmount = Math.max(0, toAmount(block.requiredAmount) - adjustments.promotionCredit);
         returnCouponToRedeem = adjustments.returnCouponId;
         if (adjustments.walletCredit + adjustments.promotionCredit < toAmount(block.requiredAmount)) {
           throw new PaymentSecurityError('Wallet and promotion credit do not cover the bus fare', 402);
         }
+        settlement = { bookingId, paymentId: String(paymentId), paymentOrderId: '', paymentMethod: 'wallet',
+          walletAmount: adjustments.walletCredit, cardAmount: 0, adjustments };
       } else {
         const paymentDetails = await paymentService.fetchPaymentDetails(String(paymentId));
         let orderDetails = null;
@@ -1106,6 +1217,31 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
           });
         }
         const notes = orderDetails?.notes || {};
+        const bookingId = String(notes.wallet_booking_id || '');
+        if (!mongoose.isValidObjectId(bookingId)) throw new PaymentSecurityError('A valid Sancharie booking reference is required', 400);
+        const linkedBooking = await Booking.findById(bookingId).select('providerReferenceHash status paymentStatus ticketNo pnr paymentId refundStatus failureReason');
+        if (linkedBooking?.status === 'confirmed' && linkedBooking.ticketNo && linkedBooking.paymentId === String(paymentId)) {
+          return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: linkedBooking.ticketNo,
+            opPNR: linkedBooking.pnr, idempotent: true });
+        }
+        if (linkedBooking?.status === 'failed' && linkedBooking.paymentId === String(paymentId)) {
+          return res.status(409).json({ apiStatus: { success: false, code: 'BOOKING_FAILED',
+            message: linkedBooking.failureReason || 'This booking already failed; any applicable refund has already been started.' },
+            paymentStatus: linkedBooking.paymentStatus, refundStatus: linkedBooking.refundStatus });
+        }
+        if (!linkedBooking || linkedBooking.providerReferenceHash !== hashReference(String(blockTicketKey)) ||
+            !['pending', 'confirmed'].includes(linkedBooking.status) ||
+            !['pending', 'completed'].includes(linkedBooking.paymentStatus)) {
+          throw new PaymentSecurityError('Payment does not match an active bus booking', 402);
+        }
+        const notesWalletAmount = toAmount(notes.wallet_amount);
+        if (orderDetails && paymentDetails.status === 'captured' && paymentDetails.captured === true &&
+            paymentDetails.amount === orderDetails.amount && paymentDetails.currency === 'INR' && orderDetails.currency === 'INR') {
+          settlement = { bookingId, paymentId: String(paymentId), paymentOrderId: paymentDetails.order_id || '',
+            paymentMethod: notesWalletAmount > 0 ? 'wallet+razorpay' : 'razorpay', walletAmount: notesWalletAmount,
+            cardAmount: Number(paymentDetails.amount) / 100, cardPayment: paymentDetails };
+          settlementValidated = true;
+        }
         const adjustments = await getBookingAdjustments({
           bookingId: notes.wallet_booking_id,
           walletAmount: notes.wallet_amount,
@@ -1116,27 +1252,93 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         });
         promotionBookingId = String(notes.wallet_booking_id || '');
         appliedPromotion = adjustments;
+        promotionReservation = adjustments.promotionReservation;
         referralBookingAmount = Math.max(0, toAmount(block.requiredAmount) - adjustments.promotionCredit);
         returnCouponToRedeem = adjustments.returnCouponId;
         const cardAmountRequired = Math.max(0, toAmount(block.requiredAmount) - adjustments.walletCredit - adjustments.promotionCredit);
-        if (cardAmountRequired > 0) assertCapturedPaymentCovers(paymentDetails, cardAmountRequired, 'bus booking');
+        if (cardAmountRequired > 0) {
+          assertCapturedPaymentCovers(paymentDetails, cardAmountRequired, 'bus booking');
+          if (Number(paymentDetails.amount) !== Math.round(cardAmountRequired * 100)) {
+            throw new PaymentSecurityError('Payment amount does not match the remaining bus fare', 402);
+          }
+        }
+        settlement = { bookingId, paymentId: String(paymentId), paymentOrderId: paymentDetails.order_id || '',
+          paymentMethod: adjustments.walletCredit > 0 ? 'wallet+razorpay' : 'razorpay',
+          walletAmount: adjustments.walletCredit, cardAmount: cardAmountRequired, cardPayment: paymentDetails, adjustments };
       }
+      settlementValidated = Boolean(settlement);
+      assertPaymentNotConsumed(String(paymentId), { serviceType: 'bus',
+        blockTicketKey: normalizeBlockTicketKey(blockTicketKey) });
+    }
+
+    if (settlement?.bookingId && mongoose.isValidObjectId(settlement.bookingId)) {
+      const claimed = await Booking.findOneAndUpdate(
+        { _id: settlement.bookingId, status: 'pending', providerReferenceHash: hashReference(String(blockTicketKey)),
+          providerStatus: { $in: ['', 'payment_pending', 'payment_verified'] } },
+        { $set: { providerStatus: 'confirming', paymentStatus: 'completed',
+          paymentId: settlement.paymentId || '', paymentOrderId: settlement.paymentOrderId || '',
+          paymentMethod: settlement.paymentMethod || '', failureStage: '', failureReason: '' } },
+        { new: true }
+      );
+      if (!claimed) {
+        const existing = await Booking.findById(settlement.bookingId).select('status providerStatus ticketNo pnr paymentId refundStatus failureReason paymentStatus');
+        if (existing?.status === 'confirmed' && existing.ticketNo) {
+          return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: existing.ticketNo,
+            opPNR: existing.pnr, idempotent: true });
+        }
+        if (existing && ['confirming', 'confirmation_unknown'].includes(existing.providerStatus)) {
+          return res.status(202).json({ apiStatus: { success: false, code: 'BOOKING_CONFIRMATION_PENDING',
+            message: 'The operator is still confirming this booking. Do not pay again.' } });
+        }
+        if (existing?.status === 'failed' && existing.paymentId === settlement.paymentId) {
+          return res.status(409).json({ apiStatus: { success: false, code: 'BOOKING_FAILED',
+            message: existing.failureReason || 'This booking already failed; any applicable refund has already been started.' },
+            paymentStatus: existing.paymentStatus, refundStatus: existing.refundStatus });
+        }
+        throw new PaymentSecurityError('This booking attempt cannot be confirmed again. Please contact support.', 409);
+      }
+      bookingClaimed = true;
     }
 
     if (returnCouponToRedeem) {
       const reservation = await Coupon.updateOne({ _id: returnCouponToRedeem, usageCount: { $lt: 1 } }, { $inc: { usageCount: 1 } });
       if (reservation.modifiedCount !== 1) throw new PaymentSecurityError('This return offer has already been used', 409);
       returnCouponReserved = true;
+    } else if (promotionReservation) {
+      const Model = promotionReservation.type === 'coupon' ? Coupon : Discount;
+      const now = new Date();
+      const filter = { _id: promotionReservation.id, enabled: true, startDate: { $lte: now }, endDate: { $gte: now } };
+      const activePromotion = await Model.findById(promotionReservation.id).select('usageLimit').lean();
+      if (Number(activePromotion?.usageLimit) > 0) filter.usageCount = { $lt: Number(activePromotion.usageLimit) };
+      const reservation = await Model.updateOne(filter, { $inc: { usageCount: 1 } });
+      if (reservation.modifiedCount !== 1) throw new PaymentSecurityError('This promotion is no longer available', 409);
+      promotionReserved = true;
     }
 
+    providerCallStarted = true;
     const data = await makeETSRequest({
       method: 'GET',
       url: `${ETS_API_CONFIG.baseUrl}/seatBooking`,
       params: { blockTicketKey: blockTicketKey},
     });
+    providerResponse = data;
+
+    if (data.apiStatus?.success === true && !read(data, 'etstnumber', 'ETSTNumber', 'ticketNo')) {
+      if (settlement?.bookingId) await updateBusBookingFromOperator({ bookingId: settlement.bookingId,
+        data: {}, paymentId: settlement.paymentId, paymentOrderId: settlement.paymentOrderId,
+        paymentMethod: settlement.paymentMethod,
+        failure: { pending: true, paymentStatus: 'completed', reason: 'The operator accepted the booking but has not returned a ticket number yet.' } });
+      return res.status(202).json({ apiStatus: { success: false, code: 'BOOKING_CONFIRMATION_PENDING',
+        message: 'The operator is processing the ticket. Do not pay again; confirmation is being checked.' } });
+    }
 
     // Log successful booking (for audit)
-    if (data.apiStatus?.success) {
+    if (data.apiStatus?.success && read(data, 'etstnumber', 'ETSTNumber', 'ticketNo')) {
+      if (settlement?.bookingId) {
+        await updateBusBookingFromOperator({ bookingId: settlement.bookingId, data,
+          paymentId: settlement.paymentId, paymentOrderId: settlement.paymentOrderId,
+          paymentMethod: settlement.paymentMethod, appliedPromotion });
+      }
       if (mongoose.isValidObjectId(promotionBookingId)) {
         try {
           await rewardReferrerForFirstBooking(promotionBookingId, referralBookingAmount);
@@ -1166,13 +1368,166 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         opPNR: data.opPNR,
         timestamp: new Date().toISOString(),
       });
-    } else if (returnCouponReserved) {
-      await Coupon.updateOne({ _id: returnCouponToRedeem, usageCount: { $gt: 0 } }, { $inc: { usageCount: -1 } });
-      returnCouponReserved = false;
+    } else {
+      // A well-formed negative supplier response means no ticket was issued,
+      // so reverse both settlement legs. Network errors are treated as
+      // ambiguous below and are never refunded blindly.
+      if (returnCouponReserved) {
+        await Coupon.updateOne({ _id: returnCouponToRedeem, usageCount: { $gt: 0 } }, { $inc: { usageCount: -1 } });
+        returnCouponReserved = false;
+      }
+      if (promotionReserved) { await releasePromotionReservation(promotionReservation); promotionReserved = false; }
+      let walletRestored = true;
+      if (settlement?.walletAmount > 0) {
+        try { walletRestored = await reverseWalletDebit(settlement.bookingId, settlement.walletAmount); }
+        catch (restoreError) { walletRestored = false; console.error('[ETS API] Wallet reversal failed:', restoreError.message); }
+      }
+      let cardRefunded = cardRefundSucceeded !== false;
+      let refundStatus = settlement?.walletAmount > 0 && !walletRestored ? 'wallet_refund_pending' : '';
+      if (settlement?.cardAmount > 0 && settlement?.paymentId && !settlement.paymentId.startsWith('WALLET-')) {
+        cardRefundAttempted = true;
+        try {
+          const refund = await paymentService.refundPayment(settlement.paymentId,
+            Number(settlement.cardPayment.amount) / 100, { reason: 'bus_booking_failed', booking_id: settlement.bookingId });
+          cardRefundSucceeded = true;
+          refundStatus = refund?.status || 'processed';
+        } catch (refundError) {
+          cardRefundSucceeded = false;
+          cardRefunded = false;
+          refundStatus = 'refund_pending';
+          console.error('[ETS API] Automatic card refund failed:', refundError.message);
+        }
+      }
+      if (settlement?.bookingId) {
+        await updateBusBookingFromOperator({ bookingId: settlement.bookingId, data: {},
+          paymentId: settlement.paymentId, paymentOrderId: settlement.paymentOrderId,
+          paymentMethod: settlement.paymentMethod, refundStatus,
+          failure: { reason: data.apiStatus?.message || 'The bus operator rejected the booking',
+            paymentStatus: walletRestored && cardRefunded
+              ? (settlement.walletAmount > 0 || settlement.cardAmount > 0 ? 'refunded' : 'failed')
+              : 'completed' } });
+      }
     }
     
     res.json(data);
   } catch (error) {
+    const definiteProviderRejection = Boolean(error.response && error.response.status >= 400 && error.response.status < 500);
+    const providerReturnedFailure = providerResponse?.apiStatus?.success === false;
+    if (providerCallStarted && settlement?.bookingId && !definiteProviderRejection && !providerReturnedFailure) {
+      // A timeout or connection break can happen after the operator created a
+      // ticket. Keep the attempt pending and let reconciliation/support check
+      // the supplier before retrying or refunding.
+      try {
+        await updateBusBookingFromOperator({ bookingId: settlement.bookingId, data: {},
+          paymentId: settlement.paymentId, paymentOrderId: settlement.paymentOrderId,
+          paymentMethod: settlement.paymentMethod,
+          failure: { pending: true, paymentStatus: 'completed', reason: 'The operator response was interrupted; confirmation is being checked.' } });
+      } catch (stateError) {
+        console.error('[ETS API] Could not persist pending operator confirmation:', stateError.message);
+      }
+      return res.status(202).json({ apiStatus: { success: false, code: 'BOOKING_CONFIRMATION_PENDING',
+        message: 'Payment was received. The operator confirmation is still being checked; do not pay again.' } });
+    }
+    if (!settlementValidated && !providerCallStarted && req.query.paymentId) {
+      // Errors before the supplier call (expired in-memory seat block, RTC
+      // fare refresh failure, etc.) are safe to compensate, but only after
+      // reconstructing and binding the captured payment/debit to this exact
+      // persisted Sancharie booking and block reference.
+      try {
+        const attemptedPaymentId = String(req.query.paymentId);
+        const attemptedBlockKey = String(req.query.blockTicketKey || '');
+        if (attemptedPaymentId.startsWith('WALLET-')) {
+          const bookingId = String(req.query.walletBookingId || '');
+          const amount = toAmount(req.query.walletAmount);
+          const booking = await Booking.findById(bookingId).select('userId providerReferenceHash status ticketNo pnr paymentId refundStatus paymentStatus failureReason');
+          if (booking?.status === 'confirmed' && booking.ticketNo && booking.paymentId === attemptedPaymentId) {
+            return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: booking.ticketNo,
+              opPNR: booking.pnr, idempotent: true });
+          }
+          if (booking?.status === 'failed' && booking.paymentId === attemptedPaymentId) {
+            return res.status(409).json({ apiStatus: { success: false, code: 'BOOKING_FAILED',
+              message: booking.failureReason || 'This booking already failed; any applicable refund has already been started.' },
+              paymentStatus: booking.paymentStatus, refundStatus: booking.refundStatus });
+          }
+          const account = booking && amount > 0 ? await User.findOne({ _id: booking.userId, walletTransactions: { $elemMatch: {
+            type: 'debit', bookingId: String(bookingId), amount,
+          } } }).select('_id') : amount === 0;
+          if (booking && account && booking.providerReferenceHash === hashReference(attemptedBlockKey)) {
+            settlement = { bookingId, paymentId: attemptedPaymentId, paymentOrderId: '', paymentMethod: 'wallet',
+              walletAmount: amount, cardAmount: 0 };
+            settlementValidated = true;
+          }
+        } else {
+          const paymentDetails = await paymentService.fetchPaymentDetails(attemptedPaymentId);
+          const orderDetails = paymentDetails.order_id ? await paymentService.fetchOrderDetails(paymentDetails.order_id) : null;
+          const notes = orderDetails?.notes || {};
+          const bookingId = String(notes.wallet_booking_id || '');
+          const booking = mongoose.isValidObjectId(bookingId)
+            ? await Booking.findById(bookingId).select('providerReferenceHash status paymentStatus ticketNo pnr paymentId refundStatus failureReason')
+            : null;
+          if (booking?.status === 'confirmed' && booking.ticketNo && booking.paymentId === attemptedPaymentId) {
+            return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: booking.ticketNo,
+              opPNR: booking.pnr, idempotent: true });
+          }
+          if (booking?.status === 'failed' && booking.paymentId === attemptedPaymentId) {
+            return res.status(409).json({ apiStatus: { success: false, code: 'BOOKING_FAILED',
+              message: booking.failureReason || 'This booking already failed; any applicable refund has already been started.' },
+              paymentStatus: booking.paymentStatus, refundStatus: booking.refundStatus });
+          }
+          if (booking && orderDetails && notes.service_type === 'bus' &&
+              notes.pricing_ref_hash === hashReference(attemptedBlockKey) &&
+              booking.providerReferenceHash === hashReference(attemptedBlockKey) &&
+              paymentDetails.status === 'captured' && paymentDetails.captured === true &&
+              paymentDetails.amount === orderDetails.amount && paymentDetails.currency === 'INR' && orderDetails.currency === 'INR') {
+            settlement = { bookingId, paymentId: attemptedPaymentId, paymentOrderId: paymentDetails.order_id,
+              paymentMethod: Number(notes.wallet_amount) > 0 ? 'wallet+razorpay' : 'razorpay',
+              walletAmount: toAmount(notes.wallet_amount), cardAmount: Number(paymentDetails.amount) / 100,
+              cardPayment: paymentDetails };
+            settlementValidated = true;
+          }
+        }
+      } catch (recoveryError) {
+        console.error('[ETS API] Could not safely reconcile pre-provider payment:', recoveryError.message);
+      }
+    }
+    if (settlementValidated && settlement?.bookingId) {
+      if (returnCouponReserved) {
+        await Coupon.updateOne({ _id: returnCouponToRedeem, usageCount: { $gt: 0 } }, { $inc: { usageCount: -1 } });
+      }
+      if (promotionReserved) { await releasePromotionReservation(promotionReservation); promotionReserved = false; }
+      let walletRestored = true;
+      if (settlement.walletAmount > 0) {
+        try { walletRestored = await reverseWalletDebit(settlement.bookingId, settlement.walletAmount); }
+        catch (restoreError) { walletRestored = false; console.error('[ETS API] Wallet reversal failed:', restoreError.message); }
+      }
+      let cardRefunded = cardRefundSucceeded !== false;
+      let refundStatus = settlement.walletAmount > 0 && !walletRestored ? 'wallet_refund_pending' : '';
+      if (!cardRefundAttempted && settlement.cardAmount > 0 && settlement.paymentId && !settlement.paymentId.startsWith('WALLET-')) {
+        cardRefundAttempted = true;
+        try {
+          const refund = await paymentService.refundPayment(settlement.paymentId,
+            Number(settlement.cardPayment.amount) / 100, { reason: 'bus_booking_not_submitted', booking_id: settlement.bookingId });
+          cardRefundSucceeded = true;
+          refundStatus = refund?.status || 'processed';
+        } catch (refundError) {
+          cardRefundSucceeded = false;
+          cardRefunded = false;
+          refundStatus = 'refund_pending';
+          console.error('[ETS API] Automatic card refund failed:', refundError.message);
+        }
+      }
+      try {
+        await updateBusBookingFromOperator({ bookingId: settlement.bookingId, data: {},
+          paymentId: settlement.paymentId, paymentOrderId: settlement.paymentOrderId,
+          paymentMethod: settlement.paymentMethod, refundStatus,
+          failure: { reason: error.message || 'Booking could not be submitted to the bus operator',
+            paymentStatus: walletRestored && cardRefunded
+              ? (settlement.walletAmount > 0 || settlement.cardAmount > 0 ? 'refunded' : 'failed')
+              : 'completed' } });
+      } catch (stateError) {
+        console.error('[ETS API] Could not persist failed bus booking:', stateError.message);
+      }
+    }
     handleApiError(error, 'Book seat', res);
   }
 });
@@ -1208,6 +1563,41 @@ router.get('/ets/getTicketByETSTNumber', async (req, res) => {
     res.json(data);
   } catch (error) {
     handleApiError(error, 'Get ticket details', res);
+  }
+});
+
+/**
+ * Get live GPS tracking for a confirmed bus booking owned by the signed-in user.
+ * GET /ets/getLiveTracking?bookingId=<Sancharie booking id>
+ */
+router.get('/ets/getLiveTracking', authenticateToken, async (req, res) => {
+  try {
+    const bookingId = String(req.query.bookingId || '').trim();
+    if (!mongoose.isValidObjectId(bookingId)) {
+      return res.status(400).json({ success: false, message: 'A valid booking reference is required' });
+    }
+
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      userId: req.user.userId,
+      serviceType: 'bus',
+    }).select('ticketNo status paymentStatus providerStatus');
+
+    if (!booking) return res.status(404).json({ success: false, message: 'Bus booking was not found' });
+    if (booking.status !== 'confirmed' || booking.paymentStatus !== 'completed' || !booking.ticketNo) {
+      return res.status(409).json({ success: false, message: 'Live tracking is available only for confirmed, paid bus tickets' });
+    }
+
+    const data = await makeETSRequest({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/getLiveTracking`,
+      params: { ticketNo: booking.ticketNo },
+    });
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(data);
+  } catch (error) {
+    handleApiError(error, 'Get live bus tracking', res);
   }
 });
 
@@ -1321,6 +1711,22 @@ router.post('/ets/cancelTicket', async (req, res) => {
 
     // Log cancellation (for audit)
     if (data.apiStatus?.success) {
+      const booking = await Booking.findOne({ serviceType: 'bus', ticketNo: etsTicketNo.toUpperCase() });
+      if (booking) {
+        const cancelledSeats = new Set(seatNbrsToCancel.map((seat) => String(seat).toUpperCase()));
+        const bookedSeats = Array.isArray(booking.seats) ? booking.seats.map((seat) => String(seat).toUpperCase()) : [];
+        const isFullCancellation = bookedSeats.length > 0 && bookedSeats.every((seat) => cancelledSeats.has(seat));
+        booking.status = isFullCancellation ? 'cancelled' : booking.status;
+        booking.refundAmount = Number(data.totalRefundAmount) || 0;
+        booking.refundStatus = booking.refundAmount > 0 ? 'processing' : booking.refundStatus;
+        if (!isFullCancellation && bookedSeats.length) {
+          booking.seats = booking.seats.filter((seat) => !cancelledSeats.has(String(seat).toUpperCase()));
+          booking.selectedSeats = booking.seats;
+        }
+        booking.statusHistory.push({ status: booking.status, paymentStatus: booking.paymentStatus,
+          stage: 'operator_cancellation', message: `Cancellation completed for ${[...cancelledSeats].join(', ')}`.slice(0, 500), createdAt: new Date() });
+        await booking.save();
+      }
       console.log('[ETS API] Ticket cancelled:', {
         etsTicketNo,
         seats: seatNbrsToCancel,

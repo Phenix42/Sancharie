@@ -239,6 +239,15 @@ const fetchOrderDetails = async (orderId) => {
   }
 };
 
+const refundPayment = async (paymentId, amount, notes = {}) => {
+  const razorpay = getRazorpayInstance();
+  const amountInPaise = Math.round(Number(amount) * 100);
+  if (!paymentId || !Number.isSafeInteger(amountInPaise) || amountInPaise <= 0) {
+    throw new Error('A valid payment and refund amount are required');
+  }
+  return razorpay.payments.refund(paymentId, { amount: amountInPaise, notes });
+};
+
 /**
  * List Razorpay payments in a bounded time window. This is used only by the
  * server-side reconciliation job; callers never receive the raw Razorpay
@@ -302,6 +311,7 @@ module.exports = {
   verifyPaymentSignature,
   fetchPaymentDetails,
   fetchOrderDetails,
+  refundPayment,
   listPayments,
   isConfigured,
   getPublicKeyId,

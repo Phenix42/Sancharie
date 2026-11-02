@@ -267,25 +267,33 @@ router.post('/verify-payment', validateVerifyPayment, async (req, res) => {
       });
     }
 
-    // Fetch payment details for confirmation
-    let paymentDetails = null;
+    // A valid checkout signature alone does not prove that payment was
+    // captured or that it belongs to this order. Ticket confirmation happens
+    // separately through the operator's seatBooking API.
+    let paymentDetails;
+    let orderDetails;
     try {
-      paymentDetails = await paymentService.fetchPaymentDetails(razorpay_payment_id);
-    } catch (fetchError) {
-      console.warn('Could not fetch payment details:', fetchError.message);
-      // Continue even if fetch fails - signature is already verified
+      [paymentDetails, orderDetails] = await Promise.all([
+        paymentService.fetchPaymentDetails(razorpay_payment_id),
+        paymentService.fetchOrderDetails(razorpay_order_id),
+      ]);
+    } catch (lookupError) {
+      console.warn('Payment status lookup is temporarily unavailable:', lookupError.message);
+      return res.status(202).json({ success: true, verified: false, payment_pending: true,
+        code: 'PAYMENT_STATUS_PENDING', message: 'Payment status is being checked. Do not pay again.' });
     }
-
-    // Here you would typically:
-    // 1. Update your database with payment status
-    // 2. Confirm the booking
-    // 3. Send confirmation email/SMS
-    // 4. Generate ticket/invoice
+    if (paymentDetails.order_id !== razorpay_order_id || orderDetails.id !== razorpay_order_id) {
+      return res.status(402).json({ success: false, verified: false, message: 'Payment does not match this order.' });
+    }
+    if (paymentDetails.status !== 'captured' || paymentDetails.captured !== true ||
+        paymentDetails.amount !== orderDetails.amount || paymentDetails.currency !== 'INR' || orderDetails.currency !== 'INR') {
+      return res.status(402).json({ success: false, verified: false, message: 'Payment has not been captured for the full order amount.' });
+    }
 
     console.log('Payment verified successfully:', {
       order_id: razorpay_order_id,
       payment_id: razorpay_payment_id,
-      status: paymentDetails?.status || 'verified',
+        status: paymentDetails.status,
     });
 
     res.json({
@@ -295,10 +303,10 @@ router.post('/verify-payment', validateVerifyPayment, async (req, res) => {
       data: {
         order_id: razorpay_order_id,
         payment_id: razorpay_payment_id,
-        status: paymentDetails?.status || 'captured',
+        status: paymentDetails.status,
         method: paymentDetails?.method || null,
-        // Include booking confirmation details
-        booking_confirmed: true,
+        booking_confirmed: false,
+        next_step: 'Confirm the ticket with the bus operator before showing booking success.',
       },
     });
   } catch (error) {

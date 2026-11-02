@@ -19,6 +19,7 @@ import {
   Gift,
   IndianRupee,
   MapPin,
+  Navigation,
   Route,
   Search,
   Sparkles,
@@ -125,6 +126,7 @@ export default function MyBookings() {
   const [activeTab, setActiveTab] = useState('All');
   const [expandedCard, setExpandedCard] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [trackingByBooking, setTrackingByBooking] = useState({});
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellingBooking, setCancellingBooking] = useState(null);
@@ -272,6 +274,17 @@ export default function MyBookings() {
     setCancellationDetails(null);
   };
 
+  const loadLiveTracking = async (booking) => {
+    const key = String(booking.id || booking._id || booking.bookingId);
+    setTrackingByBooking((current) => ({ ...current, [key]: { loading: true } }));
+    try {
+      const result = await bus.getLiveTracking(booking.id || booking._id);
+      setTrackingByBooking((current) => ({ ...current, [key]: { loading: false, result } }));
+    } catch (trackingError) {
+      setTrackingByBooking((current) => ({ ...current, [key]: { loading: false, error: trackingError.message } }));
+    }
+  };
+
   const closeReturnOffer = () => {
     if (returnOffer && !claimedReturnOffer) {
       sessionStorage.setItem(`return-offer-dismissed:${returnOffer.bookingId}`, '1');
@@ -383,18 +396,6 @@ export default function MyBookings() {
             ? { ...booking, status: 'cancelled', refundAmount: result.totalRefundAmount }
             : booking;
         }));
-
-        if (bookingDbId) {
-          try {
-            await userApi.updateBooking(bookingDbId, {
-              status: 'cancelled',
-              refundAmount: parseFloat(result.totalRefundAmount) || 0,
-              refundStatus: 'processing',
-            });
-          } catch (databaseError) {
-            console.error('Failed to update booking status in DB:', databaseError);
-          }
-        }
 
         window.setTimeout(() => {
           closeCancelModal();
@@ -631,6 +632,11 @@ export default function MyBookings() {
                     || CANCELLED_STATUSES.includes(providerStatusKey);
                   const canDownload = !isCancelled && DOWNLOADABLE_STATUSES.includes(statusKey);
                   const canCancel = !isCancelled && statusKey === 'confirmed';
+                  const canTrackBus = booking.serviceType === 'bus' && canCancel && Boolean(booking.ticketNo);
+                  const tracking = trackingByBooking[bookingKey];
+                  const trackingUrl = /^https?:\/\//i.test(tracking?.result?.trackingUrl || '')
+                    ? tracking.result.trackingUrl
+                    : '';
 
                   return (
                     <article
@@ -789,6 +795,31 @@ export default function MyBookings() {
                                 )}
                               </div>
                             </div>
+                          )}
+
+                          {canTrackBus && (
+                            <section className="booking-tracking" aria-live="polite">
+                              <div className="booking-tracking-copy">
+                                <strong><Navigation size={17} /> Live bus location</strong>
+                                <p>Tracking is available within 2 hours of departure when the operator shares GPS.</p>
+                              </div>
+                              <button type="button" className="track-bus-btn" onClick={() => loadLiveTracking(booking)} disabled={tracking?.loading}>
+                                <Navigation size={16} /> {tracking?.loading ? 'Checking GPS…' : tracking?.result ? 'Refresh tracking' : 'Track bus'}
+                              </button>
+                              {tracking?.error && <p className="booking-tracking-message" role="status">{tracking.error}</p>}
+                              {tracking?.result && (
+                                <div className="booking-tracking-result">
+                                  {tracking.result.vehicleNumber && <span>Bus number <strong>{tracking.result.vehicleNumber}</strong></span>}
+                                  {tracking.result.driverDetails.map((driver, index) => (
+                                    <span key={`${driver.name || 'driver'}-${index}`}>
+                                      Driver <strong>{driver.name || 'Details available'}</strong>
+                                      {driver.mobile && <> · <a href={`tel:${String(driver.mobile).replace(/[^+\d]/g, '')}`}>{driver.mobile}</a></>}
+                                    </span>
+                                  ))}
+                                  {trackingUrl ? <a className="track-bus-link" href={trackingUrl} target="_blank" rel="noopener noreferrer">Open live map <ArrowRight size={15} /></a> : <p className="booking-tracking-message">{tracking.result.message}</p>}
+                                </div>
+                              )}
+                            </section>
                           )}
 
                           {statusKey === 'failed' && (

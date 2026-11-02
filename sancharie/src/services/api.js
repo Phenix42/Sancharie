@@ -745,8 +745,16 @@ export const bus = {
     if (walletPayment.promotionId) params.set('promotionId', walletPayment.promotionId);
     const data = await apiRequest(`/api/ets/seatBooking?${params}`);
 
+    if (data.apiStatus?.code === 'BOOKING_CONFIRMATION_PENDING') {
+      const error = new Error(data.apiStatus.message || 'The operator is still confirming your ticket. Do not pay again.');
+      error.code = data.apiStatus.code;
+      error.pendingConfirmation = true;
+      throw error;
+    }
     if (data.apiStatus?.success !== true || !data.etstnumber) {
-      throw new Error(data.apiStatus?.message || 'The operator did not issue a ticket number');
+      const error = new Error(data.apiStatus?.message || 'The operator did not issue a ticket number');
+      error.code = data.apiStatus?.code || 'BOOKING_FAILED';
+      throw error;
     }
 
     return {
@@ -760,6 +768,19 @@ export const bus = {
       cancellationPolicy: data.cancellationPolicy,
       tripCode: data.tripCode,
       inventoryType: data.inventoryType,
+      ticketStatus: data.ticketStatus || 'CONFIRMED',
+      travelerDetails: Array.isArray(data.travelerDetails) ? data.travelerDetails : [],
+      sourceCity: data.sourceCity,
+      destinationCity: data.destinationCity,
+      journeyDate: data.journeyDate,
+      departureTime: data.departureTime,
+      arrivalTime: data.arrivalTime,
+      routeScheduleId: data.routeScheduleId,
+      serviceProvider: data.serviceProvider,
+      serviceType: data.service_type,
+      serviceId: data.serviceId,
+      boardingPoint: data.boardingPoint,
+      droppingPoint: data.droppingPoint,
       success: data.apiStatus?.success || false,
     };
   },
@@ -792,7 +813,7 @@ export const bus = {
       boardingPoint: data.boardingPoint,
       droppingPoint: data.droppingPoint,
       travelerDetails: data.travelerDetails || [],
-      etsTicketNumber: data.ETSTNumber,
+      etsTicketNumber: data.ETSTNumber || data.etstnumber || etsTicketNumber,
       opPNR: data.opPNR,
       commPCT: data.commPCT,
       cancellationPolicy: data.cancellationPolicy,
@@ -801,6 +822,23 @@ export const bus = {
       refundAmount: data.refundAmount,
       tripCode: data.tripCode,
       success: data.apiStatus?.success || false,
+    };
+  },
+
+  /** Get live GPS data for a confirmed bus booking owned by the signed-in user. */
+  getLiveTracking: async (bookingId) => {
+    const params = new URLSearchParams({ bookingId });
+    const data = await apiRequest(`/api/ets/getLiveTracking?${params}`);
+    if (data.success !== true) {
+      const error = new Error(data.message || 'Live tracking is not available for this trip yet.');
+      error.code = data.errorCode || 'TRACKING_UNAVAILABLE';
+      throw error;
+    }
+    return {
+      vehicleNumber: data.vehicleNumber || '',
+      driverDetails: Array.isArray(data.driverDetails) ? data.driverDetails : [],
+      trackingUrl: data.trackingUrl || '',
+      message: data.message || 'Live tracking is ready.',
     };
   },
 
@@ -1235,7 +1273,11 @@ export const payment = {
                 onSuccess?.(verification);
                 resolve(verification);
               } else {
-                const err = new Error('Payment verification failed');
+                const err = new Error(verification.message || 'Payment verification failed');
+                if (verification.payment_pending || verification.code === 'PAYMENT_STATUS_PENDING') {
+                  err.pendingPayment = true;
+                  err.code = 'PAYMENT_STATUS_PENDING';
+                }
                 onFailure?.(err);
                 reject(err);
               }

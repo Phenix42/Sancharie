@@ -86,9 +86,10 @@ const pruneConsumedPayments = () => {
   }
 };
 
-const assertPaymentNotConsumed = (paymentId) => {
+const assertPaymentNotConsumed = (paymentId, expected = {}) => {
   pruneConsumedPayments();
-  if (consumedPayments.has(paymentId)) {
+  const existing = consumedPayments.get(paymentId);
+  if (existing && !(expected.serviceType === existing.serviceType && expected.blockTicketKey === existing.blockTicketKey)) {
     throw new PaymentSecurityError('This payment has already been used for a booking', 409);
   }
 };

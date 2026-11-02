@@ -85,11 +85,11 @@ export default function Payment() {
 
   // Payment status
   const [isProcessing, setIsProcessing] = useState(false);
+  const [confirmationPending, setConfirmationPending] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [bookingResponse, setBookingResponse] = useState(null);
   const [bookingError, setBookingError] = useState(null);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
-  const [paymentId, setPaymentId] = useState(null);
   const [serverRequiredAmount, setServerRequiredAmount] = useState(null);
 
   // GST Invoice state
@@ -229,8 +229,10 @@ export default function Payment() {
 
     setIsProcessing(true);
     setBookingError(null);
+    setConfirmationPending(false);
 
     let bookingRecordId = '';
+    let internalBookingReference = '';
     let lifecycleStage = 'fare_check';
     let paymentVerified = false;
     let walletDebitRequestId = '';
@@ -285,6 +287,7 @@ export default function Payment() {
         throw new Error(bookingAttempt?.message || 'Unable to safely create your booking record. No payment was taken.');
       }
       bookingRecordId = bookingAttempt.booking.id;
+      internalBookingReference = bookingAttempt.booking.bookingId || '';
 
       if (busData?.isRTC) {
         console.log('[Booking Flow] Bus is RTC, refreshing fare before payment...');
@@ -343,10 +346,6 @@ export default function Payment() {
           onStart: () => {
             console.log('Payment initiated...');
           },
-          onSuccess: async (verification) => {
-            console.log('Payment verified successfully:', verification.data?.payment_id);
-            setPaymentId(verification.data?.payment_id);
-          },
           onFailure: (error) => {
             console.error('Payment failed:', error);
           },
@@ -359,18 +358,6 @@ export default function Payment() {
 
       if (paymentResult.verified) {
         paymentVerified = true;
-        setPaymentId(paymentResult.data?.payment_id || '');
-        await persistBookingUpdate(updateBooking, bookingRecordId, {
-          status: 'pending',
-          paymentStatus: 'completed',
-          paymentId: paymentResult.data?.payment_id || '',
-          paymentOrderId: paymentResult.data?.order_id || '',
-          paymentMethod: appliedWalletAmount > 0 && payableAmount > 0 ? 'wallet+razorpay' : appliedWalletAmount > 0 ? 'wallet' : 'razorpay',
-          providerStatus: 'payment_verified',
-          failureStage: '',
-          failureReason: '',
-        });
-
         lifecycleStage = 'provider_booking';
         console.log('[Booking Flow] Starting seatBooking with blockTicketKey:', blockTicketKey.substring(0, 20) + '...');
         
@@ -383,56 +370,89 @@ export default function Payment() {
           promotionId: promotion?.promotionId || '',
         });
         console.log('[Booking Flow] Booking successful:', bookingResult);
-        
-        setBookingResponse({
-          ...bookingResult,
-          paymentId: paymentResult.data?.payment_id,
-          orderId: paymentResult.data?.order_id,
-        });
-        actions.setBookingData(bookingResult);
 
-        await persistBookingUpdate(updateBooking, bookingRecordId, {
-          status: 'confirmed',
-          paymentStatus: 'completed',
-          paymentId: paymentResult.data?.payment_id || '',
-          paymentOrderId: paymentResult.data?.order_id || '',
-          paymentMethod: appliedWalletAmount > 0 && payableAmount > 0 ? 'wallet+razorpay' : appliedWalletAmount > 0 ? 'wallet' : 'razorpay',
-          externalBookingId: bookingResult?.etsTicketNumber || bookingResult?.bookingId || '',
-          ticketNo: bookingResult?.etsTicketNumber || bookingResult?.ticketNo || '',
-          pnr: bookingResult?.opPNR || bookingResult?.travelOperatorPNR || '',
-          providerStatus: 'confirmed',
-          failureStage: '',
-          failureReason: '',
-        });
-        
-        const ticketData = {
-          bookingId: bookingResult?.BookingID || bookingResult?.bookingId || `SAN${Date.now().toString().slice(-8)}`,
-          ticketNo: bookingResult?.TicketNo || bookingResult?.ticketNo || bookingResult?.etsTicketNumber,
-          pnr: bookingResult?.TravelOperatorPNR || bookingResult?.opPNR || bookingResult?.travelOperatorPNR || bookingResult?.pnr,
-          busName: busData?.name || busData?.TravelName || 'Bus Service',
-          busType: busData?.type || busData?.BusType || 'Sleeper',
-          serviceNo: busData?.busNumber || busData?.BusNumber || busData?.serviceId || busData?.routeScheduleId,
-          status: 'CONFIRMED',
-          fromCity: fromCity,
-          toCity: toCity,
-          journeyDate: busData?.date || busData?.DepartureTime,
-          boardingPoint: boardingPoint,
-          droppingPoint: droppingPoint,
-          departureTime: boardingPoint?.time || boardingPoint?.Time,
-          arrivalTime: droppingPoint?.time || droppingPoint?.Time,
-          seats: seatNames,
-          seatLayout: Array.isArray(seatLayout) && seatLayout.length ? seatLayout : selectedSeatDetails,
+        // The operator's final traveler records are authoritative for assigned
+        // seats. The seat selection is only the request sent before payment.
+        let confirmedBookingResult = bookingResult;
+        const hasAssignedSeats = (travelers) => Array.isArray(travelers)
+          && travelers.some((traveler) => traveler?.seatNo || traveler?.seatNumber || traveler?.seatNbr);
+        if (!hasAssignedSeats(confirmedBookingResult.travelerDetails)) {
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+              const ticketDetails = await bus.getBookingDetails(bookingResult.etsTicketNumber);
+              if (hasAssignedSeats(ticketDetails?.travelerDetails)) {
+                confirmedBookingResult = { ...bookingResult, ...ticketDetails };
+                break;
+              }
+            } catch (ticketDetailsError) {
+              if (attempt === 2) {
+                console.warn('[Booking Flow] Could not fetch final operator ticket details:', ticketDetailsError.message);
+              }
+            }
+
+            if (attempt < 2) {
+              await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+            }
+          }
+        }
+
+        const confirmedTravelers = Array.isArray(confirmedBookingResult.travelerDetails)
+          ? confirmedBookingResult.travelerDetails
+          : [];
+        const confirmedSeats = confirmedTravelers
+          .map((traveler) => traveler.seatNo || traveler.seatNumber || traveler.seatNbr)
+          .filter(Boolean)
+          .map(String);
+        const layoutSeatNames = new Set((Array.isArray(seatLayout) ? seatLayout : [])
+          .map((seat) => String(seat?.id || seat?.seatName || seat?.seatNumber || '').toLowerCase())
+          .filter(Boolean));
+        const confirmedSeatsMatchLayout = confirmedSeats.length > 0
+          && confirmedSeats.every((seat) => layoutSeatNames.has(seat.toLowerCase()));
+        const ticketPdfData = confirmedSeats.length > 0 ? {
+          bookingId: internalBookingReference || bookingRecordId,
+          ticketNo: bookingResult.etsTicketNumber,
+          pnr: bookingResult.opPNR || bookingResult.travelOperatorPNR,
+          busName: confirmedBookingResult.serviceProvider || busData?.name || busData?.TravelName || 'Bus Service',
+          busType: confirmedBookingResult.serviceType || busData?.type || busData?.BusType || 'Sleeper',
+          serviceNo: confirmedBookingResult.serviceId || confirmedBookingResult.routeScheduleId
+            || busData?.busNumber || busData?.BusNumber || busData?.serviceId || busData?.routeScheduleId,
+          status: confirmedBookingResult.ticketStatus || 'CONFIRMED',
+          fromCity: confirmedBookingResult.sourceCity || fromCity,
+          toCity: confirmedBookingResult.destinationCity || toCity,
+          journeyDate: confirmedBookingResult.journeyDate || rawJourneyDate,
+          boardingPoint: confirmedBookingResult.boardingPoint || boardingPoint,
+          droppingPoint: confirmedBookingResult.droppingPoint || droppingPoint,
+          departureTime: confirmedBookingResult.departureTime || boardingPoint?.time || boardingPoint?.Time,
+          arrivalTime: confirmedBookingResult.arrivalTime || droppingPoint?.time || droppingPoint?.Time,
+          seats: confirmedSeats,
+          seatLayout: confirmedSeatsMatchLayout ? seatLayout : [],
           hasUpperDeck,
-          passengers: passengers,
-          totalFare: payableAmount,
+          passengers: confirmedTravelers.map((traveler) => ({
+            name: `${traveler.name || ''} ${traveler.lastName || ''}`.trim() || 'Passenger',
+            age: traveler.age,
+            gender: traveler.gender,
+            seatNumber: traveler.seatNo || traveler.seatNumber || traveler.seatNbr,
+          })),
+          totalFare: confirmedBookingResult.totalFare || payableAmount,
           paymentId: paymentResult.data?.payment_id,
           contactPhone: contactDetails?.phone,
-          contactEmail: contactDetails?.email
-        };
+          contactEmail: contactDetails?.email,
+        } : null;
         
-        setTimeout(() => {
-          generateTicketPDF(ticketData);
-        }, 1000);
+        setBookingResponse({
+          ...confirmedBookingResult,
+          paymentId: paymentResult.data?.payment_id,
+          orderId: paymentResult.data?.order_id,
+          internalBookingId: internalBookingReference || bookingRecordId,
+          ticketPdfData,
+        });
+        actions.setBookingData(confirmedBookingResult);
+
+        if (ticketPdfData) {
+          setTimeout(() => generateTicketPDF(ticketPdfData), 1000);
+        } else {
+          console.warn('[Booking Flow] Ticket issued, but operator seat allocation is not available yet; skipped PDF generation.');
+        }
         
         // Stop session timer on successful booking
         actions.resetSession();
@@ -441,6 +461,13 @@ export default function Payment() {
       }
     } catch (error) {
       console.error("Payment/Booking error:", error);
+
+      if (error.pendingPayment) {
+        setConfirmationPending(true);
+        setBookingError('Payment status is being checked. Do not retry payment or release your wallet balance yet. Please check My Bookings or contact support shortly.');
+        toast.error('Payment status is still pending. Do not pay again.');
+        return;
+      }
 
       if (walletDebitApplied && !paymentVerified) {
         try {
@@ -451,7 +478,7 @@ export default function Payment() {
         }
       }
 
-      if (bookingRecordId) {
+      if (bookingRecordId && !paymentVerified) {
         await persistBookingUpdate(updateBooking, bookingRecordId, {
           status: 'failed',
           paymentStatus: paymentVerified ? 'completed' : 'failed',
@@ -459,6 +486,13 @@ export default function Payment() {
           failureStage: lifecycleStage,
           failureReason: error.message || 'Booking failed',
         });
+      }
+
+      if (error.pendingConfirmation) {
+        setConfirmationPending(true);
+        setBookingError('Payment was received. The bus operator is still confirming your ticket. Please check My Bookings before trying again.');
+        toast.error('Ticket confirmation is still in progress. Do not pay again.');
+        return;
       }
       
       // Handle specific API errors
@@ -486,9 +520,11 @@ export default function Payment() {
 
   // Payment Success Screen
   if (paymentSuccess) {
-    const bookingId = bookingResponse?.BookingID || bookingResponse?.bookingId || `SAN${Date.now().toString().slice(-8)}`;
-    const ticketNo = bookingResponse?.TicketNo || bookingResponse?.ticketNo;
-    const pnr = bookingResponse?.TravelOperatorPNR || bookingResponse?.pnr;
+    const bookingId = bookingResponse?.internalBookingId || bookingResponse?.BookingID || bookingResponse?.bookingId || '';
+    const ticketNo = bookingResponse?.etsTicketNumber || bookingResponse?.TicketNo || bookingResponse?.ticketNo;
+    const pnr = bookingResponse?.opPNR || bookingResponse?.travelOperatorPNR
+      || bookingResponse?.TravelOperatorPNR || bookingResponse?.pnr;
+    const confirmedSeatNames = bookingResponse?.ticketPdfData?.seats || [];
     
     return (
       <div className="payment-page payment-page-success">
@@ -508,10 +544,10 @@ export default function Payment() {
             
             {/* Booking Reference */}
             <div className="booking-reference">
-              <div className="reference-item">
+              {bookingId && <div className="reference-item">
                 <span className="reference-label">Booking ID</span>
                 <span className="reference-value">{bookingId}</span>
-              </div>
+              </div>}
               {ticketNo && (
                 <div className="reference-item">
                   <span className="reference-label">Ticket No</span>
@@ -597,7 +633,9 @@ export default function Payment() {
                     <Armchair size={18} />
                     <div className="chip-content">
                       <span className="chip-label">Seats</span>
-                      <span className="chip-value">{seatNames.join(", ")}</span>
+                      <span className="chip-value">
+                        {confirmedSeatNames.length > 0 ? confirmedSeatNames.join(", ") : 'Awaiting operator allocation'}
+                      </span>
                     </div>
                   </div>
                   <div className="info-chip">
@@ -627,38 +665,25 @@ export default function Payment() {
 
             {/* Action Buttons */}
             <div className="success-actions">
-              <button className="btn-primary" onClick={() => generateTicketPDF({
-                bookingId,
-                ticketNo,
-                pnr,
-                busName: busData?.name || busData?.TravelName || 'Bus Service',
-                busType: busData?.type || busData?.BusType || 'Sleeper',
-                serviceNo: busData?.busNumber || busData?.BusNumber || busData?.serviceId || busData?.routeScheduleId,
-                status: 'CONFIRMED',
-                fromCity: fromCity,
-                toCity: toCity,
-                journeyDate: busData?.date || busData?.DepartureTime,
-                boardingPoint: boardingPoint,
-                droppingPoint: droppingPoint,
-                departureTime: boardingPoint?.time || boardingPoint?.Time,
-                arrivalTime: droppingPoint?.time || droppingPoint?.Time,
-                seats: seatNames,
-                seatLayout: Array.isArray(seatLayout) && seatLayout.length ? seatLayout : selectedSeatDetails,
-                hasUpperDeck,
-                passengers: passengers,
-                totalFare: fareAfterPromo,
-                paymentId: paymentId,
-                contactPhone: contactDetails?.phone,
-                contactEmail: contactDetails?.email
-              })}>
+              <button
+                className="btn-primary"
+                disabled={!bookingResponse?.ticketPdfData}
+                onClick={() => bookingResponse?.ticketPdfData && generateTicketPDF(bookingResponse.ticketPdfData)}
+                title={!bookingResponse?.ticketPdfData ? 'Waiting for the operator to confirm passenger seat allocations' : 'Download your confirmed ticket'}
+              >
                 <Download size={18} />
-                Download Ticket
+                {bookingResponse?.ticketPdfData ? 'Download Ticket' : 'Ticket details syncing'}
               </button>
               <button className="btn-secondary" onClick={() => navigate('/')}>
                 <Home size={18} />
                 Back to Home
               </button>
             </div>
+            {!bookingResponse?.ticketPdfData && (
+              <p className="success-subtitle">
+                Your booking is confirmed. The PDF will be available once the operator returns the assigned seats.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -947,13 +972,15 @@ export default function Payment() {
             <button 
               className="pay-button" 
               onClick={handlePayNow}
-              disabled={isProcessing || (grandTotal > 0 && !razorpayLoaded)}
+              disabled={isProcessing || confirmationPending || (grandTotal > 0 && !razorpayLoaded)}
             >
               {isProcessing ? (
                 <>
                   <Loader2 size={20} className="spinner" />
                   Processing...
                 </>
+              ) : confirmationPending ? (
+                'Confirmation in progress — do not pay again'
               ) : grandTotal > 0 && !razorpayLoaded ? (
                 <>
                   <Loader2 size={20} className="spinner" />

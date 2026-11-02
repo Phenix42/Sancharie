@@ -58,6 +58,34 @@ const sanitizeSeatDetails = (seatDetails) => (Array.isArray(seatDetails) ? seatD
   }))
   .filter((seat) => seat.seatNumber);
 
+const sanitizeSeatNumbers = (seats) => (Array.isArray(seats) ? seats : [])
+  .slice(0, 16)
+  .map((seat) => cleanText(typeof seat === 'object'
+    ? seat?.seatNumber || seat?.seatName || seat?.seatNo || seat?.id
+    : seat, 50))
+  .filter(Boolean);
+
+const sanitizePassengers = (passengers) => (Array.isArray(passengers) ? passengers : [])
+  .slice(0, 16)
+  .map((passenger) => {
+    const rawGender = cleanText(passenger?.gender, 20).toLowerCase();
+    const gender = rawGender === 'f' || rawGender === 'female'
+      ? 'female'
+      : rawGender === 'other'
+        ? 'other'
+        : 'male';
+    const age = Number(passenger?.age);
+    return {
+      name: cleanText(passenger?.name, 150) || 'Passenger',
+      age: Number.isFinite(age) && age > 0 ? Math.min(120, Math.floor(age)) : 25,
+      gender,
+      seatNumber: cleanText(
+        passenger?.seatNumber || passenger?.seatNo || passenger?.seatName,
+        50,
+      ),
+    };
+  });
+
 const cleanSeatSpan = (value) => {
   const span = Number(value);
   return Number.isFinite(span) && span >= 1
@@ -553,18 +581,21 @@ router.post('/wallet/restore-debit', authenticateToken, async (req, res) => {
   try {
     const requestId = cleanText(req.body?.requestId, 100);
     if (!/^[A-Za-z0-9._:-]{8,100}$/.test(requestId)) return res.status(400).json({ success: false, message: 'A valid wallet debit requestId is required' });
-    const bookingId = requestId.startsWith('wallet-') ? requestId.slice('wallet-'.length) : '';
-    if (!mongoose.isValidObjectId(bookingId)) return res.status(400).json({ success: false, message: 'Wallet debit reference is invalid' });
-    const booking = await Booking.findOne({ _id: bookingId, userId: req.user.userId }).select('bookingId status paymentStatus');
-    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-    if (booking.status !== 'pending' || booking.paymentStatus !== 'pending') return res.status(409).json({ success: false, message: 'Wallet funds can only be restored before payment is completed' });
-
-    const refundKey = `refund-${requestId}`;
     const account = await User.findById(req.user.userId).select('walletBalance walletTransactions walletProcessedAdjustments');
     if (!account) return res.status(404).json({ success: false, message: 'User not found' });
+    const debit = account.walletTransactions?.find((transaction) => transaction.requestId === requestId && transaction.type === 'debit');
+    const bookingId = String(debit?.bookingId || req.body?.bookingId ||
+      (requestId.startsWith('wallet-') ? requestId.slice('wallet-'.length) : ''));
+    if (!mongoose.isValidObjectId(bookingId)) return res.status(400).json({ success: false, message: 'Wallet debit reference is invalid' });
+    const refundKey = `refund-${requestId}`;
     if (account.walletProcessedAdjustments?.includes(refundKey)) return res.json({ success: true, idempotent: true, balance: account.walletBalance || 0 });
-    const debit = account.walletTransactions?.find((transaction) => transaction.requestId === requestId && transaction.type === 'debit' && String(transaction.bookingId) === bookingId);
-    if (!debit) return res.status(404).json({ success: false, message: 'Wallet debit not found' });
+    if (!debit || String(debit.bookingId) !== bookingId) return res.status(404).json({ success: false, message: 'Wallet debit not found' });
+    const booking = await Booking.findOne({ _id: bookingId, userId: req.user.userId }).select('bookingId status paymentStatus providerStatus paymentId');
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    const unpaidAttempt = booking.status === 'pending' && booking.paymentStatus === 'pending';
+    const failedCheckout = booking.status === 'failed' && booking.paymentStatus === 'failed' &&
+      booking.providerStatus === 'payment_failed' && !booking.paymentId;
+    if (!unpaidAttempt && !failedCheckout) return res.status(409).json({ success: false, message: 'Wallet funds can only be restored for an unpaid or failed checkout' });
 
     const restored = await User.findOneAndUpdate(
       { _id: req.user.userId, walletProcessedAdjustments: { $ne: refundKey } },
@@ -765,19 +796,20 @@ router.post('/bookings', authenticateToken, async (req, res) => {
       });
     }
 
-    const normalizedStatus = BOOKING_STATUSES.includes(String(status).toLowerCase())
-      ? String(status).toLowerCase()
-      : 'confirmed';
-    const normalizedPaymentStatus = PAYMENT_STATUSES.includes(String(paymentStatus).toLowerCase())
-      ? String(paymentStatus).toLowerCase()
-      : 'completed';
-    const normalizedSeatDetails = sanitizeSeatDetails(seatDetails);
-    const normalizedSeatLayout = sanitizeSeatLayout(seatLayout);
     const requestedServiceType = String(serviceType || type || 'bus').toLowerCase();
     const normalizedServiceType = SERVICE_TYPES.includes(requestedServiceType)
       ? requestedServiceType
       : 'bus';
-
+    // A customer can create an attempt, but cannot self-assert that a bus
+    // operator confirmed it or that money was captured.
+    const normalizedStatus = normalizedServiceType === 'bus' ? 'pending' : BOOKING_STATUSES.includes(String(status).toLowerCase())
+      ? String(status).toLowerCase()
+      : 'confirmed';
+    const normalizedPaymentStatus = normalizedServiceType === 'bus' ? 'pending' : PAYMENT_STATUSES.includes(String(paymentStatus).toLowerCase())
+      ? String(paymentStatus).toLowerCase()
+      : 'completed';
+    const normalizedSeatDetails = sanitizeSeatDetails(seatDetails);
+    const normalizedSeatLayout = sanitizeSeatLayout(seatLayout);
     const booking = new Booking({
       userId: req.user.userId,
       userPhone: req.user.phone,
@@ -935,11 +967,27 @@ router.put('/bookings/:id', authenticateToken, async (req, res) => {
       status, paymentStatus, paymentId, paymentOrderId, paymentMethod,
       externalBookingId, ticketNo, pnr, providerStatus,
       failureStage, failureReason,
-      refundAmount, refundStatus, cancellationReason
+      refundAmount, refundStatus, cancellationReason,
+      seats, selectedSeats, passengers,
     } = req.body;
 
     const normalizedStatus = String(status || '').toLowerCase();
     const normalizedPaymentStatus = String(paymentStatus || '').toLowerCase();
+
+    if (booking.serviceType === 'bus') {
+      const attemptsToClaimConfirmation = normalizedStatus && !(normalizedStatus === 'failed' &&
+          booking.status === 'pending' && booking.paymentStatus === 'pending' &&
+          booking.providerStatus === 'payment_pending' && !booking.paymentId) ||
+        normalizedPaymentStatus && !(normalizedPaymentStatus === 'failed' && normalizedStatus === 'failed' &&
+          booking.status === 'pending' && booking.paymentStatus === 'pending' &&
+          booking.providerStatus === 'payment_pending' && !booking.paymentId) ||
+        ['paymentId', 'paymentOrderId', 'paymentMethod', 'externalBookingId', 'ticketNo', 'pnr', 'providerStatus',
+          'refundAmount', 'refundStatus'].some((field) => req.body[field] !== undefined &&
+            !(field === 'providerStatus' && req.body[field] === 'payment_failed'));
+      if (attemptsToClaimConfirmation) {
+        return res.status(403).json({ success: false, message: 'Bus payment and operator confirmation are managed by the booking service.' });
+      }
+    }
 
     if (BOOKING_STATUSES.includes(normalizedStatus)) booking.status = normalizedStatus;
     if (PAYMENT_STATUSES.includes(normalizedPaymentStatus)) booking.paymentStatus = normalizedPaymentStatus;
@@ -952,6 +1000,10 @@ router.put('/bookings/:id', authenticateToken, async (req, res) => {
     if (providerStatus !== undefined) booking.providerStatus = cleanText(providerStatus, 100);
     if (failureStage !== undefined) booking.failureStage = cleanText(failureStage, 100);
     if (failureReason !== undefined) booking.failureReason = cleanText(failureReason);
+    if (seats !== undefined) booking.seats = sanitizeSeatNumbers(seats);
+    if (selectedSeats !== undefined) booking.selectedSeats = sanitizeSeatNumbers(selectedSeats);
+    else if (seats !== undefined) booking.selectedSeats = sanitizeSeatNumbers(seats);
+    if (passengers !== undefined) booking.passengers = sanitizePassengers(passengers);
     if (refundAmount !== undefined) booking.refundAmount = refundAmount;
     if (refundStatus !== undefined) booking.refundStatus = cleanText(refundStatus, 100);
     if (cancellationReason !== undefined) booking.cancellationReason = cleanText(cancellationReason);
@@ -1037,3 +1089,4 @@ router.post('/verify-token', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.authenticateToken = authenticateToken;

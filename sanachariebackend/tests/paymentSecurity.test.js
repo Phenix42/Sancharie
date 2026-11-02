@@ -4,7 +4,9 @@ const {
   PaymentSecurityError,
   assertCapturedPaymentCovers,
   assertOrderContextMatches,
+  assertPaymentNotConsumed,
   hashReference,
+  markPaymentConsumed,
 } = require('../services/paymentSecurity');
 const busRoute = require('../routes/bus');
 const {
@@ -54,6 +56,15 @@ test('payment order context rejects cross-booking reuse when notes are present',
     ),
     PaymentSecurityError
   );
+});
+
+test('a retried booking may replay its own consumed payment but cannot spend it on another block', () => {
+  const expected = { serviceType: 'bus', blockTicketKey: 'block-retry-1' };
+  markPaymentConsumed('pay_replay_test', expected);
+  assert.doesNotThrow(() => assertPaymentNotConsumed('pay_replay_test', expected));
+  assert.throws(() => assertPaymentNotConsumed('pay_replay_test', {
+    serviceType: 'bus', blockTicketKey: 'different-block',
+  }), (error) => error instanceof PaymentSecurityError && error.status === 409);
 });
 
 test('bus block request stamps supplier seat fares over client-supplied fares', () => {

@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const common = { timestamps: true, strict: 'throw', minimize: false };
 const routeTargets = { type: [String], default: [] };
+const normalizeHexColor = (value) => {
+  if (typeof value !== 'string') return value;
+  const color = value.trim();
+  return /^#?[0-9a-fA-F]{6}$/.test(color) ? `#${color.replace(/^#/, '')}` : color;
+};
 const datePair = {
   startDate: { type: Date, required: true, index: true },
   endDate: { type: Date, required: true, index: true, validate: { validator(value) { return !this.startDate || value >= this.startDate; }, message: 'End date must be on or after the start date' } },
@@ -64,9 +69,9 @@ const offerSchema = new mongoose.Schema({
 const themeSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 120 },
   festival: { type: String, default: 'custom', maxlength: 80 },
-  primaryColor: { type: String, default: '#1746a2', match: /^#[0-9a-fA-F]{6}$/ },
-  secondaryColor: { type: String, default: '#f3a712', match: /^#[0-9a-fA-F]{6}$/ },
-  backgroundColor: { type: String, default: '#ffffff', match: /^#[0-9a-fA-F]{6}$/ },
+  primaryColor: { type: String, default: '#1746a2', set: normalizeHexColor, match: /^#[0-9a-fA-F]{6}$/ },
+  secondaryColor: { type: String, default: '#f3a712', set: normalizeHexColor, match: /^#[0-9a-fA-F]{6}$/ },
+  backgroundColor: { type: String, default: '#ffffff', set: normalizeHexColor, match: /^#[0-9a-fA-F]{6}$/ },
   bannerImage: { type: String, default: '', maxlength: 2000 },
   logoImage: { type: String, default: '', maxlength: 2000, match: /^(|https:\/\/|\/(?!\/))/ },
   icon: { type: String, default: '', maxlength: 100 },
@@ -103,7 +108,7 @@ const settingsSchema = new mongoose.Schema({
 }, common);
 
 const appAssetSchema = new mongoose.Schema({
-  key: { type: String, required: true, unique: true, match: /^(app-icon|offer-[a-f\d]{24})$/i },
+  key: { type: String, required: true, unique: true, match: /^(app-icon|offer-[a-f\d]{24}|theme-[a-f\d]{24}-(bannerImage|logoImage)|banner-[a-f\d]{24}-image)$/i },
   contentType: { type: String, required: true, enum: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/x-ms-bmp'] },
   image: { type: Buffer, required: true },
 }, { timestamps: true });

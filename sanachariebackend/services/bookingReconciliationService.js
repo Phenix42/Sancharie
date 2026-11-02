@@ -1,6 +1,7 @@
 const axios = require('axios');
 const Booking = require('../models/Booking');
 const paymentService = require('./paymentService');
+const { hashReference } = require('./paymentSecurity');
 
 const DEFAULT_LOOKBACK_DAYS = 365;
 const REPORT_WINDOW_DAYS = 30;
@@ -173,13 +174,19 @@ const bookingNameMatches = (ticket, order) => {
 };
 
 const scorePaymentForTicket = (ticket, payment) => {
-  if (!ticket.bookingDate || !amountMatches(ticket, payment)) return Number.NEGATIVE_INFINITY;
+  if (!ticket.bookingDate) return Number.NEGATIVE_INFINITY;
+  const referenceMatches = Boolean(ticket.blockKey && payment.order?.notes?.pricing_ref_hash &&
+    cleanText(payment.order.notes.pricing_ref_hash, 100) === hashReference(ticket.blockKey));
+  // A card payment in a mixed wallet/coupon booking intentionally covers only
+  // the remainder. The durable booking/block reference is stronger evidence
+  // than comparing that partial card amount with the operator's full fare.
+  if (!referenceMatches && !amountMatches(ticket, payment)) return Number.NEGATIVE_INFINITY;
   const paymentDate = toDate(Number(payment.created_at) * 1000);
   if (!paymentDate) return Number.NEGATIVE_INFINITY;
   const distance = Math.abs(ticket.bookingDate.getTime() - paymentDate.getTime());
   if (distance > PAYMENT_MATCH_WINDOW_MS) return Number.NEGATIVE_INFINITY;
 
-  let score = 100 - (distance / 60000);
+  let score = (referenceMatches ? 1000 : 100) - (distance / 60000);
   if (sameSeats(ticket, payment.order)) score += 100;
   if (bookingNameMatches(ticket, payment.order)) score += 50;
   if (normalizeText(payment.order?.notes?.service_type) === 'bus') score += 10;
@@ -421,10 +428,17 @@ const performSync = async (user, { lookbackDays = DEFAULT_LOOKBACK_DAYS, dryRun 
 
   for (const ticket of providerTickets) {
     const availablePayments = payments.filter((payment) => !usedPaymentIds.has(payment.id));
-    const match = matchTicketToPayments(ticket, availablePayments);
+    let match = matchTicketToPayments(ticket, availablePayments);
+    let existingByBlock = ticket.blockKey
+      ? await Booking.findOne({ userId: user._id, providerReferenceHash: hashReference(ticket.blockKey) })
+      : null;
+    if (!match && existingByBlock?.paymentId?.startsWith('WALLET-')) {
+      match = { primary: { id: existingByBlock.paymentId, order_id: existingByBlock.paymentOrderId || '', method: 'wallet', amount: 0 },
+        related: [], referenceHash: hashReference(ticket.blockKey) };
+    }
     if (!match) continue;
     match.related.forEach((payment) => usedPaymentIds.add(payment.id));
-    let booking = await findExistingBooking(user._id, ticket, match);
+    let booking = existingByBlock || await findExistingBooking(user._id, ticket, match);
     if (!booking) booking = new Booking();
     const applied = applyTicketToBooking(booking, user, ticket, match, now);
     if (applied.isNew) result.bookingsCreated += 1;

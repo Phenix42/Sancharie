@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { _test } = require('../services/bookingReconciliationService');
+const { hashReference } = require('../services/paymentSecurity');
 
 test('provider statuses map to dashboard lifecycle states', () => {
   assert.equal(_test.mapProviderStatus('CONFIRMED'), 'confirmed');
@@ -38,6 +39,27 @@ test('one provider ticket links duplicate captured payments and keeps the pre-bo
   assert.equal(match.primary.id, 'pay_first');
   assert.deepEqual(new Set(match.related.map((payment) => payment.id)), new Set(['pay_first', 'pay_duplicate']));
   assert.equal(match.referenceHash, 'same-provider-attempt');
+});
+
+test('mixed wallet and coupon reconciliation matches the remaining captured card amount by block reference', () => {
+  const blockKey = 'ets-block-mixed-123';
+  const ticket = {
+    bookingDate: new Date('2026-08-02T04:32:09.000Z'),
+    totalFare: 1000,
+    seats: ['4A'],
+    busName: 'FlixBus',
+    blockKey,
+  };
+  const match = _test.matchTicketToPayments(ticket, [{
+    id: 'pay_mixed_partial',
+    order_id: 'order_mixed_partial',
+    amount: 40000,
+    created_at: Math.floor(new Date('2026-08-02T04:31:11.000Z').getTime() / 1000),
+    order: { notes: { service_type: 'bus', pricing_ref_hash: hashReference(blockKey), wallet_amount: '300', promo_code: 'SAVE' } },
+  }]);
+
+  assert.equal(match.primary.id, 'pay_mixed_partial');
+  assert.equal(match.referenceHash, hashReference(blockKey));
 });
 
 test('provider report sanitizer excludes partner account fields', () => {

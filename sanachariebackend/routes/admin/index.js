@@ -11,6 +11,7 @@ const { Discount, Coupon, Offer, FestivalTheme, Banner, ApplicationSettings, App
 const PushSubscription = require('../../models/PushSubscription');
 const pushNotifications = require('../../services/pushNotifications');
 const { authenticateAdmin, requirePermission } = require('../../middleware/adminAuth');
+const { hasPermission } = require('../../services/adminPermissions');
 const { recordAdminAction } = require('../../services/adminAudit');
 
 const router = express.Router();
@@ -132,7 +133,7 @@ router.post('/notifications/campaign', requirePermission('notifications:send'), 
   res.json({ success: true, ...result });
 }));
 
-router.put('/offers/:id/banner-image', requirePermission('offers:manage'), express.raw({ type: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/x-ms-bmp'], limit: '5mb' }), asyncRoute(async (req, res) => {
+router.put('/offers/:id/banner-image', requirePermission('offers:manage'), express.raw({ type: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/x-ms-bmp'], limit: Infinity }), asyncRoute(async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid offer ID' });
   const image = req.body;
   const contentType = req.get('content-type');
@@ -161,6 +162,53 @@ router.put('/offers/:id/banner-image', requirePermission('offers:manage'), expre
   await offer.save();
   await recordAdminAction(req, { action: 'update', resource: 'offers', resourceId: offer._id, summary: `Uploaded banner image for ${offer.name}`, changes: { before, after: { bannerImage: offer.bannerImage } } });
   res.json({ success: true, data: { bannerImage: offer.bannerImage } });
+}));
+
+router.put('/images/:resource/:id/:field', express.raw({ type: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/x-ms-bmp'], limit: Infinity }), asyncRoute(async (req, res) => {
+  const { resource, field } = req.params;
+  const definitions = {
+    offers: { permission: 'offers:manage', model: Offer, fields: { bannerImage: (id) => `offer-${id}` } },
+    themes: { permission: 'themes:manage', model: FestivalTheme, fields: {
+      bannerImage: (id) => `theme-${id}-bannerImage`,
+      logoImage: (id) => `theme-${id}-logoImage`,
+    } },
+    banners: { permission: 'banners:manage', model: Banner, fields: { image: (id) => `banner-${id}-image` } },
+  };
+  const definition = definitions[resource];
+  const keyForField = definition?.fields[field];
+  if (!definition || !keyForField) return res.status(400).json({ success: false, message: 'Unsupported image field' });
+  if (!hasPermission(req.admin, definition.permission)) {
+    return res.status(403).json({ success: false, message: `Missing permission: ${definition.permission}` });
+  }
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid record ID' });
+
+  const image = req.body;
+  const contentType = req.get('content-type');
+  if (!Buffer.isBuffer(image) || image.length === 0) return res.status(400).json({ success: false, message: 'Choose an image file first' });
+  const isPng = image.length >= 8 && image.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const isJpeg = image.length >= 3 && image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff;
+  const isWebp = image.length >= 12 && image.toString('ascii', 0, 4) === 'RIFF' && image.toString('ascii', 8, 12) === 'WEBP';
+  const isGif = image.length >= 6 && ['GIF87a', 'GIF89a'].includes(image.toString('ascii', 0, 6));
+  const isAvif = image.length >= 12 && image.toString('ascii', 4, 8) === 'ftyp' && ['avif', 'avis'].includes(image.toString('ascii', 8, 12));
+  const isBmp = image.length >= 2 && image.toString('ascii', 0, 2) === 'BM';
+  const validImage = (contentType === 'image/png' && isPng)
+    || (contentType === 'image/jpeg' && isJpeg)
+    || (contentType === 'image/webp' && isWebp)
+    || (contentType === 'image/gif' && isGif)
+    || (contentType === 'image/avif' && isAvif)
+    || (['image/bmp', 'image/x-ms-bmp'].includes(contentType) && isBmp);
+  if (!validImage) return res.status(400).json({ success: false, message: 'Image content must match PNG, JPG/JPEG, WebP, GIF, AVIF, or BMP format' });
+
+  const item = await definition.model.findById(req.params.id);
+  if (!item) return res.status(404).json({ success: false, message: 'Record not found' });
+  const key = keyForField(String(item._id));
+  const asset = await AppAsset.findOneAndUpdate({ key }, { $set: { image, contentType }, $setOnInsert: { key } }, { upsert: true, new: true, runValidators: true }).select('updatedAt').lean();
+  const imageUrl = `/api/admin-images/${resource}/${item._id}/${field}?v=${asset.updatedAt.getTime()}`;
+  const before = { [field]: item[field] };
+  item[field] = imageUrl;
+  await item.save();
+  await recordAdminAction(req, { action: 'update', resource, resourceId: item._id, summary: `Uploaded ${field} for ${item.name || item.title || 'record'}`, changes: { before, after: { [field]: imageUrl } } });
+  res.json({ success: true, data: { [field]: imageUrl } });
 }));
 
 for (const [path, config] of Object.entries(modelRegistry)) {
@@ -205,6 +253,8 @@ for (const [path, config] of Object.entries(modelRegistry)) {
     const item = await model.findByIdAndDelete(req.params.id);
     if (!item) return res.status(404).json({ success: false, message: `${label} not found` });
     if (path === 'offers') await AppAsset.deleteOne({ key: `offer-${item._id}` });
+    if (path === 'themes') await AppAsset.deleteMany({ key: { $in: [`theme-${item._id}-bannerImage`, `theme-${item._id}-logoImage`] } });
+    if (path === 'banners') await AppAsset.deleteOne({ key: `banner-${item._id}-image` });
     await recordAdminAction(req, { action: 'delete', resource: path, resourceId: item._id, summary: `Deleted ${label}`, changes: item.toObject() });
     res.json({ success: true });
   }));
@@ -364,7 +414,7 @@ router.get('/app-icon', requirePermission('settings:read'), asyncRoute(async (re
   const asset = await AppAsset.findOne({ key: 'app-icon' }).select('updatedAt contentType').lean();
   res.json({ success: true, data: asset ? { url: `/api/app-icon?v=${asset.updatedAt.getTime()}`, contentType: asset.contentType, updatedAt: asset.updatedAt } : null });
 }));
-router.put('/app-icon', requirePermission('settings:manage'), express.raw({ type: ['image/png', 'image/jpeg', 'image/webp'], limit: '1mb' }), asyncRoute(async (req, res) => {
+router.put('/app-icon', requirePermission('settings:manage'), express.raw({ type: ['image/png', 'image/jpeg', 'image/webp'], limit: Infinity }), asyncRoute(async (req, res) => {
   const image = req.body;
   const contentType = req.get('content-type');
   if (!Buffer.isBuffer(image) || image.length === 0) return res.status(400).json({ success: false, message: 'Select a PNG, JPG, or WebP image first' });

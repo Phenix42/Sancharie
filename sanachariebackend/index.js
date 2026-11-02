@@ -341,6 +341,27 @@ app.get('/api/offer-images/:id', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+app.get('/api/admin-images/:resource/:id/:field', async (req, res, next) => {
+  try {
+    const { resource, field } = req.params;
+    const assetKey = resource === 'themes' && ['bannerImage', 'logoImage'].includes(field)
+      ? `theme-${req.params.id}-${field}`
+      : resource === 'banners' && field === 'image'
+        ? `banner-${req.params.id}-image`
+        : resource === 'offers' && field === 'bannerImage'
+          ? `offer-${req.params.id}`
+          : null;
+    if (!assetKey || !mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ success: false, message: 'Image not found' });
+    const asset = await AppAsset.findOne({ key: assetKey }).select('image contentType updatedAt').lean();
+    if (!asset) return res.status(404).json({ success: false, message: 'Image not found' });
+    const image = asImageBuffer(asset.image);
+    const etag = `W/\"admin-image-${assetKey}-${asset.updatedAt.getTime()}\"`;
+    res.set({ 'Content-Type': asset.contentType, 'Content-Length': image.length, 'Cache-Control': 'public, max-age=300', ETag: etag });
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
+    res.send(image);
+  } catch (error) { next(error); }
+});
+
 // Authentication routes (OTP send/verify)
 app.use('/auth', authRoutes);
 
