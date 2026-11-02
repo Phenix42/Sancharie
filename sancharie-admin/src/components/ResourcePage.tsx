@@ -62,7 +62,7 @@ export default function ResourcePage({ title, description, endpoint, fields, sea
       }
     }
     return { uploadError };
-  }, onSuccess: async (result) => { setEditing(null); setIsOpen(false); setImageFiles({}); setNotice(result.uploadError ? `Offer saved, but banner upload failed: ${result.uploadError}` : 'Changes saved.'); await queryClient.invalidateQueries({ queryKey: [endpoint] }); }, onError: (error) => setNotice(errorMessage(error)) });
+  }, onSuccess: async (result) => { setEditing(null); setIsOpen(false); setImageFiles({}); setNotice(result.uploadError ? `${title.replace(/s$/, '')} saved, but image upload failed: ${result.uploadError}` : 'Changes saved.'); await queryClient.invalidateQueries({ queryKey: [endpoint] }); }, onError: (error) => setNotice(errorMessage(error)) });
   const remove = useMutation({ mutationFn: (id: string) => api.delete(`/${endpoint}/${id}`), onSuccess: async () => { setNotice('Record deleted.'); await queryClient.invalidateQueries({ queryKey: [endpoint] }); }, onError: (error) => setNotice(errorMessage(error)) });
   const deactivate = useMutation({ mutationFn: (record: Record<string, unknown>) => { const key = Object.hasOwn(record, 'enabled') ? 'enabled' : 'active'; return api.patch(`/${endpoint}/${record._id}`, { [key]: !record[key] }); }, onSuccess: async () => { setNotice('Status updated.'); await queryClient.invalidateQueries({ queryKey: [endpoint] }); }, onError: (error) => setNotice(errorMessage(error)) });
   const openNew = () => { setEditing(null); setForm(blankFor(fields)); setImageFiles({}); setNotice(''); setPreviewOpen(false); setIsOpen(true); };
