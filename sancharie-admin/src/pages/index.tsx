@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { api, errorMessage } from '../api/client';
+import { api, errorMessage, serviceApi } from '../api/client';
 import ResourcePage, { type Field } from '../components/ResourcePage';
 import { useAuth } from '../auth';
-import { ArrowDownLeft, ArrowUpRight, WalletCards } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Download, WalletCards } from 'lucide-react';
 import type { DashboardData } from '../types';
 import './record-details.css';
+// @ts-ignore The Admin and customer apps share the same ticket PDF renderer.
+import { generateTicketPDF } from '../../../sancharie/src/utils/ticketGenerator.js';
 
 const dateFields: Field[] = [{ key: 'startDate', label: 'Starts at', type: 'datetime-local', required: true }, { key: 'endDate', label: 'Ends at', type: 'datetime-local', required: true }, { key: 'enabled', label: 'Enabled', type: 'checkbox' }];
 const resources: Record<string, { title: string; description: string; fields: Field[] }> = {
@@ -64,14 +66,71 @@ function flattenDetails(value: unknown, field = ''): DetailRow[] {
   return [{ field: field || 'Details', value: formatted }];
 }
 function DataPage({ title, description, endpoint, columns, search = true, statusAction, filters = [] }: { title: string; description: string; endpoint: string; columns: Column[]; search?: boolean; statusAction?: boolean; filters?: { key: string; label: string; options: string[] }[] }) {
-  const [q, setQ] = useState(''); const [page, setPage] = useState(1); const [selected, setSelected] = useState<DataRecord | null>(null); const [message, setMessage] = useState(''); const [filterValues, setFilterValues] = useState<Record<string, string>>({}); const [from, setFrom] = useState(''); const [to, setTo] = useState(''); const client = useQueryClient();
+  const [q, setQ] = useState(''); const [page, setPage] = useState(1); const [selected, setSelected] = useState<DataRecord | null>(null); const [message, setMessage] = useState(''); const [filterValues, setFilterValues] = useState<Record<string, string>>({}); const [from, setFrom] = useState(''); const [to, setTo] = useState('');
+  const [etsTicketNo, setEtsTicketNo] = useState(''); const [etsTicket, setEtsTicket] = useState<Record<string, any> | null>(null); const [etsError, setEtsError] = useState(''); const [etsLoading, setEtsLoading] = useState(false);
+  const client = useQueryClient();
+  const etsStatus = String(etsTicket?.ticketStatus || '').toUpperCase().replace(/[\s-]+/g, '_');
+  const etsTicketConfirmed = Boolean(etsTicket && ['CONFIRMED', 'BOOKED', 'TICKETED', 'SUCCESS'].includes(etsStatus));
   const params = { q: q || undefined, page, limit: 50, ...filterValues, from: from || undefined, to: to || undefined };
   const query = useQuery<{ data: DataRecord[]; pagination?: { page: number; limit: number; total: number; pages: number } }>({ queryKey: [endpoint, params], queryFn: async () => (await api.get(`/${endpoint}`, { params })).data });
   const pagination = query.data?.pagination;
   const detail = useQuery({ queryKey: [endpoint, 'detail', selected?._id], enabled: Boolean(selected?._id && ['users', 'bookings'].includes(endpoint)), queryFn: async () => (await api.get(`/${endpoint}/${selected?._id}`)).data.data });
+  const openRecord = (row: DataRecord) => {
+    setSelected(row);
+    setEtsTicketNo(String(row.ticketNo || row.externalBookingId || ''));
+    setEtsTicket(null);
+    setEtsError('');
+  };
+  const verifyEtsTicket = async () => {
+    if (!selected?._id) return;
+    const ticketNo = etsTicketNo.trim() || String(detail.data?.ticketNo || detail.data?.externalBookingId || '');
+    if (!ticketNo) { setEtsError('This booking has no ETS ticket number. Enter the number shown in the ETS portal.'); return; }
+    setEtsLoading(true); setEtsError(''); setEtsTicket(null);
+    try {
+      const response = await serviceApi.get('/ets/adminTicketLookup', { params: { bookingId: selected._id, ticketNo } });
+      const data = response.data;
+      if (data.apiStatus?.success !== true) throw new Error(data.apiStatus?.message || data.message || 'ETS could not confirm this ticket.');
+      setEtsTicket({ ...data, etsTicketNumber: data.ETSTNumber || data.etstnumber || ticketNo });
+    } catch (error) { setEtsError(errorMessage(error)); }
+    finally { setEtsLoading(false); }
+  };
+  const downloadEtsTicket = async () => {
+    if (!etsTicket) return;
+    const status = String(etsTicket.ticketStatus || '').toUpperCase().replace(/[\s-]+/g, '_');
+    if (!['CONFIRMED', 'BOOKED', 'TICKETED', 'SUCCESS'].includes(status)) {
+      setEtsError(`ETS reports this ticket as ${status || 'unconfirmed'}; only confirmed tickets can be downloaded.`);
+      return;
+    }
+    const downloaded = await generateTicketPDF({
+      bookingId: etsTicket.etsTicketNumber,
+      ticketNo: etsTicket.etsTicketNumber,
+      pnr: etsTicket.opPNR,
+      busName: etsTicket.serviceProvider || detail.data?.busName || selected?.busName,
+      busType: etsTicket.serviceType || etsTicket.service_type || detail.data?.busType || selected?.busType,
+      serviceNo: etsTicket.serviceId || etsTicket.routeScheduleId || etsTicket.tripCode,
+      status: etsTicket.ticketStatus,
+      fromCity: etsTicket.sourceCity,
+      toCity: etsTicket.destinationCity,
+      journeyDate: etsTicket.journeyDate,
+      boardingPoint: etsTicket.boardingPoint,
+      droppingPoint: etsTicket.droppingPoint,
+      departureTime: etsTicket.departureTime,
+      arrivalTime: etsTicket.arrivalTime,
+      seats: etsTicket.travelerDetails?.map((traveler: Record<string, any>) => traveler.seatNo) || [],
+      passengers: etsTicket.travelerDetails?.map((traveler: Record<string, any>) => ({
+        name: `${traveler.name || ''} ${traveler.lastName || ''}`.trim(),
+        age: traveler.age,
+        gender: traveler.gender,
+        seatNumber: traveler.seatNo,
+      })) || [],
+      totalFare: etsTicket.travelerDetails?.reduce((total: number, traveler: Record<string, any>) => total + (Number(traveler.fare) || 0), 0) || detail.data?.totalFare || selected?.totalFare,
+      contactPhone: etsTicket.serviceProviderContact,
+    });
+    if (!downloaded) setEtsError('Could not generate the ticket PDF. Please try again.');
+  };
   const toggle = async (row: DataRecord) => { const active = row.accountActive !== false; if (!window.confirm(`${active ? 'Deactivate' : 'Activate'} ${String(row.name || row.email || row.phone || 'account')}?`)) return; try { await api.patch(`/users/${row._id}/status`, { active: !active }); setMessage('Account status updated.'); await client.invalidateQueries({ queryKey: [endpoint] }); } catch (error) { setMessage(errorMessage(error)); } };
-  return <section className="page-stack"><div className="page-heading"><div><div className="eyebrow">OPERATIONS</div><h1>{title}</h1><p>{description}</p></div></div>{message && <div className="notice">{message}</div>}<div className="panel"><div className="panel-toolbar"><div className="filter-controls">{search && <input className="search-input" placeholder={`Search ${title.toLowerCase()}...`} value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />}{filters.map((filter) => <select key={filter.key} className="list-filter" aria-label={filter.label} value={filterValues[filter.key] || ''} onChange={(e) => { setFilterValues((prev) => ({ ...prev, [filter.key]: e.target.value })); setPage(1); }}><option value="">All {filter.label}</option>{filter.options.map((option) => <option key={option} value={option}>{option}</option>)}</select>)}{['bookings', 'payments'].includes(endpoint) && <><input className="date-filter" aria-label="From date" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} /><span className="filter-separator">to</span><input className="date-filter" aria-label="To date" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} /></>}</div></div>{query.isLoading ? <div className="loading-line">Loading…</div> : query.error ? <div className="empty-state">{errorMessage(query.error)}</div> : !query.data?.data?.length ? <div className="empty-state">No records found.</div> : <div className="table-wrap"><table><thead><tr>{columns.map((col) => <th key={col.key}>{col.label}</th>)}{statusAction && <th>Account</th>}</tr></thead><tbody>{query.data.data.map((row) => <tr key={row._id || row.bookingId || row.paymentId} onClick={() => setSelected(row)} className="click-row">{columns.map((col) => <td key={col.key}>{col.render ? col.render(row) : row[col.key] == null || row[col.key] === '' ? '—' : String(row[col.key])}</td>)}{statusAction && <td><button className="text-button" onClick={(e) => { e.stopPropagation(); void toggle(row); }}>{row.accountActive === false ? 'Activate' : 'Deactivate'}</button></td>}</tr>)}</tbody></table></div>}{pagination && pagination.pages > 1 && <div className="table-pagination"><span>{`Page ${page} of ${pagination.pages} · ${pagination.total} records`}</span><div><button className="button button-quiet" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button><button className="button button-quiet" disabled={page >= pagination.pages} onClick={() => setPage((current) => current + 1)}>Next</button></div></div>}</div>
-    {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}><div className="detail-card" onClick={(e) => e.stopPropagation()}><div className="dialog-heading"><div><span className="eyebrow">RECORD DETAILS</span><h2>{title} detail</h2></div><button className="icon-button" onClick={() => setSelected(null)}>×</button></div>{detail.isLoading ? <div className="loading-line">Loading complete record…</div> : detail.error ? <div className="inline-error">{errorMessage(detail.error)}</div> : <div className="record-details-wrap"><table className="record-details-table"><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody>{flattenDetails(detail.data || selected).map((row) => <tr key={row.field}><th scope="row">{row.field}</th><td>{row.value}</td></tr>)}</tbody></table></div>}</div></div>}
+  return <section className="page-stack"><div className="page-heading"><div><div className="eyebrow">OPERATIONS</div><h1>{title}</h1><p>{description}</p></div></div>{message && <div className="notice">{message}</div>}<div className="panel"><div className="panel-toolbar"><div className="filter-controls">{search && <input className="search-input" placeholder={`Search ${title.toLowerCase()}...`} value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />}{filters.map((filter) => <select key={filter.key} className="list-filter" aria-label={filter.label} value={filterValues[filter.key] || ''} onChange={(e) => { setFilterValues((prev) => ({ ...prev, [filter.key]: e.target.value })); setPage(1); }}><option value="">All {filter.label}</option>{filter.options.map((option) => <option key={option} value={option}>{option}</option>)}</select>)}{['bookings', 'payments'].includes(endpoint) && <><input className="date-filter" aria-label="From date" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} /><span className="filter-separator">to</span><input className="date-filter" aria-label="To date" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} /></>}</div></div>{query.isLoading ? <div className="loading-line">Loading…</div> : query.error ? <div className="empty-state">{errorMessage(query.error)}</div> : !query.data?.data?.length ? <div className="empty-state">No records found.</div> : <div className="table-wrap"><table><thead><tr>{columns.map((col) => <th key={col.key}>{col.label}</th>)}{statusAction && <th>Account</th>}</tr></thead><tbody>{query.data.data.map((row) => <tr key={row._id || row.bookingId || row.paymentId} onClick={() => openRecord(row)} className="click-row">{columns.map((col) => <td key={col.key}>{col.render ? col.render(row) : row[col.key] == null || row[col.key] === '' ? '—' : String(row[col.key])}</td>)}{statusAction && <td><button className="text-button" onClick={(e) => { e.stopPropagation(); void toggle(row); }}>{row.accountActive === false ? 'Activate' : 'Deactivate'}</button></td>}</tr>)}</tbody></table></div>}{pagination && pagination.pages > 1 && <div className="table-pagination"><span>{`Page ${page} of ${pagination.pages} · ${pagination.total} records`}</span><div><button className="button button-quiet" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button><button className="button button-quiet" disabled={page >= pagination.pages} onClick={() => setPage((current) => current + 1)}>Next</button></div></div>}</div>
+    {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}><div className="detail-card" onClick={(e) => e.stopPropagation()}><div className="dialog-heading"><div><span className="eyebrow">RECORD DETAILS</span><h2>{title} detail</h2></div><button className="icon-button" onClick={() => setSelected(null)}>×</button></div>{detail.isLoading ? <div className="loading-line">Loading complete record…</div> : detail.error ? <div className="inline-error">{errorMessage(detail.error)}</div> : <><div className="record-details-wrap"><table className="record-details-table"><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody>{flattenDetails(detail.data || selected).map((row) => <tr key={row.field}><th scope="row">{row.field}</th><td>{row.value}</td></tr>)}</tbody></table></div>{endpoint === 'bookings' && String((detail.data || selected).serviceType || '').toLowerCase() === 'bus' && <section className="ets-ticket-panel"><div><span className="eyebrow">TICKET RECOVERY</span><h3>Verify ticket with ETS</h3><p>Check the operator’s booking record, then download the verified ticket PDF to send to the customer.</p></div><label className="form-field"><span>ETS ticket number</span><input value={etsTicketNo} onChange={(event) => setEtsTicketNo(event.target.value)} placeholder={String(detail.data?.ticketNo || detail.data?.externalBookingId || 'Enter ETS ticket number')} /></label><button className="button button-primary" onClick={() => void verifyEtsTicket()} disabled={etsLoading}>{etsLoading ? 'Checking ETS…' : 'Verify with ETS'}</button>{etsError && <div className="inline-error" role="alert">{etsError}</div>}{etsTicket && <div className="ets-ticket-verified"><div><strong>{etsTicketConfirmed ? 'Confirmed with ETS' : 'ETS ticket found'}</strong><span>Ticket: {etsTicket.etsTicketNumber}</span><span>Status: {etsTicket.ticketStatus || 'Status not returned'}</span><span>PNR: {etsTicket.opPNR || '—'}</span></div><button className="button button-quiet" disabled={!etsTicketConfirmed} onClick={() => void downloadEtsTicket()}><Download size={15} /> Download ticket PDF</button></div>}</section>}</>}</div></div>}
   </section>;
 }
 

@@ -276,6 +276,8 @@ const applyTicketToBooking = (booking, user, ticket, match, now) => {
     paymentIssue: booking.paymentIssue,
   };
   const providerStatus = mapProviderStatus(ticket.providerStatus);
+  const becameConfirmed = ['confirmed', 'completed'].includes(providerStatus) &&
+    !['confirmed', 'completed'].includes(String(previous.status || '').toLowerCase());
   const relatedPaymentIds = match.related.map((payment) => payment.id);
   const duplicatePaymentIds = relatedPaymentIds.filter((id) => id !== match.primary.id);
   const totalFare = Number(ticket.totalFare) || Number(match.primary.amount) / 100;
@@ -337,7 +339,7 @@ const applyTicketToBooking = (booking, user, ticket, match, now) => {
       createdAt: now,
     });
   }
-  return { isNew, duplicatePaymentIds };
+  return { isNew, becameConfirmed, duplicatePaymentIds };
 };
 
 const isBusPayment = (payment) => {
@@ -444,7 +446,16 @@ const performSync = async (user, { lookbackDays = DEFAULT_LOOKBACK_DAYS, dryRun 
     if (applied.isNew) result.bookingsCreated += 1;
     else result.bookingsUpdated += 1;
     result.duplicatePayments.push(...applied.duplicatePaymentIds);
-    if (!dryRun) await booking.save();
+    if (!dryRun) {
+      await booking.save();
+      if (applied.becameConfirmed && booking.ticketNo) {
+        setImmediate(() => {
+          require('./smsService').sendBookingConfirmation(booking._id).catch((error) => {
+            console.error('[SMS] Reconciled booking confirmation dispatch failed:', error.message);
+          });
+        });
+      }
+    }
   }
 
   for (const payment of payments) {

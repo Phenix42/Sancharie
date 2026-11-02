@@ -130,6 +130,10 @@ const bookingSchema = new mongoose.Schema({
   // External booking reference
   externalBookingId: { type: String, default: '' },
   ticketNo: { type: String, default: '' },
+  confirmationSmsStatus: { type: String, enum: ['not_sent', 'sending', 'sent', 'failed'], default: 'not_sent' },
+  confirmationSmsAttemptedAt: { type: Date, default: null },
+  confirmationSmsSentAt: { type: Date, default: null },
+  confirmationSmsError: { type: String, default: '', maxlength: 300 },
   
   // Fare details
   baseFare: { type: Number, required: true },

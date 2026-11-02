@@ -36,6 +36,9 @@ const Booking = require('../models/Booking');
 const User = require('../models/User');
 const userRoutes = require('./user');
 const authenticateToken = userRoutes.authenticateToken;
+const { authenticateAdmin, requirePermission } = require('../middleware/adminAuth');
+const { recordAdminAction } = require('../services/adminAudit');
+const smsService = require('../services/smsService');
 const Referral = require('../models/Referral');
 const { ApplicationSettings, Coupon, Discount } = require('../models/AdminResources');
 const {
@@ -192,6 +195,7 @@ const updateBusBookingFromOperator = async ({ bookingId, data, paymentId, paymen
   booking.statusHistory.push({ status: booking.status, paymentStatus: booking.paymentStatus,
     stage: booking.failureStage || 'operator_confirmed', message: booking.failureReason || '', createdAt: new Date() });
   await booking.save();
+  if (!failure && booking.status === 'confirmed' && booking.ticketNo) dispatchBookingConfirmationSms(booking._id);
 };
 
 const rewardReferrerForFirstBooking = async (bookingId, bookingAmount) => {
@@ -454,6 +458,9 @@ const requestLogger = (req, res, next) => {
   delete sanitizedQuery.customerPhone;
   delete sanitizedQuery.customerEmail;
   delete sanitizedQuery.paymentId;
+  delete sanitizedQuery.ticketNo;
+  delete sanitizedQuery.ETSTNumber;
+  delete sanitizedQuery.bookingId;
   
   console.log(`[ETS API] ${req.method} ${req.path}`, {
     requestId: req.requestId,
@@ -519,6 +526,14 @@ const read = (object, ...keys) => {
 
 const BUS_BLOCK_TTL_MS = (Number.parseInt(process.env.BUS_BLOCK_TTL_MINUTES, 10) || 12) * 60 * 1000;
 const busBlockStore = new Map();
+
+const dispatchBookingConfirmationSms = (bookingId) => {
+  setImmediate(() => {
+    smsService.sendBookingConfirmation(bookingId).catch((error) => {
+      console.error('[SMS] Booking confirmation dispatch failed:', error.message);
+    });
+  });
+};
 
 const normalizeBlockTicketKey = (value) => String(value || '').trim();
 
@@ -1179,6 +1194,7 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         // expired coupon must not strand wallet funds.
         const booking = await Booking.findById(bookingId).select('providerReferenceHash status ticketNo pnr paymentId refundStatus paymentStatus failureReason');
         if (booking?.status === 'confirmed' && booking.ticketNo && booking.paymentId === String(paymentId)) {
+          dispatchBookingConfirmationSms(booking._id);
           return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: booking.ticketNo,
             opPNR: booking.pnr, idempotent: true });
         }
@@ -1221,6 +1237,7 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         if (!mongoose.isValidObjectId(bookingId)) throw new PaymentSecurityError('A valid Sancharie booking reference is required', 400);
         const linkedBooking = await Booking.findById(bookingId).select('providerReferenceHash status paymentStatus ticketNo pnr paymentId refundStatus failureReason');
         if (linkedBooking?.status === 'confirmed' && linkedBooking.ticketNo && linkedBooking.paymentId === String(paymentId)) {
+          dispatchBookingConfirmationSms(linkedBooking._id);
           return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: linkedBooking.ticketNo,
             opPNR: linkedBooking.pnr, idempotent: true });
         }
@@ -1283,6 +1300,7 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
       if (!claimed) {
         const existing = await Booking.findById(settlement.bookingId).select('status providerStatus ticketNo pnr paymentId refundStatus failureReason paymentStatus');
         if (existing?.status === 'confirmed' && existing.ticketNo) {
+          dispatchBookingConfirmationSms(existing._id);
           return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: existing.ticketNo,
             opPNR: existing.pnr, idempotent: true });
         }
@@ -1441,6 +1459,7 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
           const amount = toAmount(req.query.walletAmount);
           const booking = await Booking.findById(bookingId).select('userId providerReferenceHash status ticketNo pnr paymentId refundStatus paymentStatus failureReason');
           if (booking?.status === 'confirmed' && booking.ticketNo && booking.paymentId === attemptedPaymentId) {
+            dispatchBookingConfirmationSms(booking._id);
             return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: booking.ticketNo,
               opPNR: booking.pnr, idempotent: true });
           }
@@ -1466,6 +1485,7 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
             ? await Booking.findById(bookingId).select('providerReferenceHash status paymentStatus ticketNo pnr paymentId refundStatus failureReason')
             : null;
           if (booking?.status === 'confirmed' && booking.ticketNo && booking.paymentId === attemptedPaymentId) {
+            dispatchBookingConfirmationSms(booking._id);
             return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: booking.ticketNo,
               opPNR: booking.pnr, idempotent: true });
           }
@@ -1563,6 +1583,38 @@ router.get('/ets/getTicketByETSTNumber', async (req, res) => {
     res.json(data);
   } catch (error) {
     handleApiError(error, 'Get ticket details', res);
+  }
+});
+
+/** Admin-only recovery lookup: verify the selected Sancharie booking against ETS. */
+router.get('/ets/adminTicketLookup', authenticateAdmin, requirePermission('bookings:read'), async (req, res) => {
+  try {
+    const bookingId = String(req.query.bookingId || '').trim();
+    const ticketNo = String(req.query.ticketNo || '').trim();
+    if (!mongoose.isValidObjectId(bookingId)) {
+      return res.status(400).json({ success: false, message: 'A valid Sancharie booking ID is required' });
+    }
+    if (!isValidETSTicketNumber(ticketNo)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid ETS ticket number' });
+    }
+    const booking = await Booking.findOne({ _id: bookingId, serviceType: 'bus' }).select('ticketNo externalBookingId');
+    if (!booking) return res.status(404).json({ success: false, message: 'Bus booking was not found' });
+    const storedTicketNo = String(booking.ticketNo || booking.externalBookingId || '').trim();
+    if (storedTicketNo && storedTicketNo.toUpperCase() !== ticketNo.toUpperCase()) {
+      return res.status(403).json({ success: false, message: 'Ticket number does not match the selected booking' });
+    }
+
+    const data = await makeETSRequest({
+      method: 'GET',
+      url: `${ETS_API_CONFIG.baseUrl}/getTicketByETSTNumber`,
+      params: { ETSTNumber: ticketNo.toUpperCase() },
+    });
+    await recordAdminAction(req, { action: 'verify', resource: 'bookings', resourceId: booking._id,
+      summary: 'Verified a bus ticket with ETS', changes: { ticketStatus: data.ticketStatus || 'unknown' } });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(data);
+  } catch (error) {
+    handleApiError(error, 'Verify admin ticket with ETS', res);
   }
 });
 

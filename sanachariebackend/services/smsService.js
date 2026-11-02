@@ -13,6 +13,100 @@
  */
 
 const axios = require('axios');
+const Booking = require('../models/Booking');
+const { ApplicationSettings } = require('../models/AdminResources');
+
+const cleanSmsValue = (value, fallback = '—', maxLength = 100) => String(value || fallback)
+  .replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, maxLength);
+
+const indianMobileNumber = (value) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  const mobile = digits.length > 10 ? digits.slice(-10) : digits;
+  return /^[6-9]\d{9}$/.test(mobile) ? mobile : '';
+};
+
+const formatJourneyDate = (value) => {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Date to be confirmed' : date.toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata',
+  });
+};
+
+const sendBookingConfirmation = async (bookingId) => {
+  const staleSendingBefore = new Date(Date.now() - 5 * 60 * 1000);
+  const booking = await Booking.findOneAndUpdate({
+    _id: bookingId,
+    status: 'confirmed',
+    ticketNo: { $ne: '' },
+    $or: [
+      { confirmationSmsStatus: { $nin: ['sent', 'sending'] } },
+      { confirmationSmsStatus: 'sending', confirmationSmsAttemptedAt: { $lt: staleSendingBefore } },
+    ],
+  }, {
+    $set: { confirmationSmsStatus: 'sending', confirmationSmsAttemptedAt: new Date(), confirmationSmsError: '' },
+  }, { new: true });
+
+  if (!booking) return { success: false, skipped: true };
+
+  try {
+    const apiKey = process.env.SMS_API_KEY;
+    const senderId = process.env.SMS_SENDER_ID;
+    const apiUrl = process.env.SMS_API_URL;
+    const entityId = process.env.SMS_ENTITY_ID;
+    const templateId = process.env.SMS_BOOKING_TEMPLATE_ID || '1777179118623284362';
+    const mobile = indianMobileNumber(booking.userPhone);
+    const settings = await ApplicationSettings.findOne({ key: 'global' }).select('contactPhone').lean();
+    const supportNumber = cleanSmsValue(settings?.contactPhone || process.env.SANCHARIE_SUPPORT_NUMBER, '', 40);
+
+    if (!apiKey || !senderId || !apiUrl || !templateId) throw new Error('MetaReach booking SMS is not configured');
+    if (!mobile) throw new Error('Customer phone number is unavailable or invalid');
+    if (!supportNumber) throw new Error('Sancharie support phone number is not configured');
+
+    const primaryPassenger = booking.passengers?.[0];
+    const passengerName = cleanSmsValue(primaryPassenger?.name, 'Passenger');
+    const passengerSeats = Array.isArray(booking.passengers)
+      ? booking.passengers.map((passenger) => passenger.seatNumber).filter(Boolean)
+      : [];
+    const seatNumbers = passengerSeats.length ? passengerSeats : (booking.selectedSeats?.length ? booking.selectedSeats : booking.seats || []);
+    const message = [
+      'Sancharie Booking Confirmed',
+      '',
+      `Hi ${passengerName}, your journey is confirmed.`,
+      '',
+      `${cleanSmsValue(booking.fromCity || booking.source)} to ${cleanSmsValue(booking.toCity || booking.destination)}`,
+      `Date ${formatJourneyDate(booking.journeyDate)} Time ${cleanSmsValue(booking.departureTime, 'Time to be confirmed')}`,
+      `Seat ${cleanSmsValue(seatNumbers?.join(', '), 'Seat to be confirmed')} Booking ${cleanSmsValue(booking.bookingId || booking.ticketNo)}`,
+      '',
+      'Please reach boarding point 15 mins before departure.',
+      '',
+      `Support ${supportNumber}`,
+    ].join('\n');
+    const params = new URLSearchParams({
+      apikey: apiKey,
+      senderid: senderId,
+      number: `91${mobile}`,
+      message,
+      templateid: templateId,
+    });
+    if (entityId) params.set('peid', entityId);
+
+    const response = await axios.get(apiUrl, { params, timeout: 20000, headers: { Accept: 'application/json' } });
+    if (response.status < 200 || response.status >= 300) throw new Error('MetaReach rejected the booking SMS');
+    const responseText = typeof response.data === 'string' ? response.data.toLowerCase() : JSON.stringify(response.data || {}).toLowerCase();
+    if (/\b(error|failed|invalid|rejected)\b/.test(responseText)) throw new Error('MetaReach reported a booking SMS failure');
+
+    await Booking.updateOne({ _id: booking._id, confirmationSmsStatus: 'sending' }, {
+      $set: { confirmationSmsStatus: 'sent', confirmationSmsSentAt: new Date(), confirmationSmsError: '' },
+    });
+    return { success: true };
+  } catch (error) {
+    await Booking.updateOne({ _id: booking._id, confirmationSmsStatus: 'sending' }, {
+      $set: { confirmationSmsStatus: 'failed', confirmationSmsError: cleanSmsValue(error.message, 'SMS delivery failed', 300) },
+    }).catch(() => {});
+    console.error('[SMS] Booking confirmation could not be sent:', error.message);
+    return { success: false, error: 'Booking confirmation SMS could not be sent' };
+  }
+};
 
 /**
  * Send OTP via MetaReach SMS API
@@ -168,5 +262,6 @@ async function sendOTPViaGet(mobile, otp) {
 
 module.exports = {
   sendOTP,
-  sendOTPViaGet
+  sendOTPViaGet,
+  sendBookingConfirmation,
 };

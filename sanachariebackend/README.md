@@ -153,6 +153,8 @@ SMS_SENDER_ID=xxx
 SMS_API_URL=https://sms.metareach.in/vb/apikey.php
 SMS_ENTITY_ID=xxx
 SMS_TEMPLATE_ID=xxx
+SMS_BOOKING_TEMPLATE_ID=1777179118623284362
+SANCHARIE_SUPPORT_NUMBER=your-customer-support-number
 
 # Razorpay
 RAZORPAY_KEY_ID=rzp_xxx
