@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { Discount, Coupon, Offer, FestivalTheme } = require('../models/AdminResources');
+const { Discount, Coupon, Offer, FestivalTheme, ApplicationSettings } = require('../models/AdminResources');
 
 const dates = { startDate: '2026-10-15T00:00:00Z', endDate: '2026-10-25T00:00:00Z' };
 
@@ -29,4 +29,16 @@ test('percentage coupons and offers cannot exceed 100 percent', async () => {
 test('festival theme colors must be valid six-digit hex colors', () => {
   const theme = new FestivalTheme({ name: 'Festival', primaryColor: 'orange', ...dates });
   assert.ok(theme.validateSync().errors.primaryColor);
+});
+
+test('festival theme colors can use the customer portal defaults', () => {
+  const theme = new FestivalTheme({ name: 'Default colors', primaryColor: '', secondaryColor: '', backgroundColor: '', ...dates });
+  assert.equal(theme.validateSync(), undefined);
+});
+
+test('homepage hero settings accept custom copy and valid text colors', () => {
+  const settings = new ApplicationSettings({ heroTitleLine1: 'Your journey starts here', heroTitleColor: '#123456', heroAccentColor: '#abcdef', heroSubtitleColor: '#002c3f' });
+  assert.equal(settings.validateSync(), undefined);
+  const invalid = new ApplicationSettings({ heroTitleColor: 'blue' });
+  assert.ok(invalid.validateSync().errors.heroTitleColor);
 });

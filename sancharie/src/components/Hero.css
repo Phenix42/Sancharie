@@ -1,9 +1,11 @@
 .hero {
+  --hero-primary: var(--primary-color, #002c3f);
+  --hero-secondary: var(--gold-color, #ceb45f);
   position: relative;
   width: 100%;
   min-height: 575px;
   overflow: hidden;
-  background: #002c3f;
+  background: var(--hero-primary);
 }
 
 .hero-background,
@@ -25,9 +27,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background:
-    linear-gradient(90deg, rgba(0, 35, 50, 0.96) 0%, rgba(0, 35, 50, 0.79) 37%, rgba(0, 35, 50, 0.28) 74%, rgba(0, 35, 50, 0.14) 100%),
-    linear-gradient(180deg, rgba(0, 27, 39, 0.06) 0%, rgba(0, 27, 39, 0.12) 55%, rgba(0, 27, 39, 0.72) 100%);
+  background: none;
 }
 
 .hero-content {
@@ -45,10 +45,10 @@
   min-height: 34px;
   padding: 0 14px;
   margin-bottom: 20px;
-  border: 1px solid rgba(229, 203, 116, 0.42);
+  border: 1px solid color-mix(in srgb, var(--hero-secondary) 42%, transparent);
   border-radius: 999px;
   background: rgba(0, 27, 39, 0.34);
-  color: #efd77f;
+  color: var(--hero-secondary);
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 12px;
   font-weight: 800;
@@ -61,8 +61,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #efd77f;
-  box-shadow: 0 0 0 5px rgba(239, 215, 127, 0.12);
+  background: var(--hero-secondary);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--hero-secondary) 12%, transparent);
 }
 
 .hero-title {
@@ -84,13 +84,13 @@
 }
 
 .hero-title span:last-child {
-  color: #f2d87c;
+  color: var(--hero-secondary);
 }
 
 .hero-subtitle {
   max-width: 620px;
   margin: 0 0 28px;
-  color: rgba(247, 252, 253, 0.88);
+  color: #002c3f;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 18px;
   font-weight: 500;
@@ -124,7 +124,7 @@
 
 .hero-proof-row svg {
   flex: 0 0 auto;
-  color: #efd77f;
+  color: var(--hero-secondary);
 }
 
 @media (max-width: 1024px) {
@@ -147,11 +147,7 @@
     transform: none;
   }
 
-  .hero-overlay {
-    background:
-      linear-gradient(90deg, rgba(0, 35, 50, 0.88) 0%, rgba(0, 35, 50, 0.58) 76%, rgba(0, 35, 50, 0.36) 100%),
-      linear-gradient(180deg, rgba(0, 27, 39, 0.22) 0%, rgba(0, 27, 39, 0.34) 58%, rgba(0, 27, 39, 0.9) 100%);
-  }
+  .hero-overlay { background: none; }
 
   .hero-content {
     padding: 52px 20px 72px;

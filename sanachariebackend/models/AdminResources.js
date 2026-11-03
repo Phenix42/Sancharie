@@ -69,9 +69,9 @@ const offerSchema = new mongoose.Schema({
 const themeSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 120 },
   festival: { type: String, default: 'custom', maxlength: 80 },
-  primaryColor: { type: String, default: '#1746a2', set: normalizeHexColor, match: /^#[0-9a-fA-F]{6}$/ },
-  secondaryColor: { type: String, default: '#f3a712', set: normalizeHexColor, match: /^#[0-9a-fA-F]{6}$/ },
-  backgroundColor: { type: String, default: '#ffffff', set: normalizeHexColor, match: /^#[0-9a-fA-F]{6}$/ },
+  primaryColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
+  secondaryColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
+  backgroundColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
   bannerImage: { type: String, default: '', maxlength: 2000 },
   logoImage: { type: String, default: '', maxlength: 2000, match: /^(|https:\/\/|\/(?!\/))/ },
   icon: { type: String, default: '', maxlength: 100 },
@@ -105,6 +105,12 @@ const settingsSchema = new mongoose.Schema({
   contactPhone: { type: String, default: '', maxlength: 30 },
   supportInformation: { type: String, default: '', maxlength: 2000 },
   announcement: { type: String, default: '', maxlength: 1000 },
+  heroTitleLine1: { type: String, default: '', maxlength: 120 },
+  heroTitleLine2: { type: String, default: '', maxlength: 120 },
+  heroSubtitle: { type: String, default: '', maxlength: 500 },
+  heroTitleColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
+  heroAccentColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
+  heroSubtitleColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
 }, common);
 
 const appAssetSchema = new mongoose.Schema({

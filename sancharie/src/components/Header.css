@@ -1,11 +1,11 @@
 .header {
-  --header-primary: #002C3F;
+  --header-primary: var(--primary-color, #002C3F);
   --header-primary-soft: #07384c;
-  --header-gold: #CEB45F;
+  --header-gold: var(--gold-color, #CEB45F);
   --header-gold-dark: #b08c37;
-  --header-gold-light: #CEB45F;
-  --header-gold-soft: rgba(206, 180, 95, 0.16);
-  --header-gold-wash: rgba(206, 180, 95, 0.2);
+  --header-gold-light: var(--gold-color, #CEB45F);
+  --header-gold-soft: color-mix(in srgb, var(--gold-color, #CEB45F) 16%, transparent);
+  --header-gold-wash: color-mix(in srgb, var(--gold-color, #CEB45F) 20%, transparent);
   --header-white: #ffffff;
   --header-muted: rgba(255, 255, 255, 0.72);
   --header-border: rgba(206, 180, 95, 0.22);
@@ -461,7 +461,7 @@
     width: 100vw;
     max-width: 100vw;
     border-bottom: 1px solid var(--header-border);
-    background: rgba(0, 44, 63, 0.96);
+    background: color-mix(in srgb, var(--header-primary) 96%, transparent);
     backdrop-filter: blur(14px);
     box-shadow: 0 8px 24px rgba(0, 44, 63, 0.16);
   }

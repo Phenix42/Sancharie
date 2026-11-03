@@ -3,13 +3,13 @@
 
 /* Main Wrapper */
 .search-bus-wrapper {
-  --booking-primary: #002C3F;
-  --booking-primary-hover: #004663;
-  --booking-gold: #9c7635;
-  --booking-gold-dark: #7a5c2a;
-  --booking-gold-light: #CEB45F;
-  --booking-border-accent: #d4b861;
-  --booking-gold-soft: #faf7f0;
+  --booking-primary: var(--primary-color, #002C3F);
+  --booking-primary-hover: color-mix(in srgb, var(--primary-color, #002C3F) 84%, white);
+  --booking-gold: var(--gold-color, #9c7635);
+  --booking-gold-dark: var(--gold-color, #7a5c2a);
+  --booking-gold-light: var(--gold-color, #CEB45F);
+  --booking-border-accent: var(--gold-color, #d4b861);
+  --booking-gold-soft: color-mix(in srgb, var(--gold-color, #CEB45F) 10%, white);
   --booking-border: #d9e2e7;
   --booking-border-strong: #c7d6de;
   --booking-muted: #647481;

@@ -430,7 +430,7 @@ router.put('/app-icon', requirePermission('settings:manage'), express.raw({ type
   res.json({ success: true, data: { url: `/api/app-icon?v=${asset.updatedAt.getTime()}`, contentType: asset.contentType, updatedAt: asset.updatedAt } });
 }));
 router.put('/settings', requirePermission('settings:manage'), asyncRoute(async (req, res) => {
-  const allowed = ['maintenanceMode', 'bookingsEnabled', 'registrationEnabled', 'couponsEnabled', 'discountsEnabled', 'festivalThemeEnabled', 'referralRewardPercentage', 'contactEmail', 'contactPhone', 'supportInformation', 'announcement'];
+  const allowed = ['maintenanceMode', 'bookingsEnabled', 'registrationEnabled', 'couponsEnabled', 'discountsEnabled', 'festivalThemeEnabled', 'referralRewardPercentage', 'contactEmail', 'contactPhone', 'supportInformation', 'announcement', 'heroTitleLine1', 'heroTitleLine2', 'heroSubtitle', 'heroTitleColor', 'heroAccentColor', 'heroSubtitleColor'];
   const update = {};
   for (const key of allowed) if (req.body?.[key] !== undefined) update[key] = req.body[key];
   const booleanKeys = ['maintenanceMode', 'bookingsEnabled', 'registrationEnabled', 'couponsEnabled', 'discountsEnabled', 'festivalThemeEnabled'];
@@ -440,6 +440,13 @@ router.put('/settings', requirePermission('settings:manage'), asyncRoute(async (
     if (!Number.isFinite(update.referralRewardPercentage) || update.referralRewardPercentage < 0 || update.referralRewardPercentage > 100) return res.status(400).json({ success: false, message: 'Referral reward percentage must be between 0 and 100' });
   }
   if (update.contactEmail !== undefined && update.contactEmail !== '' && !/^\S+@\S+\.\S+$/.test(String(update.contactEmail))) return res.status(400).json({ success: false, message: 'Contact email is invalid' });
+  for (const key of ['heroTitleLine1', 'heroTitleLine2', 'heroSubtitle']) if (update[key] !== undefined) update[key] = String(update[key]).trim();
+  for (const key of ['heroTitleColor', 'heroAccentColor', 'heroSubtitleColor']) {
+    if (update[key] === undefined) continue;
+    const color = String(update[key]).trim();
+    if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ success: false, message: `${key} must be a six-digit hex color or blank` });
+    update[key] = color;
+  }
   const before = await ApplicationSettings.findOne({ key: 'global' }).lean();
   const data = await ApplicationSettings.findOneAndUpdate({ key: 'global' }, { $set: update, $setOnInsert: { key: 'global' } }, { upsert: true, new: true, runValidators: true }).lean();
   await recordAdminAction(req, { action: 'update', resource: 'settings', resourceId: 'global', summary: 'Updated application settings', changes: { before, after: data } });

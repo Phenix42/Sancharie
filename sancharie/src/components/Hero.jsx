@@ -6,8 +6,8 @@ import { BadgeCheck, IndianRupee, TicketCheck } from 'lucide-react'
 import August15Hero from '../themes/August15Hero'
 import { THEME_FLAGS } from '../themes/themeConfig'
 
-function Hero({ runtimeTheme }) {
-  const themeBanner = /^(https:\/\/|\/(?!\/))/.test(String(runtimeTheme?.bannerImage || ''))
+function Hero({ runtimeTheme, runtimeSettings }) {
+  const themeBanner = /^(https?:\/\/|\/(?!\/))/i.test(String(runtimeTheme?.bannerImage || ''))
     ? runtimeTheme.bannerImage
     : null
 
@@ -35,12 +35,12 @@ function Hero({ runtimeTheme }) {
           <span className="hero-kicker-dot" />
           Bus journeys across India
         </div>
-        <h1 className="hero-title">
-          <span>Wherever you’re going,</span>
-          <span>go with confidence.</span>
+        <h1 className="hero-title" style={runtimeSettings?.heroTitleColor ? { color: runtimeSettings.heroTitleColor } : undefined}>
+          <span>{runtimeSettings?.heroTitleLine1 || 'Wherever you’re going,'}</span>
+          <span style={runtimeSettings?.heroAccentColor ? { color: runtimeSettings.heroAccentColor } : undefined}>{runtimeSettings?.heroTitleLine2 || 'go with confidence.'}</span>
         </h1>
-        <p className="hero-subtitle">
-          Compare buses, choose your seat, and book in minutes—with clear fares and support whenever you need it.
+        <p className="hero-subtitle" style={runtimeSettings?.heroSubtitleColor ? { color: runtimeSettings.heroSubtitleColor } : undefined}>
+          {runtimeSettings?.heroSubtitle || 'Compare buses, choose your seat, and book in minutes—with clear fares and support whenever you need it.'}
         </p>
         <div className="hero-proof-row" aria-label="Sancharie booking highlights">
           <span><BadgeCheck size={17} /> Verified operators</span>

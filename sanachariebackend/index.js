@@ -235,6 +235,9 @@ app.get('/api/config', async (req, res, next) => {
         festivalThemeEnabled: settings?.festivalThemeEnabled ?? true,
         contactEmail: settings?.contactEmail || '', contactPhone: settings?.contactPhone || '',
         supportInformation: settings?.supportInformation || '', announcement: settings?.announcement || '',
+        heroTitleLine1: settings?.heroTitleLine1 || '', heroTitleLine2: settings?.heroTitleLine2 || '',
+        heroSubtitle: settings?.heroSubtitle || '', heroTitleColor: settings?.heroTitleColor || '',
+        heroAccentColor: settings?.heroAccentColor || '', heroSubtitleColor: settings?.heroSubtitleColor || '',
       },
       theme: settings?.festivalThemeEnabled === false ? null : theme ? {
         name: theme.name, festival: theme.festival, primaryColor: theme.primaryColor,
@@ -322,7 +325,7 @@ app.get('/api/app-icon', async (req, res, next) => {
     if (!asset) return res.status(404).json({ success: false, message: 'App icon has not been uploaded' });
     const image = asImageBuffer(asset.image);
     const etag = `W/"app-icon-${asset.updatedAt.getTime()}"`;
-    res.set({ 'Content-Type': asset.contentType, 'Content-Length': image.length, 'Cache-Control': 'public, max-age=300', ETag: etag });
+    res.set({ 'Content-Type': asset.contentType, 'Content-Length': image.length, 'Cache-Control': 'public, max-age=300', 'Cross-Origin-Resource-Policy': 'cross-origin', ETag: etag });
     if (req.headers['if-none-match'] === etag) return res.status(304).end();
     res.send(image);
   } catch (error) { next(error); }
@@ -335,7 +338,7 @@ app.get('/api/offer-images/:id', async (req, res, next) => {
     if (!asset) return res.status(404).json({ success: false, message: 'Offer image not found' });
     const image = asImageBuffer(asset.image);
     const etag = `W/"offer-image-${req.params.id}-${asset.updatedAt.getTime()}"`;
-    res.set({ 'Content-Type': asset.contentType, 'Content-Length': image.length, 'Cache-Control': 'public, max-age=300', ETag: etag });
+    res.set({ 'Content-Type': asset.contentType, 'Content-Length': image.length, 'Cache-Control': 'public, max-age=300', 'Cross-Origin-Resource-Policy': 'cross-origin', ETag: etag });
     if (req.headers['if-none-match'] === etag) return res.status(304).end();
     res.send(image);
   } catch (error) { next(error); }
@@ -356,7 +359,7 @@ app.get('/api/admin-images/:resource/:id/:field', async (req, res, next) => {
     if (!asset) return res.status(404).json({ success: false, message: 'Image not found' });
     const image = asImageBuffer(asset.image);
     const etag = `W/\"admin-image-${assetKey}-${asset.updatedAt.getTime()}\"`;
-    res.set({ 'Content-Type': asset.contentType, 'Content-Length': image.length, 'Cache-Control': 'public, max-age=300', ETag: etag });
+    res.set({ 'Content-Type': asset.contentType, 'Content-Length': image.length, 'Cache-Control': 'public, max-age=300', 'Cross-Origin-Resource-Policy': 'cross-origin', ETag: etag });
     if (req.headers['if-none-match'] === etag) return res.status(304).end();
     res.send(image);
   } catch (error) { next(error); }

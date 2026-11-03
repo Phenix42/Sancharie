@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Power, Trash2, X } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
 
-export type Field = { key: string; label: string; type?: 'text' | 'password' | 'number' | 'date' | 'datetime-local' | 'textarea' | 'select' | 'checkbox' | 'csv' | 'image' | 'color'; options?: string[]; required?: boolean; min?: number; max?: number; defaultValue?: unknown; };
+export type Field = { key: string; label: string; type?: 'text' | 'password' | 'number' | 'date' | 'datetime-local' | 'textarea' | 'select' | 'checkbox' | 'csv' | 'image' | 'color'; options?: string[]; required?: boolean; min?: number; max?: number; defaultValue?: unknown; allowDefault?: boolean; };
 type ResourcePageProps = { title: string; description: string; endpoint: string; fields: Field[]; searchable?: boolean; };
 
 const blankFor = (fields: Field[]) => Object.fromEntries(fields.map((f) => [f.key, f.defaultValue ?? (f.type === 'checkbox' ? true : f.type === 'csv' ? '' : f.type === 'select' ? f.options?.[0] || '' : '')]));
@@ -20,7 +20,7 @@ const normalizedColor = (value: unknown) => {
 };
 const toForm = (data: Record<string, unknown>, fields: Field[]) => Object.fromEntries(fields.map((f) => {
   const value = data[f.key];
-  if (f.type === 'color') return [f.key, normalizedColor(value || f.defaultValue || '#000000')];
+  if (f.type === 'color') return [f.key, f.allowDefault && (value == null || value === '') ? '' : normalizedColor(value || f.defaultValue || '#000000')];
   if (f.type === 'csv') return [f.key, Array.isArray(value) ? value.join(', ') : ''];
   if (f.type === 'date' || f.type === 'datetime-local') return [f.key, localDateValue(value, f.type === 'date')];
   const fallback = f.defaultValue ?? (f.type === 'checkbox' ? false : f.type === 'select' ? f.options?.[0] || '' : '');
@@ -41,6 +41,7 @@ function FormField({ field, value, onChange, onFileChange, required = field.requ
   const percentValue = field.key === 'percentage' || (field.key === 'value' && values.type === 'percentage') || (field.key === 'discountValue' && values.discountType === 'percentage');
   const numberMax = field.max ?? (percentValue ? 100 : undefined);
   if (field.type === 'checkbox') return <label className="check-field"><input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} /> {field.label}</label>;
+  if (field.type === 'color' && field.allowDefault) { const useDefault = value == null || value === ''; const colorValue = normalizedColor(value || field.defaultValue || '#1746a2'); return <div className="form-field"><span>{field.label}</span><div className="color-input-row"><input type="color" value={colorValue} disabled={useDefault} onChange={(e) => onChange(e.target.value)} /><label className="color-default-option"><input type="checkbox" checked={useDefault} onChange={(e) => onChange(e.target.checked ? '' : colorValue)} /> Use portal default</label></div></div>; }
   if (field.type === 'image') return <label className="form-field"><span>{field.label}</span>{typeof value === 'string' && /^(https:\/\/|\/(?!\/))/.test(value) && <img className="offer-banner-preview" src={value.startsWith('/') ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${value}` : value} alt={`Current ${field.label.toLowerCase()}`} />}<input type="file" accept="image/png,image/jpeg,.jpg,.jpeg,image/webp,image/gif,image/avif,image/bmp" onChange={(e) => onFileChange?.(e.target.files?.[0] || null)} /><small>PNG, JPG/JPEG, WebP, GIF, AVIF, or BMP</small></label>;
   return <label className="form-field"><span>{field.label}</span>
     {field.type === 'textarea' ? <textarea {...common} rows={3} /> : field.type === 'select' ? <select {...common}>{(field.options || []).map((option) => <option key={option} value={option}>{option.replaceAll('_', ' ')}</option>)}</select> : <input {...common} type={field.type === 'csv' ? 'text' : field.type || 'text'} min={numberMin} max={numberMax} step={field.type === 'number' ? 'any' : undefined} minLength={field.key === 'password' ? 14 : undefined} autoComplete={field.type === 'password' ? 'new-password' : undefined} placeholder={field.type === 'csv' ? 'Comma separated values' : field.type === 'color' ? '#RRGGBB' : undefined} />}

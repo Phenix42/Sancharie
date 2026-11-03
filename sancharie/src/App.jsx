@@ -107,12 +107,17 @@ function App() {
     navigate(getModePath(mode));
   };
   const customerBanner = runtimeConfig?.banners?.[0];
-  const customerAssetUrl = (url) => /^https:\/\//.test(String(url || ''))
-    ? url
-    : String(url || '').startsWith('/') ? `${API_BASE_URL.replace(/\/$/, '')}${url}` : '';
-  const runtimeBrandTheme = runtimeConfig?.appIconUrl
-    ? { ...runtimeConfig.theme, logoImage: `${API_BASE_URL.replace(/\/$/, '')}${runtimeConfig.appIconUrl}` }
-    : runtimeConfig?.theme;
+  const customerAssetUrl = (url) => {
+    const value = String(url || '').trim();
+    if (/^https?:\/\//i.test(value)) return value;
+    if (value.startsWith('/') && !value.startsWith('//')) return new URL(value, API_BASE_URL).toString();
+    return '';
+  };
+  const runtimeBrandTheme = runtimeConfig ? {
+    ...(runtimeConfig.theme || {}),
+    bannerImage: customerAssetUrl(runtimeConfig.theme?.bannerImage),
+    logoImage: customerAssetUrl(runtimeConfig.appIconUrl || runtimeConfig.theme?.logoImage),
+  } : null;
   const safeCustomerUrl = (url) => /^(https:\/\/|\/(?!\/))/.test(String(url || '')) ? url : '#';
 
   return (
@@ -200,7 +205,7 @@ function App() {
               <HotelHome />
             ) : (
               <>
-                <Hero runtimeTheme={runtimeBrandTheme} />
+                <Hero runtimeTheme={runtimeBrandTheme} runtimeSettings={runtimeConfig?.settings} />
                 <SearchBus onSearch={handleSearch} mode="bus" />
                 <DiscountOffers discounts={runtimeConfig?.settings?.discountsEnabled === false ? [] : runtimeConfig?.discounts || []} onSelectOffer={handleSelectOffer} />
                 <OurService />
