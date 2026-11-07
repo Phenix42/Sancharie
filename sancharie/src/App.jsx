@@ -1,6 +1,6 @@
 import "./App.css";
 import { useEffect, useState } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import SearchBus from "./components/SearchBus";
@@ -46,6 +46,23 @@ function App() {
   const [travelMode, setTravelMode] = useState(getInitialTravelMode);
   const [runtimeConfig, setRuntimeConfig] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const targetId = decodeURIComponent(location.hash.slice(1));
+    if (!targetId) return;
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      const target = document.getElementById(targetId);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.clearInterval(timer);
+      } else if (++attempts >= 30) {
+        window.clearInterval(timer);
+      }
+    }, 100);
+    return () => window.clearInterval(timer);
+  }, [location.hash, location.pathname]);
 
   useEffect(() => {
     let active = true;

@@ -56,8 +56,8 @@ function Footer({ className = '' }) {
               <Link to="/about-us">About Us</Link>
               <a href="#contact">Contact Us</a>
               <a href="#career">Careers</a>
-              <a href="#offers">Offers & Discounts</a>
-              <a href="#wallet">Wallet</a>
+              <Link to="/#discount-offers">Offers & Discounts</Link>
+              <Link to="/wallet">Wallet</Link>
             </nav>
           </div>
 
