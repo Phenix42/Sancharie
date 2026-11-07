@@ -66,7 +66,7 @@ export default function DiscountOffers({ discounts = [], onSelectOffer }) {
           const imageStyle = image ? { backgroundImage: `url("${image.replace(/["\\]/g, '')}")` } : undefined;
           const offerKey = String(discount._id || `${discount.name}-${index}`);
           const isFlipped = flippedOffer === offerKey;
-          return <article className={`discount-offer-card ${palettes[index % palettes.length]} ${image ? 'has-image' : ''} ${isFlipped ? 'is-flipped' : ''}`} key={offerKey} role="button" tabIndex={0} aria-label={`Select ${discount.name || 'offer'} and search for a bus`} onClick={() => onSelectOffer?.(discount)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelectOffer?.(discount); } }}>
+          return <article className={`discount-offer-card ${palettes[index % palettes.length]} ${image ? 'has-image' : ''} ${isFlipped ? 'is-flipped' : ''}`} key={offerKey} role="button" tabIndex={0} aria-label={`Flip ${discount.name || 'discount offer'} card`} onClick={() => setFlippedOffer((current) => current === offerKey ? '' : offerKey)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); setFlippedOffer((current) => current === offerKey ? '' : offerKey); } }}>
             <div className="discount-offer-flipper">
               <div className="discount-offer-face discount-offer-front" style={imageStyle}>
                 <button type="button" className="discount-offer-flip-button" onClick={(event) => { event.stopPropagation(); setFlippedOffer(offerKey); }} aria-label="Flip card to see offer details"><ChevronRight size={18} /></button>

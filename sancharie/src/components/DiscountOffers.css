@@ -77,10 +77,7 @@
 
 .discount-offer-card:focus-visible { outline: 3px solid #17664e; outline-offset: 3px; }
 .discount-offer-flipper { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .62s cubic-bezier(.2,.72,.2,1); }
-.discount-offer-card:hover .discount-offer-flipper,
-.discount-offer-card:focus-within .discount-offer-flipper,
 .discount-offer-card.is-flipped .discount-offer-flipper { transform: rotateY(180deg); }
-.discount-offer-card:focus-within .discount-offer-flip-button { display: inline-flex; }
 .discount-offer-face { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; padding: 19px 22px 15px; border-radius: inherit; backface-visibility: hidden; background-position: center; background-size: cover; }
 .discount-offer-front { color: transparent; }
 .discount-offer-back { align-items: center; justify-content: center; transform: rotateY(180deg); background: linear-gradient(145deg, #07384c, #002c3f); color: #fff; }
@@ -198,6 +195,10 @@
 
 @media (hover: none) {
   .discount-offer-front .discount-offer-flip-button { display: inline-flex; }
+}
+
+@media (hover: hover) {
+  .discount-offer-card:hover .discount-offer-flipper { transform: rotateY(180deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
