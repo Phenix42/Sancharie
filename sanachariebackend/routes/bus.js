@@ -198,43 +198,116 @@ const updateBusBookingFromOperator = async ({ bookingId, data, paymentId, paymen
   if (!failure && booking.status === 'confirmed' && booking.ticketNo) dispatchBookingConfirmationSms(booking._id);
 };
 
-const rewardReferrerForFirstBooking = async (bookingId, bookingAmount) => {
-  if (!mongoose.isValidObjectId(bookingId)) return;
-  const booking = await Booking.findById(bookingId).select('userId serviceType paymentStatus').lean();
-  if (!booking || booking.serviceType !== 'bus' || booking.paymentStatus !== 'completed') return;
-
-  const settings = await ApplicationSettings.findOne({ key: 'global' }).select('referralRewardPercentage').lean();
-  const percentage = Math.max(0, Math.min(100, Number(settings?.referralRewardPercentage ?? 2)));
+const REFERRER_REWARD_PERCENTAGE = 2;
+const INVITEE_FIRST_BOOKING_REWARD_PERCENTAGE = 8;
+const REFERRER_REWARD_CAP = 1000;
+const calculateReferralRewards = (bookingAmount) => {
   const eligibleAmount = Math.max(0, Math.round((Number(bookingAmount) || 0) * 100) / 100);
-  const amount = Math.round((eligibleAmount * percentage + Number.EPSILON) * 100) / 100;
-  const referral = await Referral.findOneAndUpdate(
-    { referredUserId: booking.userId, status: 'joined', firstBookingId: null },
-    { $set: { firstBookingId: booking._id, bookingAmount: eligibleAmount, rewardPercentage: percentage, rewardAmount: amount, status: 'qualified', qualifiedAt: new Date() } },
-    { new: true }
-  ) || await Referral.findOne({ referredUserId: booking.userId, status: 'qualified' });
+  return {
+    eligibleAmount,
+    referrerAmount: Math.round((eligibleAmount * REFERRER_REWARD_PERCENTAGE / 100 + Number.EPSILON) * 100) / 100,
+    inviteeAmount: Math.round((eligibleAmount * INVITEE_FIRST_BOOKING_REWARD_PERCENTAGE / 100 + Number.EPSILON) * 100) / 100,
+  };
+};
+
+const ensureReferralRewardTotal = async (userId) => {
+  const historical = await Referral.aggregate([
+    { $match: { referrerUserId: new mongoose.Types.ObjectId(String(userId)), status: 'rewarded' } },
+    { $group: { _id: null, total: { $sum: '$rewardAmount' } } },
+  ]);
+  const historicalTotal = Math.min(REFERRER_REWARD_CAP, Math.max(0, Number(historical[0]?.total) || 0));
+  await User.updateOne({ _id: userId, referralRewardTotal: { $exists: false } },
+    { $set: { referralRewardTotal: historicalTotal } });
+  const referrer = await User.findById(userId).select('referralRewardTotal').lean();
+  return Math.min(REFERRER_REWARD_CAP, Math.max(0, Number(referrer?.referralRewardTotal) || 0));
+};
+
+const creditCappedReferralCommission = async ({ userId, referral, bookingId, bookingAmount, amount }) => {
+  const requestId = `referral-commission-${referral._id}-${bookingId}`;
+  await ensureReferralRewardTotal(userId);
+  const credit = { $min: [amount, { $max: [0, { $subtract: [REFERRER_REWARD_CAP, { $ifNull: ['$referralRewardTotal', 0] }] }] }] };
+  const account = await User.findOneAndUpdate({
+    _id: userId,
+    walletProcessedAdjustments: { $ne: requestId },
+    $or: [{ referralRewardTotal: { $lt: REFERRER_REWARD_CAP } }, { referralRewardTotal: { $exists: false } }],
+  }, [
+    { $set: { __referralCredit: credit } },
+    { $set: {
+      walletBalance: { $add: [{ $ifNull: ['$walletBalance', 0] }, '$__referralCredit'] },
+      referralRewardTotal: { $add: [{ $ifNull: ['$referralRewardTotal', 0] }, '$__referralCredit'] },
+      walletProcessedAdjustments: { $concatArrays: [{ $ifNull: ['$walletProcessedAdjustments', []] }, [{ $literal: requestId }]] },
+      walletTransactions: { $slice: [{ $concatArrays: [{ $ifNull: ['$walletTransactions', []] }, [{
+        type: { $literal: 'referral_commission' }, amount: '$__referralCredit', requestId: { $literal: requestId },
+        bookingId: { $literal: String(bookingId) }, bookingAmount, rewardPercentage: REFERRER_REWARD_PERCENTAGE,
+        description: { $literal: 'Referral commission · bus booking' }, createdAt: new Date(),
+      }]] }, -100] },
+    } },
+    { $unset: '__referralCredit' },
+  ], { new: true, projection: { _id: 1 } });
+  if (!account) {
+    const referrer = await User.findById(userId).select('walletProcessedAdjustments referralRewardTotal').lean();
+    if (!referrer || (referrer.walletProcessedAdjustments || []).includes(requestId) ||
+        Number(referrer.referralRewardTotal || 0) >= REFERRER_REWARD_CAP) return;
+    throw new Error('Referrer wallet could not be credited');
+  }
+};
+
+const creditInviteeFirstBookingBonus = async ({ userId, referral, bookingAmount }) => {
+  const amount = calculateReferralRewards(bookingAmount).inviteeAmount;
+  if (amount <= 0) return false;
+  const requestId = `referral-invitee-bonus-${referral._id}`;
+  const account = await User.findOneAndUpdate({ _id: userId, walletProcessedAdjustments: { $ne: requestId } }, {
+    $inc: { walletBalance: amount },
+    $addToSet: { walletProcessedAdjustments: requestId },
+    $push: { walletTransactions: { $each: [{ type: 'referral_bonus', amount, requestId,
+      bookingId: String(referral.firstBookingId), bookingAmount, rewardPercentage: INVITEE_FIRST_BOOKING_REWARD_PERCENTAGE,
+      description: 'One-time 8% first bus booking referral reward', createdAt: new Date() }], $slice: -100 } },
+  }, { new: true, projection: { _id: 1 } });
+  if (!account) {
+    const invitee = await User.findById(userId).select('walletProcessedAdjustments').lean();
+    if (!invitee || (invitee.walletProcessedAdjustments || []).includes(requestId)) return false;
+    throw new Error('Referred customer wallet could not be credited');
+  }
+  return true;
+};
+
+const rewardReferralForSuccessfulBooking = async (bookingId, bookingAmount) => {
+  if (!mongoose.isValidObjectId(bookingId)) return;
+  const booking = await Booking.findById(bookingId).select('userId serviceType status paymentStatus ticketNo').lean();
+  if (!booking || booking.serviceType !== 'bus' || !['confirmed', 'completed'].includes(booking.status) ||
+      booking.paymentStatus !== 'completed' || !booking.ticketNo) return;
+
+  const { eligibleAmount, referrerAmount: amount, inviteeAmount } = calculateReferralRewards(bookingAmount);
+  let referral = await Referral.findOneAndUpdate({ referredUserId: booking.userId, firstBookingId: null, status: 'joined' }, {
+    $set: { firstBookingId: booking._id, bookingAmount: eligibleAmount, rewardPercentage: REFERRER_REWARD_PERCENTAGE,
+      rewardAmount: amount, inviteeRewardPercentage: INVITEE_FIRST_BOOKING_REWARD_PERCENTAGE,
+      inviteeRewardAmount: inviteeAmount,
+      status: 'qualified', qualifiedAt: new Date() },
+  }, { new: true });
+  if (!referral) referral = await Referral.findOne({ referredUserId: booking.userId });
   if (!referral) return;
 
-  const rewardAmount = Number(referral.rewardAmount) || 0;
-  const requestId = `referral-commission-${referral._id}`;
-  if (rewardAmount > 0) {
-    const account = await User.findOneAndUpdate(
-      { _id: referral.referrerUserId, walletProcessedAdjustments: { $ne: requestId } },
-      {
-        $inc: { walletBalance: rewardAmount },
-        $addToSet: { walletProcessedAdjustments: requestId },
-        $push: { walletTransactions: { $each: [{ type: 'referral_commission', amount: rewardAmount, requestId, bookingId: String(referral.firstBookingId), bookingAmount: Number(referral.bookingAmount), rewardPercentage: Number(referral.rewardPercentage), description: 'Referral commission · first bus booking', createdAt: new Date() }], $slice: -100 } },
-      },
-      { new: true, projection: { walletBalance: 1 } }
-    );
-    if (!account) {
-      const referrer = await User.findById(referral.referrerUserId).select('walletProcessedAdjustments');
-      if (!referrer?.walletProcessedAdjustments?.includes(requestId)) throw new Error('Referrer wallet could not be credited');
-    }
+  if (amount > 0) await creditCappedReferralCommission({ userId: referral.referrerUserId, referral,
+    bookingId: booking._id, bookingAmount: eligibleAmount, amount });
+
+  if (String(referral.firstBookingId) === String(booking._id)) {
+    const credited = await creditInviteeFirstBookingBonus({ userId: booking.userId, referral, bookingAmount: eligibleAmount });
+    if (credited) await Referral.updateOne({ _id: referral._id }, { $set: { inviteeRewardedAt: new Date() } });
   }
   await Referral.updateOne(
-    { _id: referral._id, status: 'qualified' },
+    { _id: referral._id, status: { $in: ['joined', 'qualified'] } },
     { $set: { status: 'rewarded', rewardedAt: new Date() } }
   );
+};
+
+const retryReferralRewardForBooking = async (booking) => {
+  if (!booking?._id) return;
+  try {
+    const eligibleAmount = Math.max(0, toAmount(booking.totalFare) - toAmount(booking.promotionDiscount));
+    await rewardReferralForSuccessfulBooking(booking._id, eligibleAmount);
+  } catch (error) {
+    console.error('[ETS API] Referral reward retry failed:', error.message);
+  }
 };
 
 // ============================================
@@ -1192,8 +1265,9 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
           walletAmount: requestedWalletAmount, cardAmount: 0 };
         // Once the debit is tied to this booking and block, an invalid or
         // expired coupon must not strand wallet funds.
-        const booking = await Booking.findById(bookingId).select('providerReferenceHash status ticketNo pnr paymentId refundStatus paymentStatus failureReason');
+        const booking = await Booking.findById(bookingId).select('providerReferenceHash status ticketNo pnr paymentId refundStatus paymentStatus failureReason totalFare promotionDiscount');
         if (booking?.status === 'confirmed' && booking.ticketNo && booking.paymentId === String(paymentId)) {
+          await retryReferralRewardForBooking(booking);
           dispatchBookingConfirmationSms(booking._id);
           return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: booking.ticketNo,
             opPNR: booking.pnr, idempotent: true });
@@ -1235,8 +1309,9 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         const notes = orderDetails?.notes || {};
         const bookingId = String(notes.wallet_booking_id || '');
         if (!mongoose.isValidObjectId(bookingId)) throw new PaymentSecurityError('A valid Sancharie booking reference is required', 400);
-        const linkedBooking = await Booking.findById(bookingId).select('providerReferenceHash status paymentStatus ticketNo pnr paymentId refundStatus failureReason');
+        const linkedBooking = await Booking.findById(bookingId).select('providerReferenceHash status paymentStatus ticketNo pnr paymentId refundStatus failureReason totalFare promotionDiscount');
         if (linkedBooking?.status === 'confirmed' && linkedBooking.ticketNo && linkedBooking.paymentId === String(paymentId)) {
+          await retryReferralRewardForBooking(linkedBooking);
           dispatchBookingConfirmationSms(linkedBooking._id);
           return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: linkedBooking.ticketNo,
             opPNR: linkedBooking.pnr, idempotent: true });
@@ -1298,8 +1373,9 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         { new: true }
       );
       if (!claimed) {
-        const existing = await Booking.findById(settlement.bookingId).select('status providerStatus ticketNo pnr paymentId refundStatus failureReason paymentStatus');
+        const existing = await Booking.findById(settlement.bookingId).select('status providerStatus ticketNo pnr paymentId refundStatus failureReason paymentStatus totalFare promotionDiscount');
         if (existing?.status === 'confirmed' && existing.ticketNo) {
+          await retryReferralRewardForBooking(existing);
           dispatchBookingConfirmationSms(existing._id);
           return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: existing.ticketNo,
             opPNR: existing.pnr, idempotent: true });
@@ -1359,7 +1435,7 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
       }
       if (mongoose.isValidObjectId(promotionBookingId)) {
         try {
-          await rewardReferrerForFirstBooking(promotionBookingId, referralBookingAmount);
+          await rewardReferralForSuccessfulBooking(promotionBookingId, referralBookingAmount);
         } catch (error) {
           console.error('[ETS API] Referral commission could not be processed:', error.message);
         }
@@ -1457,8 +1533,9 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
         if (attemptedPaymentId.startsWith('WALLET-')) {
           const bookingId = String(req.query.walletBookingId || '');
           const amount = toAmount(req.query.walletAmount);
-          const booking = await Booking.findById(bookingId).select('userId providerReferenceHash status ticketNo pnr paymentId refundStatus paymentStatus failureReason');
+          const booking = await Booking.findById(bookingId).select('userId providerReferenceHash status ticketNo pnr paymentId refundStatus paymentStatus failureReason totalFare promotionDiscount');
           if (booking?.status === 'confirmed' && booking.ticketNo && booking.paymentId === attemptedPaymentId) {
+            await retryReferralRewardForBooking(booking);
             dispatchBookingConfirmationSms(booking._id);
             return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: booking.ticketNo,
               opPNR: booking.pnr, idempotent: true });
@@ -1482,9 +1559,10 @@ router.get('/ets/seatBooking', requireBookingAvailability, async (req, res) => {
           const notes = orderDetails?.notes || {};
           const bookingId = String(notes.wallet_booking_id || '');
           const booking = mongoose.isValidObjectId(bookingId)
-            ? await Booking.findById(bookingId).select('providerReferenceHash status paymentStatus ticketNo pnr paymentId refundStatus failureReason')
+            ? await Booking.findById(bookingId).select('providerReferenceHash status paymentStatus ticketNo pnr paymentId refundStatus failureReason totalFare promotionDiscount')
             : null;
           if (booking?.status === 'confirmed' && booking.ticketNo && booking.paymentId === attemptedPaymentId) {
+            await retryReferralRewardForBooking(booking);
             dispatchBookingConfirmationSms(booking._id);
             return res.json({ apiStatus: { success: true, message: 'SUCCESS' }, etstnumber: booking.ticketNo,
               opPNR: booking.pnr, idempotent: true });
@@ -1910,4 +1988,5 @@ module.exports = router;
 module.exports._test = {
   getSeatFareAmount,
   stampProviderSeatFares,
+  calculateReferralRewards,
 };

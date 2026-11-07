@@ -6,7 +6,7 @@ import { api, errorMessage } from '../api/client';
 export type Field = { key: string; label: string; type?: 'text' | 'password' | 'number' | 'date' | 'datetime-local' | 'textarea' | 'select' | 'checkbox' | 'csv' | 'image' | 'color'; options?: string[]; required?: boolean; min?: number; max?: number; defaultValue?: unknown; allowDefault?: boolean; };
 type ResourcePageProps = { title: string; description: string; endpoint: string; fields: Field[]; searchable?: boolean; };
 
-const blankFor = (fields: Field[]) => Object.fromEntries(fields.map((f) => [f.key, f.defaultValue ?? (f.type === 'checkbox' ? true : f.type === 'csv' ? '' : f.type === 'select' ? f.options?.[0] || '' : '')]));
+const blankFor = (fields: Field[]) => Object.fromEntries(fields.map((f) => [f.key, f.defaultValue ?? (f.type === 'checkbox' ? false : f.type === 'csv' ? '' : f.type === 'select' ? f.options?.[0] || '' : '')]));
 const localDateValue = (value: unknown, dateOnly: boolean) => {
   if (!value) return '';
   const date = new Date(String(value));
@@ -32,6 +32,8 @@ const toPayload = (data: Record<string, unknown>, fields: Field[]) => Object.fro
   if (f.type === 'csv') return [f.key, String(value || '').split(',').map((part) => part.trim()).filter(Boolean)];
   if (f.type === 'number') return [f.key, value === '' ? null : Number(value)];
   if (f.type === 'datetime-local' && value) return [f.key, new Date(String(value)).toISOString()];
+  if ((f.type === 'date' || f.type === 'datetime-local') && !value) return [f.key, undefined];
+  if (value === '') return [f.key, undefined];
   if (f.key === 'password' && !value) return [f.key, undefined];
   return [f.key, value];
 }));
@@ -80,7 +82,7 @@ export default function ResourcePage({ title, description, endpoint, fields, sea
     </div>
     <dialog className="editor-dialog" open={isOpen} onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
       <form className="dialog-card" onSubmit={(event) => { event.preventDefault(); setNotice(''); const startsAt = form.startDate ? new Date(String(form.startDate)).getTime() : null; const endsAt = form.endDate ? new Date(String(form.endDate)).getTime() : null; if (startsAt !== null && endsAt !== null && (Number.isNaN(startsAt) || Number.isNaN(endsAt) || endsAt < startsAt)) { setNotice('End date must be on or after the start date.'); return; } const discountValue = Number(form.percentage ?? form.value ?? form.discountValue); if ((form.percentage !== undefined || form.type === 'percentage' || form.discountType === 'percentage') && discountValue > 100) { setNotice('Percentage discount cannot exceed 100%.'); return; } save.mutate(); }}><div className="dialog-heading"><div><span className="eyebrow">{editing ? 'UPDATE RECORD' : 'NEW RECORD'}</span><h2>{editing ? 'Edit' : 'Create'} {title.replace(/s$/, '')}</h2></div><button type="button" className="icon-button" onClick={close}><X size={18} /></button></div>
-        <div className="form-grid">{fields.map((field) => <FormField key={field.key} field={field} values={form} required={field.required || (!editing && endpoint === 'admin-users' && field.key === 'password')} value={form[field.key]} onChange={(value) => setForm((prev) => ({ ...prev, [field.key]: value }))} onFileChange={field.type === 'image' ? (file) => setImageFiles((current) => { const next = { ...current }; if (file) next[field.key] = file; else delete next[field.key]; return next; }) : undefined} />)}</div>
+        <div className="form-grid">{fields.map((field) => <FormField key={field.key} field={field} values={form} required={endpoint === 'admin-users' && (field.required || (!editing && field.key === 'password'))} value={form[field.key]} onChange={(value) => setForm((prev) => ({ ...prev, [field.key]: value }))} onFileChange={field.type === 'image' ? (file) => setImageFiles((current) => { const next = { ...current }; if (file) next[field.key] = file; else delete next[field.key]; return next; }) : undefined} />)}</div>
         {endpoint === 'banners' && <div className="banner-preview-wrap"><button type="button" className="text-button" onClick={() => setPreviewOpen((open) => !open)}>{previewOpen ? 'Hide preview' : 'Preview banner'}</button>{previewOpen && <div className="banner-preview">{Boolean(form.image) && /^(https:\/\/|\/(?!\/))/.test(String(form.image)) && <img src={String(form.image)} alt=""/>}<div><span className="eyebrow">{String(form.kind || 'homepage')}</span><h3>{String(form.title || 'Banner title')}</h3><p>{String(form.description || 'Your banner description will appear here.')}</p>{Boolean(form.ctaText) && <b>{String(form.ctaText)} →</b>}</div></div>}</div>}
         {notice && notice !== '__new__' && <div className="inline-error">{notice}</div>}
         <div className="dialog-actions"><button type="button" className="button button-quiet" onClick={close}>Cancel</button><button type="submit" className="button button-primary" disabled={save.isPending}>{save.isPending ? 'Saving…' : 'Save changes'}</button></div>

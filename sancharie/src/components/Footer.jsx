@@ -53,7 +53,7 @@ function Footer({ className = '' }) {
           <div className="footer-section links-section">
             <h4 className="footer-title">Quick Links</h4>
             <nav className="footer-nav-vertical">
-              <a href="#about">About Us</a>
+              <Link to="/about-us">About Us</Link>
               <a href="#contact">Contact Us</a>
               <a href="#career">Careers</a>
               <a href="#offers">Offers & Discounts</a>
@@ -67,8 +67,8 @@ function Footer({ className = '' }) {
             <nav className="footer-nav-vertical">
               <Link to="/privacy-policy" onClick={scrollToTop}>Privacy Policy</Link>
               <Link to="/terms" onClick={scrollToTop}>Terms & Conditions</Link>
-              <Link to="/cancellation-policy" onClick={scrollToTop}>Cancellation & Refund Policy</Link>
-              <Link to="/faq" onClick={scrollToTop}>FAQs</Link>
+              <Link to="/terms#cancellation-policy">Cancellation & Refund Policy</Link>
+              <Link to="/privacy-policy#faq">FAQs</Link>
             </nav>
           </div>
 
@@ -81,14 +81,14 @@ function Footer({ className = '' }) {
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
               </a>
-              <a href="https://www.instagram.com/sancharie_bharat?igsh=d25jaWR2dnRzNDJ5" target="_blank" rel="noopener noreferrer" className="social-link" aria-label="Instagram">
+              <a href="https://www.instagram.com/travel_with_sancharie?xtok=MTh6aXVvc3NueHVpaQ==" target="_blank" rel="noopener noreferrer" className="social-link" aria-label="Instagram">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="currentColor" strokeWidth="2"/>
                   <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" stroke="currentColor" strokeWidth="2"/>
                 </svg>
               </a>
-              <a href="https://www.linkedin.com/in/sancharie-bharat-73b8b93a8/" target="_blank" rel="noopener noreferrer" className="social-link" aria-label="LinkedIn">
+              <a href="https://www.linkedin.com/company/sancharie/" target="_blank" rel="noopener noreferrer" className="social-link" aria-label="LinkedIn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
                   <rect x="2" y="9" width="4" height="12"/>
@@ -115,7 +115,7 @@ function Footer({ className = '' }) {
             <span>•</span>
             <Link to="/terms" onClick={scrollToTop}>Terms</Link>
             <span>•</span>
-            <Link to="/cancellation-policy" onClick={scrollToTop}>Refunds</Link>
+            <Link to="/terms#cancellation-policy">Refunds</Link>
           </p>
         </div>
       </div>

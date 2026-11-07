@@ -2,17 +2,27 @@ import React from 'react'
 import './Hero.css'
 import bgImage from '../assets/bgimage2.webp'
 import mobileBgImage from '../assets/mobilebg.webp'
-import { BadgeCheck, IndianRupee, TicketCheck } from 'lucide-react'
 import August15Hero from '../themes/August15Hero'
 import { THEME_FLAGS } from '../themes/themeConfig'
 
-function Hero({ runtimeTheme, runtimeSettings }) {
+function Hero({ runtimeTheme }) {
   const themeBanner = /^(https?:\/\/|\/(?!\/))/i.test(String(runtimeTheme?.bannerImage || ''))
     ? runtimeTheme.bannerImage
     : null
+  const fitUploadedBanner = (event) => {
+    if (!themeBanner) return
+    const { naturalWidth, naturalHeight } = event.currentTarget
+    if (naturalWidth > 0 && naturalHeight > 0) {
+      const hero = event.currentTarget.closest('.hero')
+      if (hero) {
+        hero.style.aspectRatio = `${naturalWidth} / ${naturalHeight}`
+        hero.classList.add('has-custom-banner')
+      }
+    }
+  }
 
   if (THEME_FLAGS.AUGUST_15) {
-    return <August15Hero bannerImage={themeBanner} />
+    return <August15Hero bannerImage={themeBanner} onBannerLoad={fitUploadedBanner} />
   }
 
   return (
@@ -26,27 +36,10 @@ function Hero({ runtimeTheme, runtimeSettings }) {
             className="hero-bg-image"
             fetchPriority="high"
             decoding="async"
+            onLoad={fitUploadedBanner}
           />
         </picture>
         <div className="hero-overlay"></div>
-      </div>
-      <div className="hero-content">
-        <div className="hero-kicker">
-          <span className="hero-kicker-dot" />
-          Bus journeys across India
-        </div>
-        <h1 className="hero-title" style={runtimeSettings?.heroTitleColor ? { color: runtimeSettings.heroTitleColor } : undefined}>
-          <span>{runtimeSettings?.heroTitleLine1 || 'Wherever you’re going,'}</span>
-          <span style={runtimeSettings?.heroAccentColor ? { color: runtimeSettings.heroAccentColor } : undefined}>{runtimeSettings?.heroTitleLine2 || 'go with confidence.'}</span>
-        </h1>
-        <p className="hero-subtitle" style={runtimeSettings?.heroSubtitleColor ? { color: runtimeSettings.heroSubtitleColor } : undefined}>
-          {runtimeSettings?.heroSubtitle || 'Compare buses, choose your seat, and book in minutes—with clear fares and support whenever you need it.'}
-        </p>
-        <div className="hero-proof-row" aria-label="Sancharie booking highlights">
-          <span><BadgeCheck size={17} /> Verified operators</span>
-          <span><IndianRupee size={17} /> Transparent fares</span>
-          <span><TicketCheck size={17} /> Instant e-tickets</span>
-        </div>
       </div>
     </section>
   )

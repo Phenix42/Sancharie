@@ -231,13 +231,9 @@ app.get('/api/config', async (req, res, next) => {
         registrationEnabled: settings?.registrationEnabled ?? true,
         couponsEnabled: settings?.couponsEnabled ?? true,
         discountsEnabled: settings?.discountsEnabled ?? true,
-        referralRewardPercentage: settings?.referralRewardPercentage ?? 2,
         festivalThemeEnabled: settings?.festivalThemeEnabled ?? true,
         contactEmail: settings?.contactEmail || '', contactPhone: settings?.contactPhone || '',
         supportInformation: settings?.supportInformation || '', announcement: settings?.announcement || '',
-        heroTitleLine1: settings?.heroTitleLine1 || '', heroTitleLine2: settings?.heroTitleLine2 || '',
-        heroSubtitle: settings?.heroSubtitle || '', heroTitleColor: settings?.heroTitleColor || '',
-        heroAccentColor: settings?.heroAccentColor || '', heroSubtitleColor: settings?.heroSubtitleColor || '',
       },
       theme: settings?.festivalThemeEnabled === false ? null : theme ? {
         name: theme.name, festival: theme.festival, primaryColor: theme.primaryColor,
@@ -347,7 +343,9 @@ app.get('/api/offer-images/:id', async (req, res, next) => {
 app.get('/api/admin-images/:resource/:id/:field', async (req, res, next) => {
   try {
     const { resource, field } = req.params;
-    const assetKey = resource === 'themes' && ['bannerImage', 'logoImage'].includes(field)
+    const assetKey = resource === 'discounts' && field === 'bannerImage'
+      ? `discount-${req.params.id}-bannerImage`
+      : resource === 'themes' && ['bannerImage', 'logoImage'].includes(field)
       ? `theme-${req.params.id}-${field}`
       : resource === 'banners' && field === 'image'
         ? `banner-${req.params.id}-image`

@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { Discount, Coupon, Offer, FestivalTheme, ApplicationSettings } = require('../models/AdminResources');
+const mongoose = require('mongoose');
+const { Discount, Coupon, Offer, FestivalTheme, Banner, ApplicationSettings, AppAsset } = require('../models/AdminResources');
 
 const dates = { startDate: '2026-10-15T00:00:00Z', endDate: '2026-10-25T00:00:00Z' };
 
@@ -11,12 +12,23 @@ test('discount schema rejects out-of-range percentage and inverted dates', () =>
   assert.ok(inverted.validateSync().errors.endDate);
 });
 
-test('coupon schema requires type/value and a code', () => {
+test('coupon schema can create an empty draft with an automatically generated code', () => {
   const coupon = new Coupon({ name: 'Incomplete', ...dates });
-  const errors = coupon.validateSync().errors;
-  assert.ok(errors.code);
-  assert.ok(errors.type);
-  assert.ok(errors.value);
+  assert.equal(coupon.validateSync(), undefined);
+  assert.match(coupon.code, /^SAN[A-F0-9]{10}$/);
+  assert.equal(coupon.type, 'percentage');
+});
+
+test('content records allow missing names, values, and schedules as drafts', () => {
+  const discount = new Discount({});
+  const offer = new Offer({});
+  const theme = new FestivalTheme({});
+  const banner = new Banner({});
+  for (const record of [discount, offer, theme, banner]) {
+    assert.equal(record.validateSync(), undefined);
+    assert.equal(record.startDate, undefined);
+    assert.equal(record.endDate, undefined);
+  }
 });
 
 test('percentage coupons and offers cannot exceed 100 percent', async () => {
@@ -36,9 +48,18 @@ test('festival theme colors can use the customer portal defaults', () => {
   assert.equal(theme.validateSync(), undefined);
 });
 
-test('homepage hero settings accept custom copy and valid text colors', () => {
-  const settings = new ApplicationSettings({ heroTitleLine1: 'Your journey starts here', heroTitleColor: '#123456', heroAccentColor: '#abcdef', heroSubtitleColor: '#002c3f' });
-  assert.equal(settings.validateSync(), undefined);
-  const invalid = new ApplicationSettings({ heroTitleColor: 'blue' });
-  assert.ok(invalid.validateSync().errors.heroTitleColor);
+test('homepage hero text and color overrides are not part of application settings', () => {
+  assert.throws(
+    () => new ApplicationSettings({ heroTitleLine1: 'Overridden title', heroTitleColor: '#123456' }),
+    /not in schema/,
+  );
+});
+
+test('discount banner uploads use a supported asset key', () => {
+  const asset = new AppAsset({
+    key: `discount-${new mongoose.Types.ObjectId()}-bannerImage`,
+    contentType: 'image/png',
+    image: Buffer.from('image'),
+  });
+  assert.equal(asset.validateSync()?.errors.key, undefined);
 });

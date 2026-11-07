@@ -10,7 +10,8 @@ import BookingSteps from "./components/BookingSteps";
 import BusResults from "./components/BusResults";
 import SearchResult from "./components/SearchResult";
 import Footer from "./components/Footer";
-import PrivacyPolicies from "./components/privacypolacies";
+import PrivacyPolicy from "./components/PrivacyPolicy";
+import TermsAndConditions from "./components/TermsAndConditions";
 import Details from "./components/Details";
 import Payment from "./components/payment";
 import MyBookings from "./components/MyBookings";
@@ -23,6 +24,7 @@ import MobileBottomNav from "./components/MobileBottomNav";
 import FlightBooking from "./components/FlightBooking";
 import FlightHome from "./components/FlightHome";
 import HotelHome from "./components/HotelHome";
+import AboutUs from "./components/AboutUs";
 import { THEME_FLAGS } from "./themes/themeConfig";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -48,7 +50,7 @@ function App() {
   useEffect(() => {
     let active = true;
     const referralCode = new URLSearchParams(window.location.search).get('ref');
-    if (/^(?:SAN[A-F0-9]{10}|SANCHARIE-[A-Z0-9]{1,30})$/i.test(referralCode || '')) localStorage.setItem('pendingReferralCode', referralCode.toUpperCase());
+    if (/^(?:[A-Z]{3}\d{3,}|SAN[A-F0-9]{10}|SANCHARIE-[A-Z0-9]{1,30})$/i.test(referralCode || '')) localStorage.setItem('pendingReferralCode', referralCode.toUpperCase());
     const loadConfig = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/config`);
@@ -138,7 +140,33 @@ function App() {
               onTravelModeChange={handleModeChange}
               onBackToHome={handleBackToHome}
             />
-            <PrivacyPolicies />
+            <PrivacyPolicy />
+            <Footer />
+            <MobileBottomNav onHomeClick={handleBackToHome} />
+          </>
+        } />
+        <Route path="/terms" element={
+          <>
+            <Header
+              runtimeTheme={runtimeBrandTheme}
+              travelMode={travelMode}
+              onTravelModeChange={handleModeChange}
+              onBackToHome={handleBackToHome}
+            />
+            <TermsAndConditions />
+            <Footer />
+            <MobileBottomNav onHomeClick={handleBackToHome} />
+          </>
+        } />
+        <Route path="/about-us" element={
+          <>
+            <Header
+              runtimeTheme={runtimeBrandTheme}
+              travelMode={travelMode}
+              onTravelModeChange={handleModeChange}
+              onBackToHome={handleBackToHome}
+            />
+            <AboutUs />
             <Footer />
             <MobileBottomNav onHomeClick={handleBackToHome} />
           </>
@@ -205,7 +233,7 @@ function App() {
               <HotelHome />
             ) : (
               <>
-                <Hero runtimeTheme={runtimeBrandTheme} runtimeSettings={runtimeConfig?.settings} />
+                <Hero runtimeTheme={runtimeBrandTheme} />
                 <SearchBus onSearch={handleSearch} mode="bus" />
                 <DiscountOffers discounts={runtimeConfig?.settings?.discountsEnabled === false ? [] : runtimeConfig?.discounts || []} onSelectOffer={handleSelectOffer} />
                 <OurService />

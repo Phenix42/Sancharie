@@ -62,30 +62,34 @@
 
 .discount-offer-card {
   position: relative;
-  display: flex;
   flex: 0 0 clamp(300px, 36vw, 500px);
   min-width: 0;
   aspect-ratio: 2.05 / 1;
-  flex-direction: column;
-  justify-content: space-between;
   overflow: hidden;
-  padding: 19px 22px 15px;
   border-radius: 22px;
   background-position: center;
   background-size: cover;
   box-shadow: 0 9px 25px rgba(24, 52, 66, .08);
   isolation: isolate;
   scroll-snap-align: start;
-  cursor: pointer;
+  perspective: 1000px;
 }
 
 .discount-offer-card:focus-visible { outline: 3px solid #17664e; outline-offset: 3px; }
+.discount-offer-flipper { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .62s cubic-bezier(.2,.72,.2,1); }
+.discount-offer-card:hover .discount-offer-flipper,
+.discount-offer-card:focus-within .discount-offer-flipper,
+.discount-offer-card.is-flipped .discount-offer-flipper { transform: rotateY(180deg); }
+.discount-offer-card:focus-within .discount-offer-flip-button { display: inline-flex; }
+.discount-offer-face { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; padding: 19px 22px 15px; border-radius: inherit; backface-visibility: hidden; background-position: center; background-size: cover; }
+.discount-offer-front { color: transparent; }
+.discount-offer-back { align-items: center; justify-content: center; transform: rotateY(180deg); background: linear-gradient(145deg, #07384c, #002c3f); color: #fff; }
 
-.discount-offer-card.sunrise { background-color: #ffedcd; background-image: radial-gradient(circle at 88% 15%, rgba(247, 176, 87, .38), transparent 29%), linear-gradient(115deg, #fff4dc, #ffe1ad); color: #462817; }
-.discount-offer-card.sky { background-image: radial-gradient(circle at 88% 18%, rgba(103, 169, 240, .25), transparent 32%), linear-gradient(115deg, #e5f3ff, #cfe7ff); color: #183863; }
-.discount-offer-card.rose { background-image: radial-gradient(circle at 88% 18%, rgba(251, 131, 123, .25), transparent 32%), linear-gradient(115deg, #fff0ed, #ffdcd8); color: #49252b; }
-.discount-offer-card.lavender { background-image: radial-gradient(circle at 88% 18%, rgba(148, 139, 235, .25), transparent 32%), linear-gradient(115deg, #efedff, #d9d8ff); color: #302956; }
-.discount-offer-card.has-image { color: #fff; }
+.discount-offer-card.sunrise .discount-offer-front { background-color: #ffedcd; background-image: radial-gradient(circle at 88% 15%, rgba(247, 176, 87, .38), transparent 29%), linear-gradient(115deg, #fff4dc, #ffe1ad); }
+.discount-offer-card.sky .discount-offer-front { background-image: radial-gradient(circle at 88% 18%, rgba(103, 169, 240, .25), transparent 32%), linear-gradient(115deg, #e5f3ff, #cfe7ff); }
+.discount-offer-card.rose .discount-offer-front { background-image: radial-gradient(circle at 88% 18%, rgba(251, 131, 123, .25), transparent 32%), linear-gradient(115deg, #fff0ed, #ffdcd8); }
+.discount-offer-card.lavender .discount-offer-front { background-image: radial-gradient(circle at 88% 18%, rgba(148, 139, 235, .25), transparent 32%), linear-gradient(115deg, #efedff, #d9d8ff); }
+.discount-offer-card.has-image .discount-offer-front { background-color: #20343c; color: #fff; }
 
 .discount-offer-ribbon {
   z-index: 1;
@@ -94,19 +98,33 @@
   overflow: hidden;
   padding: 6px 12px;
   border-radius: 0 5px 5px 0;
-  background: rgba(255, 255, 255, .76);
-  color: #263947;
+  background: transparent;
+  color: inherit;
   font-size: 13px;
   font-weight: 800;
+  text-shadow: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .discount-offer-copy { z-index: 1; max-width: 78%; }
-.discount-offer-kicker { margin: 0 0 3px; font-size: 12px; font-weight: 700; opacity: .82; }
+.discount-offer-kicker { margin: 0 0 3px; font-size: 12px; font-weight: 700; }
 .discount-offer-copy h3 { margin: 0; color: currentColor; font-size: clamp(24px, 3vw, 38px); font-weight: 850; letter-spacing: -.045em; line-height: 1.04; }
 .discount-offer-copy h3 span { color: #d62f43; font-size: 1.17em; }
 .discount-offer-description { display: -webkit-box; max-width: 34ch; overflow: hidden; margin: 5px 0 8px; font-size: 14px; font-weight: 600; line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+
+.discount-offer-flip-button { z-index: 2; display: none; align-items: center; gap: 4px; align-self: flex-start; margin-top: 7px; padding: 6px 0; border: 0; background: transparent; color: inherit; font: inherit; font-size: 11px; font-weight: 800; text-shadow: 0 2px 8px rgba(0, 0, 0, .5); cursor: pointer; }
+.discount-offer-front .discount-offer-flip-button { position: absolute; right: 12px; bottom: 12px; display: none; width: 38px; height: 38px; align-items: center; justify-content: center; margin: 0; padding: 0; border: 1px solid rgba(255,255,255,.72); border-radius: 50%; background: rgba(0, 30, 42, .62); color: #fff; }
+.discount-offer-back-button { position: absolute; bottom: 12px; left: 18px; }
+.discount-offer-back .discount-offer-ribbon { position: absolute; top: 14px; left: 18px; }
+.discount-offer-back-content { z-index: 1; display: flex; max-width: 90%; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.discount-offer-back-content .discount-offer-kicker { margin: 0; }
+.discount-offer-back-content h3 { margin: 0; color: currentColor; font-size: clamp(24px, 3vw, 36px); font-weight: 850; letter-spacing: -.045em; line-height: 1.04; }
+.discount-offer-back-content h3 span { color: #ff5264; font-size: 1.17em; }
+.discount-offer-back-content .discount-offer-description { margin: 0 0 3px; }
+.discount-offer-back-label { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.discount-offer-back-content > small { font-size: 11px; }
+.discount-offer-back-content > strong { font-size: 16px; }
 
 .discount-offer-code {
   display: inline-flex;
@@ -115,16 +133,18 @@
   padding: 5px 10px;
   border: 1px dashed currentColor;
   border-radius: 8px;
-  background: rgba(255, 255, 255, .72);
-  color: currentColor;
+  background: rgba(255, 255, 255, .96);
+  color: #17313b;
   font: inherit;
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: .06em;
   cursor: copy;
 }
 
-.discount-offer-code small { font-size: 9px; font-weight: 800; letter-spacing: .08em; }
-.discount-offer-code strong { font-size: 13px; letter-spacing: .06em; }
+.discount-offer-code strong { font-size: 16px; letter-spacing: .06em; }
 .discount-offer-auto { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
-.discount-offer-terms { z-index: 1; display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 10px; font-weight: 650; opacity: .8; }
+.discount-offer-terms { z-index: 1; display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 10px; font-weight: 650; }
 .discount-offer-decoration { position: absolute; right: 23px; bottom: 34px; display: grid; width: 132px; height: 132px; place-items: center; border: 1px solid rgba(255,255,255,.58); border-radius: 50%; background: rgba(255,255,255,.26); color: currentColor; opacity: .22; transform: rotate(-13deg); }
 .discount-offer-decoration::before { position: absolute; width: 100px; height: 100px; border: 1px dashed currentColor; border-radius: 50%; content: ''; }
 
@@ -161,7 +181,8 @@
   .discount-offers-heading h2 { max-width: 230px; font-size: 21px; }
   .discount-view-all { gap: 1px; font-size: 13px; }
   .discount-offers-rail { gap: 12px; margin-right: -15px; padding-right: 15px; }
-  .discount-offer-card { flex-basis: 86%; min-height: 200px; padding: 15px 16px 13px; border-radius: 17px; }
+  .discount-offer-card { flex-basis: 86%; min-height: 200px; border-radius: 17px; }
+  .discount-offer-face { padding: 15px 16px 13px; }
   .discount-offer-ribbon { font-size: 11px; }
   .discount-offer-copy { max-width: 85%; }
   .discount-offer-kicker { font-size: 10px; }
@@ -175,7 +196,12 @@
   .discount-offers-grid { margin-right: 0; }
 }
 
+@media (hover: none) {
+  .discount-offer-front .discount-offer-flip-button { display: inline-flex; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .discount-offers-rail { scroll-behavior: auto; }
   .discount-offers-dots button { transition: none; }
+  .discount-offer-flipper { transition: none; }
 }

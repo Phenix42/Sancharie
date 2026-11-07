@@ -15,6 +15,7 @@ export default function DiscountOffers({ discounts = [], onSelectOffer }) {
   const [showAll, setShowAll] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [copiedCode, setCopiedCode] = useState('');
+  const [flippedOffer, setFlippedOffer] = useState('');
   if (!discounts.length) return null;
 
   const scrollToCard = (index) => {
@@ -62,21 +63,36 @@ export default function DiscountOffers({ discounts = [], onSelectOffer }) {
       <div className={`discount-offers-rail ${showAll ? 'discount-offers-grid' : ''}`} ref={railRef} onScroll={onScroll}>
         {discounts.map((discount, index) => {
           const image = safeImage(discount.bannerImage);
-          const style = image ? { backgroundImage: `linear-gradient(90deg, rgba(7, 34, 47, .82), rgba(7, 34, 47, .14)), url("${image.replace(/["\\]/g, '')}")` } : undefined;
-          return <article className={`discount-offer-card ${palettes[index % palettes.length]} ${image ? 'has-image' : ''}`} style={style} key={discount._id || `${discount.name}-${index}`} role="button" tabIndex={0} aria-label={`Select ${discount.name || 'offer'} and search for a bus`} onClick={() => onSelectOffer?.(discount)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelectOffer?.(discount); } }}>
-            <span className="discount-offer-ribbon">{discount.name || 'Limited time offer'}</span>
-            <div className="discount-offer-copy">
-              <p className="discount-offer-kicker">Bus booking offer</p>
-              <h3><span>{discount.percentage}%</span> OFF</h3>
-              <p className="discount-offer-description">{discount.description || 'Save on your next bus journey'}</p>
-              {discount.code ? <button type="button" className="discount-offer-code" onClick={(event) => copyOfferCode(event, discount.code)} aria-label={`Copy promo code ${discount.code}`}><small>{copiedCode === discount.code ? 'COPIED' : 'USE CODE'}</small><strong>{discount.code}</strong>{copiedCode === discount.code ? <Check size={14} /> : <Copy size={13} />}</button> : <div className="discount-offer-auto"><TicketPercent size={17} /> Applied on eligible bookings</div>}
+          const imageStyle = image ? { backgroundImage: `url("${image.replace(/["\\]/g, '')}")` } : undefined;
+          const offerKey = String(discount._id || `${discount.name}-${index}`);
+          const isFlipped = flippedOffer === offerKey;
+          return <article className={`discount-offer-card ${palettes[index % palettes.length]} ${image ? 'has-image' : ''} ${isFlipped ? 'is-flipped' : ''}`} key={offerKey} role="button" tabIndex={0} aria-label={`Select ${discount.name || 'offer'} and search for a bus`} onClick={() => onSelectOffer?.(discount)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelectOffer?.(discount); } }}>
+            <div className="discount-offer-flipper">
+              <div className="discount-offer-face discount-offer-front" style={imageStyle}>
+                <button type="button" className="discount-offer-flip-button" onClick={(event) => { event.stopPropagation(); setFlippedOffer(offerKey); }} aria-label="Flip card to see offer details"><ChevronRight size={18} /></button>
+              </div>
+              <div className="discount-offer-face discount-offer-back">
+                <span className="discount-offer-ribbon">{discount.name || 'Limited time offer'}</span>
+                <div className="discount-offer-back-content">
+                  <p className="discount-offer-kicker">Bus booking offer</p>
+                  <h3><span>{discount.percentage}%</span> OFF</h3>
+                  <p className="discount-offer-description">{discount.description || 'Save on your next bus journey'}</p>
+                  {discount.code ? <>
+                    <span className="discount-offer-back-label">Your offer code</span>
+                    <button type="button" className="discount-offer-code" onClick={(event) => copyOfferCode(event, discount.code)} aria-label={`Copy promo code ${discount.code}`}>
+                      <strong>{discount.code}</strong>{copiedCode === discount.code ? <Check size={17} /> : <Copy size={16} />}
+                    </button>
+                    <small>{copiedCode === discount.code ? 'Code copied' : 'Tap to copy and apply at checkout'}</small>
+                  </> : <><TicketPercent size={24} /><strong>Applied automatically</strong></>}
+                </div>
+                <div className="discount-offer-terms">
+                  {Number(discount.maximumDiscount) > 0 && <span>Up to ₹{Number(discount.maximumDiscount).toLocaleString('en-IN')} off</span>}
+                  {Number(discount.minimumBooking) > 0 && <span>Min. booking ₹{Number(discount.minimumBooking).toLocaleString('en-IN')}</span>}
+                  <span>Terms apply</span>
+                </div>
+                <button type="button" className="discount-offer-flip-button discount-offer-back-button" onClick={(event) => { event.stopPropagation(); setFlippedOffer(''); event.currentTarget.blur(); }} aria-label="Return to offer details"><ChevronLeft size={14} /> Offer details</button>
+              </div>
             </div>
-            <div className="discount-offer-terms">
-              {Number(discount.maximumDiscount) > 0 && <span>Up to ₹{Number(discount.maximumDiscount).toLocaleString('en-IN')} off</span>}
-              {Number(discount.minimumBooking) > 0 && <span>Min. booking ₹{Number(discount.minimumBooking).toLocaleString('en-IN')}</span>}
-              <span>Terms apply</span>
-            </div>
-            {!image && <span className="discount-offer-decoration" aria-hidden="true"><TicketPercent size={94} strokeWidth={1.2} /></span>}
           </article>;
         })}
       </div>

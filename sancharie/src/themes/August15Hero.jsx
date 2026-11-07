@@ -1,4 +1,3 @@
-import { BadgeCheck, BusFront, Heart, ShieldCheck, Sparkles } from 'lucide-react';
 import bgImage from '../assets/bgimage2.webp';
 import mobileBgImage from '../assets/mobilebg.webp';
 
@@ -48,7 +47,7 @@ function IndianFlag({ className = '' }) {
   );
 }
 
-function August15Hero({ bannerImage }) {
+function August15Hero({ bannerImage, onBannerLoad }) {
   return (
     <section className="hero august15-hero">
       <div className="hero-background">
@@ -60,6 +59,7 @@ function August15Hero({ bannerImage }) {
             className="hero-bg-image"
             fetchPriority="high"
             decoding="async"
+            onLoad={onBannerLoad}
           />
         </picture>
         <div className="hero-overlay" />
@@ -89,66 +89,10 @@ function August15Hero({ bannerImage }) {
         ))}
       </div>
 
-      <div className="august15-poster-stage" aria-hidden="true">
-        <div className="august15-script-word">भारत</div>
-
-        <div className="august15-chakra august15-chakra-large">
-          {Array.from({ length: 24 }, (_, index) => (
-            <i key={index} style={{ '--spoke': index }} />
-          ))}
-        </div>
-
-        <div className="august15-orbit orbit-one" />
-        <div className="august15-orbit orbit-two" />
-
-        <div className="august15-date-card">
-          <div className="august15-date-card-shine" />
-          <span className="august15-date-label"><Sparkles size={12} /> India celebrates</span>
-          <div className="august15-date-main">
-            <strong>15</strong>
-            <div>
-              <b>August</b>
-              <span>Freedom in<br />every mile</span>
-            </div>
-          </div>
-          <div className="august15-date-footer">
-            <span>1947</span><i /><span>Forever</span>
-          </div>
-        </div>
-
-        <div className="august15-floating-flags">
-          {['one', 'two', 'three'].map((flag) => (
-            <IndianFlag className={`august15-floating-flag flag-${flag}`} key={flag} />
-          ))}
-        </div>
-      </div>
-
-      <div className="hero-content">
-        <div className="hero-kicker august15-kicker">
-          <IndianFlag className="india-flag-dot" />
-          स्वतंत्रता · Celebrating India
-        </div>
-
-        <h1 className="hero-title august15-title">
-          <span>One nation.</span>
-          <span>A million journeys.</span>
-        </h1>
-
-        <p className="hero-subtitle">
-          This Independence Day, celebrate the freedom to go farther—across every city, every story, and every corner of India.
-        </p>
-
-        <div className="hero-proof-row august15-proof-row" aria-label="Independence Day booking highlights">
-          <span><BusFront size={17} /> Connecting India</span>
-          <span><ShieldCheck size={17} /> Secure journeys</span>
-          <span><BadgeCheck size={17} /> Trusted operators</span>
-        </div>
-
-        <div className="august15-message">
-          <span className="august15-mini-chakra" aria-hidden="true" />
-          <span>Happy Independence Day</span>
-          <Heart size={13} fill="currentColor" aria-hidden="true" />
-        </div>
+      <div className="august15-floating-flags" aria-hidden="true">
+        {['one', 'two', 'three'].map((flag) => (
+          <IndianFlag className={`august15-floating-flag flag-${flag}`} key={flag} />
+        ))}
       </div>
 
       <div className="august15-wave-stack" aria-hidden="true">

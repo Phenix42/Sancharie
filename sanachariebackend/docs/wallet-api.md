@@ -8,7 +8,7 @@ Customer endpoints below are mounted at `/user` and require the signed-in custom
 
 Returns the customer's current balance, personal minimum booking threshold, up to 50 newest wallet transactions, and the active bonus rule (if one exists).
 
-Referral commissions are credited to the referrer's wallet only after the referred customer completes their first successful bus booking. The commission percentage is managed in Admin → Application settings. Signup by itself does not create a referral wallet transaction.
+Referral earnings are credited after each successful bus booking by the referred customer: the referrer gets 2% of the eligible fare, up to ₹1,000 total referral earnings. The referred customer also gets an 8% wallet reward once, after their first successful bus booking. Signup by itself does not create a referral wallet transaction.
 
 ```json
 {

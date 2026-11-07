@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const common = { timestamps: true, strict: 'throw', minimize: false };
 const routeTargets = { type: [String], default: [] };
@@ -8,17 +9,17 @@ const normalizeHexColor = (value) => {
   return /^#?[0-9a-fA-F]{6}$/.test(color) ? `#${color.replace(/^#/, '')}` : color;
 };
 const datePair = {
-  startDate: { type: Date, required: true, index: true },
-  endDate: { type: Date, required: true, index: true, validate: { validator(value) { return !this.startDate || value >= this.startDate; }, message: 'End date must be on or after the start date' } },
+  startDate: { type: Date, index: true },
+  endDate: { type: Date, index: true, validate: { validator(value) { return !this.startDate || !value || value >= this.startDate; }, message: 'End date must be on or after the start date' } },
   enabled: { type: Boolean, default: true, index: true },
 };
 
 const discountSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true, maxlength: 120 },
+  name: { type: String, default: '', trim: true, maxlength: 120 },
   description: { type: String, default: '', maxlength: 1000 },
   code: { type: String, default: '', trim: true, uppercase: true, maxlength: 40 },
   bannerImage: { type: String, default: '', maxlength: 2000, match: /^(|https:\/\/|\/(?!\/))/ },
-  percentage: { type: Number, required: true, min: 0.01, max: 100 },
+  percentage: { type: Number, default: null, min: 0.01, max: 100 },
   maximumDiscount: { type: Number, min: 0, default: null },
   minimumBooking: { type: Number, min: 0, default: 0 },
   usageLimit: { type: Number, min: 0, default: null },
@@ -29,14 +30,14 @@ const discountSchema = new mongoose.Schema({
 }, common);
 
 const couponSchema = new mongoose.Schema({
-  code: { type: String, required: true, trim: true, uppercase: true, unique: true, maxlength: 40 },
+  code: { type: String, default: () => `SAN${crypto.randomBytes(5).toString('hex').toUpperCase()}`, trim: true, uppercase: true, unique: true, maxlength: 40 },
   ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: undefined, index: true },
   sourceBookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: undefined, index: true },
   returnFrom: { type: String, default: '', trim: true, maxlength: 120 },
   returnTo: { type: String, default: '', trim: true, maxlength: 120 },
-  name: { type: String, required: true, trim: true, maxlength: 120 },
-  type: { type: String, enum: ['percentage', 'fixed'], required: true },
-  value: { type: Number, required: true, min: 0.01, validate: { validator(value) { return this.type !== 'percentage' || value <= 100; }, message: 'Percentage coupon cannot exceed 100' } },
+  name: { type: String, default: '', trim: true, maxlength: 120 },
+  type: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+  value: { type: Number, default: null, min: 0.01, validate: { validator(value) { return value == null || this.type !== 'percentage' || value <= 100; }, message: 'Percentage coupon cannot exceed 100' } },
   maximumDiscount: { type: Number, min: 0, default: null },
   minimumBooking: { type: Number, min: 0, default: 0 },
   usageLimit: { type: Number, min: 0, default: null },
@@ -48,11 +49,11 @@ const couponSchema = new mongoose.Schema({
 couponSchema.index({ sourceBookingId: 1 }, { unique: true, partialFilterExpression: { sourceBookingId: { $type: 'objectId' } } });
 
 const offerSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true, maxlength: 120 },
+  name: { type: String, default: '', trim: true, maxlength: 120 },
   description: { type: String, default: '', maxlength: 1000 },
   type: { type: String, enum: ['first_booking', 'weekend', 'new_user', 'festival', 'route', 'referral', 'payment_method', 'custom'], default: 'custom', set: (value) => typeof value === 'string' && value.trim() ? value.trim() : 'custom' },
-  discountType: { type: String, enum: ['percentage', 'fixed'], required: true },
-  discountValue: { type: Number, required: true, min: 0.01, validate: { validator(value) { return this.discountType !== 'percentage' || value <= 100; }, message: 'Percentage offer cannot exceed 100' } },
+  discountType: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+  discountValue: { type: Number, default: null, min: 0.01, validate: { validator(value) { return value == null || this.discountType !== 'percentage' || value <= 100; }, message: 'Percentage offer cannot exceed 100' } },
   maximumDiscount: { type: Number, min: 0, default: null },
   minimumBooking: { type: Number, min: 0, default: 0 },
   eligibility: { type: mongoose.Schema.Types.Mixed, default: {} },
@@ -67,7 +68,7 @@ const offerSchema = new mongoose.Schema({
 }, common);
 
 const themeSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true, maxlength: 120 },
+  name: { type: String, default: '', trim: true, maxlength: 120 },
   festival: { type: String, default: 'custom', maxlength: 80 },
   primaryColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
   secondaryColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
@@ -82,7 +83,7 @@ const themeSchema = new mongoose.Schema({
 }, common);
 
 const bannerSchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true, maxlength: 160 },
+  title: { type: String, default: '', trim: true, maxlength: 160 },
   description: { type: String, default: '', maxlength: 1000 },
   image: { type: String, default: '', maxlength: 2000, match: /^(|https:\/\/|\/(?!\/))/ },
   ctaText: { type: String, default: '', maxlength: 100 },
@@ -100,21 +101,14 @@ const settingsSchema = new mongoose.Schema({
   couponsEnabled: { type: Boolean, default: true },
   discountsEnabled: { type: Boolean, default: true },
   festivalThemeEnabled: { type: Boolean, default: true },
-  referralRewardPercentage: { type: Number, min: 0, max: 100, default: 2 },
   contactEmail: { type: String, default: '', maxlength: 254 },
   contactPhone: { type: String, default: '', maxlength: 30 },
   supportInformation: { type: String, default: '', maxlength: 2000 },
   announcement: { type: String, default: '', maxlength: 1000 },
-  heroTitleLine1: { type: String, default: '', maxlength: 120 },
-  heroTitleLine2: { type: String, default: '', maxlength: 120 },
-  heroSubtitle: { type: String, default: '', maxlength: 500 },
-  heroTitleColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
-  heroAccentColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
-  heroSubtitleColor: { type: String, default: '', set: (value) => value === '' ? '' : normalizeHexColor(value), match: /^(|#[0-9a-fA-F]{6})$/ },
 }, common);
 
 const appAssetSchema = new mongoose.Schema({
-  key: { type: String, required: true, unique: true, match: /^(app-icon|offer-[a-f\d]{24}|theme-[a-f\d]{24}-(bannerImage|logoImage)|banner-[a-f\d]{24}-image)$/i },
+  key: { type: String, required: true, unique: true, match: /^(app-icon|offer-[a-f\d]{24}|discount-[a-f\d]{24}-bannerImage|theme-[a-f\d]{24}-(bannerImage|logoImage)|banner-[a-f\d]{24}-image)$/i },
   contentType: { type: String, required: true, enum: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/x-ms-bmp'] },
   image: { type: Buffer, required: true },
 }, { timestamps: true });

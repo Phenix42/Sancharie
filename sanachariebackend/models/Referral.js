@@ -9,6 +9,9 @@ const referralSchema = new mongoose.Schema({
   bookingAmount: { type: Number, default: 0, min: 0 },
   rewardPercentage: { type: Number, default: 0, min: 0, max: 100 },
   rewardAmount: { type: Number, default: 0, min: 0 },
+  inviteeRewardPercentage: { type: Number, default: 0, min: 0, max: 100 },
+  inviteeRewardAmount: { type: Number, default: 0, min: 0 },
+  inviteeRewardedAt: { type: Date, default: null },
   qualifiedAt: { type: Date, default: null },
   rewardedAt: { type: Date, default: null },
 }, { timestamps: true, strict: 'throw' });

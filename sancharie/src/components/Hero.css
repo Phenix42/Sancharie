@@ -8,6 +8,10 @@
   background: var(--hero-primary);
 }
 
+.hero.has-custom-banner {
+  min-height: 0;
+}
+
 .hero-background,
 .hero-background picture {
   position: absolute;
@@ -16,11 +20,11 @@
 }
 
 .hero-bg-image {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 47%;
-  transform: scale(1.015);
+  object-position: center;
 }
 
 .hero-overlay {
@@ -143,7 +147,7 @@
   }
 
   .hero-bg-image {
-    object-position: center 32%;
+    object-position: center;
     transform: none;
   }
 

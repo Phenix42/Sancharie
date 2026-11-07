@@ -30,7 +30,7 @@ Booking status and refund-status changes send transactional notifications. Promo
 
 ## Referral tracking
 
-Customers with a profile name receive a `SANCHARIE-NAME` referral code (the name is normalized to uppercase letters and digits). A new account created through a `/?ref=SANCHARIE-NAME` invite link is attributed to its referrer. Signup itself does not issue wallet credit. After the referred customer completes their first successful bus booking, the referrer receives wallet credit calculated from the booking amount using the admin-configured referral reward percentage. Set the percentage under Admin → Application settings; it defaults to 2% and accepts 0–100%. Existing random `SAN…` referral codes remain accepted for older invite links.
+Customers with a profile name receive an invite code made from the first three letters of their name and the last three digits of their phone number (for example, `ALI567`). If that code is already taken, a numeric disambiguator is inserted before the phone digits. A new account created through a `/?ref=ALI567` invite link is attributed to its referrer. On every successful bus booking by the referred customer, the referrer earns 2% of the eligible booking amount as wallet credit, up to a lifetime cap of ₹1,000 in referral earnings. The referred customer receives 8% of their first successful bus booking as a one-time wallet credit. Signup itself does not issue wallet credit. Existing referral code formats remain accepted for older invite links.
 
 
 ## Wallets

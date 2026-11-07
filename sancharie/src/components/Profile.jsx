@@ -124,9 +124,24 @@ export default function Profile() {
   const shareReferralLink = async () => {
     if (!referral?.code) return;
     const shareUrl = `${window.location.origin}/?ref=${encodeURIComponent(referral.code)}`;
+    const shareMessage = [
+      'Join Sancharie using my referral link and enjoy 8% wallet credit on your first successful bus booking!',
+      '',
+      '🎁 Here\'s how we both benefit:',
+      '',
+      '- You get 8% wallet credit on your first successful bus booking.',
+      '- I earn 2% rewards on your successful bookings.',
+      '',
+      'It\'s a win-win! More travel, more savings, more rewards. ✨',
+      '',
+      '🔗 Join Sancharie now:',
+      shareUrl,
+      '',
+      'Sancharie – Travel Made Simple',
+    ].join('\n');
     try {
-      if (navigator.share) await navigator.share({ title: 'Travel with Sancharie', text: 'Join Sancharie with my invite. I earn a wallet reward after your first successful bus booking.', url: shareUrl });
-      else { await navigator.clipboard.writeText(shareUrl); setReferralMessage('Your invite link is copied.'); }
+      if (navigator.share) await navigator.share({ title: 'Travel with Sancharie', text: shareMessage });
+      else { await navigator.clipboard.writeText(shareMessage); setReferralMessage('Your invite message is copied.'); }
     } catch (shareError) {
       if (shareError.name !== 'AbortError') setReferralMessage('Could not share the invite link. Please try again.');
     }
@@ -472,8 +487,8 @@ export default function Profile() {
                 <small>Share your personal code with a friend.</small>
               </div>
               <div className="referral-reward-block">
-                <span className="referral-reward-badge">{Number(referral?.rewardPercentage ?? 2)}% commission</span>
-                <p>When your friend books their first successful bus ticket with Sancharie, you earn this percentage of the booking amount as wallet credit.</p>
+                <span className="referral-reward-badge">2% every booking · up to ₹1,000</span>
+                <p>You earn 2% wallet credit every time a referred friend makes a successful bus booking. Your friend gets a one-time 8% wallet reward on their first successful bus booking.</p>
                 <small>{referral?.invited ?? 0} {referral?.invited === 1 ? 'friend' : 'friends'} joined</small>
               </div>
             </div>

@@ -24,9 +24,7 @@
 
 .august15-hero .hero-bg-image {
   filter: saturate(0.92) contrast(1.06);
-  object-position: center 45%;
-  transform: scale(1.015);
-  will-change: transform;
+  object-position: center;
 }
 
 .august15-hero .hero-overlay {
@@ -608,7 +606,7 @@
   }
 
   .august15-hero .hero-bg-image {
-    object-position: center 32%;
+    object-position: center;
   }
 
   .august15-hero .hero-overlay {
@@ -791,7 +789,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .theme-august-15 .august15-hero .hero-bg-image {
-    animation: august15-image-breathe 18s ease-in-out infinite alternate;
+    animation: none;
   }
 
   .theme-august-15 .august15-ribbon::after {

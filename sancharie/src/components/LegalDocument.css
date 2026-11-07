@@ -1,0 +1,24 @@
+.legal-page { padding: 48px 20px 72px; background: #f7f9fa; color: #263b45; }
+.legal-page-shell { width: min(940px, 100%); margin: 0 auto; padding: clamp(24px, 5vw, 56px); border: 1px solid #e6ecee; border-radius: 20px; background: #fff; box-shadow: 0 16px 48px rgba(0,44,63,.07); }
+.legal-page-header { padding-bottom: 25px; border-bottom: 1px solid #e7edef; }
+.legal-kicker { color: #9c7635; font-size: 10px; font-weight: 850; letter-spacing: .15em; text-transform: uppercase; }
+.legal-page-header h1 { margin: 10px 0; color: #123647; font-size: clamp(30px, 5vw, 45px); letter-spacing: -.04em; line-height: 1.1; }
+.legal-page-header > p { margin: 0; color: #73848c; font-size: 12px; }
+.legal-draft-notice { margin: 22px 0 30px; padding: 14px 16px; border: 1px solid #ead8a8; border-left: 4px solid #b28d3f; border-radius: 9px; background: #fffbef; color: #675323; font-size: 12px; line-height: 1.65; }
+.legal-section { margin: 0 0 30px; scroll-margin-top: 24px; }
+.legal-section h2 { margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid #e8edef; color: #123647; font-size: clamp(18px, 2.5vw, 22px); letter-spacing: -.02em; line-height: 1.35; }
+.legal-section h3 { margin: 18px 0 8px; color: #244b5b; font-size: 15px; }
+.legal-section p { margin: 0 0 12px; color: #526771; font-size: 13px; line-height: 1.8; }
+.legal-section ul { margin: 10px 0 15px; padding-left: 22px; color: #526771; font-size: 13px; line-height: 1.75; }
+.legal-section li { margin: 4px 0; padding-left: 3px; }
+.legal-section li::marker { color: #b28d3f; }
+.legal-subsection { margin: 16px 0; }
+.legal-table-wrap { overflow-x: auto; margin: 14px 0; }
+.legal-table-wrap table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.legal-table-wrap th, .legal-table-wrap td { padding: 11px 12px; border: 1px solid #e1e8ea; text-align: left; vertical-align: top; }
+.legal-table-wrap th { background: #f1f6f7; color: #123647; }
+@media (max-width: 600px) {
+  .legal-page { padding: 20px 12px 45px; }
+  .legal-page-shell { padding: 23px 18px; border-radius: 14px; }
+  .legal-section { margin-bottom: 25px; }
+}

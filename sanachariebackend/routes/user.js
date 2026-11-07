@@ -28,15 +28,14 @@ const SERVICE_TYPES = ['bus', 'flight', 'hotel'];
 
 const cleanText = (value, maxLength = 500) => String(value || '').trim().slice(0, maxLength);
 const normalizeRouteCity = (value) => cleanText(value, 120).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-const newReferralCode = () => `SAN${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
-const referralCodeForName = async (name, userId) => {
-  const namePart = cleanText(name, 100).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 30) || 'USERNAME';
-  const base = `SANCHARIE-${namePart}`;
-  let candidate = base;
-  let suffix = 2;
+const referralCodeForName = async (name, phone, userId) => {
+  const namePart = cleanText(name, 100).normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3).padEnd(3, 'X');
+  const phoneSuffix = String(phone || '').replace(/\D/g, '').slice(-3).padStart(3, '0');
+  let candidate = `${namePart}${phoneSuffix}`;
+  let discriminator = 0;
   while (await User.exists({ referralCode: candidate, ...(userId ? { _id: { $ne: userId } } : {}) })) {
-    const suffixText = String(suffix++);
-    candidate = `${base.slice(0, 40 - suffixText.length)}${suffixText}`;
+    candidate = `${namePart}${String(++discriminator).padStart(2, '0')}${phoneSuffix}`;
   }
   return candidate;
 };
@@ -266,22 +265,23 @@ router.delete('/push/subscriptions', authenticateToken, async (req, res, next) =
 
 router.get('/referrals/me', authenticateToken, async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.userId).select('referralCode name');
+    const user = await User.findById(req.user.userId).select('referralCode name phone');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (!user.name?.trim()) {
       return res.json({ success: true, code: null, invited: 0, qualified: 0, requiresProfileCompletion: true, message: 'Save your profile details to unlock your referral offer.' });
     }
-    if (!user.referralCode || !user.referralCode.startsWith('SANCHARIE-') || (user.name && /^SANCHARIE-USERNAME\d*$/.test(user.referralCode))) {
-      user.referralCode = await referralCodeForName(user.name, user._id);
+    const expectedCode = await referralCodeForName(user.name, user.phone, user._id);
+    if (user.referralCode !== expectedCode) {
+      user.referralCode = expectedCode;
       await user.save();
     }
-    const [invited, qualified, settings] = await Promise.all([
+    const [invited, qualified] = await Promise.all([
       Referral.countDocuments({ referrerUserId: user._id }),
       Referral.countDocuments({ referrerUserId: user._id, status: { $in: ['qualified', 'rewarded'] } }),
-      ApplicationSettings.findOne({ key: 'global' }).select('referralRewardPercentage').lean(),
     ]);
-    const rewardPercentage = Number(settings?.referralRewardPercentage ?? 2);
-    res.json({ success: true, code: user.referralCode, invited, qualified, rewardPercentage, rewardDescription: `Earn ${rewardPercentage}% of your friend's first successful bus booking as wallet credit.` });
+    res.json({ success: true, code: user.referralCode, invited, qualified,
+      rewardPercentage: 2, inviteeRewardPercentage: 8, referrerRewardCap: 1000,
+      rewardDescription: 'Earn 2% of each referred friend’s successful bus booking. Your friend earns a one-time 8% wallet reward on their first successful bus booking. Your referral earnings are capped at ₹1,000.' });
   } catch (error) { next(error); }
 });
 
@@ -397,11 +397,11 @@ router.post('/login-complete', async (req, res) => {
       // Create new user
       try {
         let referrer = null;
-        if (/^(?:SAN[A-F0-9]{10}|SANCHARIE-[A-Z0-9]{1,30})$/.test(requestedReferralCode)) {
+        if (/^(?:[A-Z]{3}\d{3,}|SAN[A-F0-9]{10}|SANCHARIE-[A-Z0-9]{1,30})$/.test(requestedReferralCode)) {
           referrer = await User.findOne({ referralCode: requestedReferralCode, accountActive: true }).select('_id phone');
           if (referrer?.phone === phone) referrer = null;
         }
-        user = new User({ phone, referralCode: newReferralCode(), referredBy: referrer?._id || null });
+        user = new User({ phone, referredBy: referrer?._id || null });
         await user.save();
         if (referrer) {
           await Referral.create({ referrerUserId: referrer._id, referredUserId: user._id, code: requestedReferralCode, status: 'joined' });
@@ -426,7 +426,9 @@ router.post('/login-complete', async (req, res) => {
       }
       // Update last login
       user.lastLogin = new Date();
-      if (!user.referralCode) user.referralCode = newReferralCode();
+      if (!user.referralCode && user.name) {
+        user.referralCode = await referralCodeForName(user.name, user.phone, user._id);
+      }
       await user.save();
       console.log(`✅ User logged in: ${phone}`);
     }
@@ -688,9 +690,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     // Update fields
     if (name) {
       user.name = name;
-      if (!user.referralCode || !user.referralCode.startsWith('SANCHARIE-') || /^SANCHARIE-USERNAME\d*$/.test(user.referralCode)) {
-        user.referralCode = await referralCodeForName(name, user._id);
-      }
+      user.referralCode = await referralCodeForName(name, user.phone, user._id);
     }
     if (email) user.email = email;
     if (age) user.age = parseInt(age);

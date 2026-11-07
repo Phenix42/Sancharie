@@ -41,6 +41,7 @@ const userSchema = new mongoose.Schema({
   accountActive: { type: Boolean, default: true, index: true },
   referralCode: { type: String, unique: true, sparse: true, uppercase: true, trim: true, minlength: 6, maxlength: 40 },
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+  referralRewardTotal: { type: Number, default: 0, min: 0, max: 1000 },
   
   walletBalance: { type: Number, default: 0, min: 0 },
   walletProcessedOrders: { type: [String], default: [] },

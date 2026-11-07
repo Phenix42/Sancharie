@@ -50,12 +50,20 @@ const publicSettings = (settings) => ({
   couponsEnabled: settings?.couponsEnabled ?? true,
   discountsEnabled: settings?.discountsEnabled ?? true,
   festivalThemeEnabled: settings?.festivalThemeEnabled ?? true,
-  referralRewardPercentage: settings?.referralRewardPercentage ?? 2,
   contactEmail: settings?.contactEmail || '',
   contactPhone: settings?.contactPhone || '',
   supportInformation: settings?.supportInformation || '',
   announcement: settings?.announcement || '',
 });
+const withoutHeroOverrides = (settings) => {
+  if (!settings) return publicSettings(null);
+  const {
+    heroTitleLine1, heroTitleLine2, heroSubtitle,
+    heroTitleColor, heroAccentColor, heroSubtitleColor,
+    ...remainingSettings
+  } = settings;
+  return remainingSettings;
+};
 
 router.post('/auth/login', adminLoginRateLimit, asyncRoute(async (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase();
@@ -167,6 +175,7 @@ router.put('/offers/:id/banner-image', requirePermission('offers:manage'), expre
 router.put('/images/:resource/:id/:field', express.raw({ type: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/x-ms-bmp'], limit: Infinity }), asyncRoute(async (req, res) => {
   const { resource, field } = req.params;
   const definitions = {
+    discounts: { permission: 'discounts:manage', model: Discount, fields: { bannerImage: (id) => `discount-${id}-bannerImage` } },
     offers: { permission: 'offers:manage', model: Offer, fields: { bannerImage: (id) => `offer-${id}` } },
     themes: { permission: 'themes:manage', model: FestivalTheme, fields: {
       bannerImage: (id) => `theme-${id}-bannerImage`,
@@ -253,6 +262,7 @@ for (const [path, config] of Object.entries(modelRegistry)) {
     const item = await model.findByIdAndDelete(req.params.id);
     if (!item) return res.status(404).json({ success: false, message: `${label} not found` });
     if (path === 'offers') await AppAsset.deleteOne({ key: `offer-${item._id}` });
+    if (path === 'discounts') await AppAsset.deleteOne({ key: `discount-${item._id}-bannerImage` });
     if (path === 'themes') await AppAsset.deleteMany({ key: { $in: [`theme-${item._id}-bannerImage`, `theme-${item._id}-logoImage`] } });
     if (path === 'banners') await AppAsset.deleteOne({ key: `banner-${item._id}-image` });
     await recordAdminAction(req, { action: 'delete', resource: path, resourceId: item._id, summary: `Deleted ${label}`, changes: item.toObject() });
@@ -409,7 +419,10 @@ router.get('/payments', requirePermission('payments:read'), asyncRoute(async (re
   res.json({ success: true, data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
 }));
 
-router.get('/settings', requirePermission('settings:read'), asyncRoute(async (req, res) => res.json({ success: true, data: await ApplicationSettings.findOne({ key: 'global' }).lean() || publicSettings(null) })));
+router.get('/settings', requirePermission('settings:read'), asyncRoute(async (req, res) => {
+  const settings = await ApplicationSettings.findOne({ key: 'global' }).lean();
+  res.json({ success: true, data: withoutHeroOverrides(settings) });
+}));
 router.get('/app-icon', requirePermission('settings:read'), asyncRoute(async (req, res) => {
   const asset = await AppAsset.findOne({ key: 'app-icon' }).select('updatedAt contentType').lean();
   res.json({ success: true, data: asset ? { url: `/api/app-icon?v=${asset.updatedAt.getTime()}`, contentType: asset.contentType, updatedAt: asset.updatedAt } : null });
@@ -430,27 +443,21 @@ router.put('/app-icon', requirePermission('settings:manage'), express.raw({ type
   res.json({ success: true, data: { url: `/api/app-icon?v=${asset.updatedAt.getTime()}`, contentType: asset.contentType, updatedAt: asset.updatedAt } });
 }));
 router.put('/settings', requirePermission('settings:manage'), asyncRoute(async (req, res) => {
-  const allowed = ['maintenanceMode', 'bookingsEnabled', 'registrationEnabled', 'couponsEnabled', 'discountsEnabled', 'festivalThemeEnabled', 'referralRewardPercentage', 'contactEmail', 'contactPhone', 'supportInformation', 'announcement', 'heroTitleLine1', 'heroTitleLine2', 'heroSubtitle', 'heroTitleColor', 'heroAccentColor', 'heroSubtitleColor'];
+  const allowed = ['maintenanceMode', 'bookingsEnabled', 'registrationEnabled', 'couponsEnabled', 'discountsEnabled', 'festivalThemeEnabled', 'contactEmail', 'contactPhone', 'supportInformation', 'announcement'];
   const update = {};
   for (const key of allowed) if (req.body?.[key] !== undefined) update[key] = req.body[key];
   const booleanKeys = ['maintenanceMode', 'bookingsEnabled', 'registrationEnabled', 'couponsEnabled', 'discountsEnabled', 'festivalThemeEnabled'];
   if (booleanKeys.some((key) => update[key] !== undefined && typeof update[key] !== 'boolean')) return res.status(400).json({ success: false, message: 'Feature flags must be boolean values' });
-  if (update.referralRewardPercentage !== undefined) {
-    update.referralRewardPercentage = Number(update.referralRewardPercentage);
-    if (!Number.isFinite(update.referralRewardPercentage) || update.referralRewardPercentage < 0 || update.referralRewardPercentage > 100) return res.status(400).json({ success: false, message: 'Referral reward percentage must be between 0 and 100' });
-  }
   if (update.contactEmail !== undefined && update.contactEmail !== '' && !/^\S+@\S+\.\S+$/.test(String(update.contactEmail))) return res.status(400).json({ success: false, message: 'Contact email is invalid' });
-  for (const key of ['heroTitleLine1', 'heroTitleLine2', 'heroSubtitle']) if (update[key] !== undefined) update[key] = String(update[key]).trim();
-  for (const key of ['heroTitleColor', 'heroAccentColor', 'heroSubtitleColor']) {
-    if (update[key] === undefined) continue;
-    const color = String(update[key]).trim();
-    if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ success: false, message: `${key} must be a six-digit hex color or blank` });
-    update[key] = color;
-  }
   const before = await ApplicationSettings.findOne({ key: 'global' }).lean();
-  const data = await ApplicationSettings.findOneAndUpdate({ key: 'global' }, { $set: update, $setOnInsert: { key: 'global' } }, { upsert: true, new: true, runValidators: true }).lean();
+  const data = await ApplicationSettings.findOneAndUpdate({ key: 'global' }, {
+    $set: update,
+    $unset: { heroTitleLine1: 1, heroTitleLine2: 1, heroSubtitle: 1,
+      heroTitleColor: 1, heroAccentColor: 1, heroSubtitleColor: 1 },
+    $setOnInsert: { key: 'global' },
+  }, { upsert: true, new: true, runValidators: true }).lean();
   await recordAdminAction(req, { action: 'update', resource: 'settings', resourceId: 'global', summary: 'Updated application settings', changes: { before, after: data } });
-  res.json({ success: true, data });
+  res.json({ success: true, data: withoutHeroOverrides(data) });
 }));
 router.get('/admin-users', requirePermission('admins:manage'), asyncRoute(async (req, res) => {
   const data = await Admin.find().select('email name role permissions active lastLoginAt createdAt').sort({ createdAt: -1 }).lean();
