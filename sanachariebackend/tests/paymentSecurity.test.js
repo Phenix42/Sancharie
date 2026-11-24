@@ -39,6 +39,13 @@ test('captured payment must cover the backend-calculated amount', () => {
     ),
     PaymentSecurityError
   );
+
+  for (const payment of [
+    { id: 'pay_refunded', amount: 56000, captured: true, status: 'refunded', amount_refunded: 56000 },
+    { id: 'pay_partial_refund', amount: 56000, captured: true, status: 'captured', amount_refunded: 100 },
+  ]) {
+    assert.throws(() => assertCapturedPaymentCovers(payment, 560, 'bus booking'), PaymentSecurityError);
+  }
 });
 
 test('payment order context rejects cross-booking reuse when notes are present', () => {
@@ -89,6 +96,23 @@ test('bus block request stamps supplier seat fares over client-supplied fares', 
   assert.equal(result.passengers[0].fare, 500);
   assert.equal(result.passengers[0].serviceTaxAmount, 60);
   assert.equal(result.passengers[0].totalFareWithTaxes, 560);
+});
+
+test('block-ticket updated fare takes priority over the seat-layout fare', () => {
+  assert.equal(busRoute._test.getUpdatedBlockFare({
+    updatedFareBreakup: { updatedTotalFareWithTaxes: 996.45 },
+  }), 996.45);
+  assert.equal(busRoute._test.getUpdatedBlockFare({ updatedFareBreakup: null }), null);
+});
+
+test('block-key lookup accepts only an issued ticket with a successful ETS response', () => {
+  const classify = busRoute._test.classifyBlockKeyTicket;
+  const confirmed = { apiStatus: { success: true }, ticketStatus: 'CONFIRMED', etstnumber: 'ETS123' };
+  assert.equal(classify(confirmed).ticket, confirmed);
+  assert.equal(classify({ ...confirmed, ticketStatus: 'CANCELLED' }).ticket, null);
+  assert.equal(classify({ ...confirmed, apiStatus: { success: false } }).ticket, null);
+  assert.equal(classify({ apiStatus: { success: false, message: 'Ticket not found' } }).available, true);
+  assert.equal(classify(null).available, false);
 });
 
 test('hotel amount calculation uses provider room prices', () => {

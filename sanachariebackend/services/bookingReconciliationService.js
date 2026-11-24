@@ -1,4 +1,5 @@
 const axios = require('axios');
+const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const paymentService = require('./paymentService');
 const { hashReference } = require('./paymentSecurity');
@@ -156,7 +157,14 @@ const paymentBelongsToUser = (payment, user) => {
     (email && normalizeEmail(payment.email) === email);
 };
 
-const capturedPayment = (payment) => payment.captured === true || payment.status === 'captured';
+const fullyRefundedPayment = (payment) => {
+  const amount = Number(payment.amount);
+  const refunded = Number(payment.amount_refunded);
+  if (amount > 0 && Number.isFinite(refunded)) return refunded >= amount;
+  return payment.status === 'refunded';
+};
+const capturedPayment = (payment) => !fullyRefundedPayment(payment) &&
+  (payment.captured === true || payment.status === 'captured');
 
 const amountMatches = (ticket, payment) =>
   Math.abs(Math.round((Number(ticket.totalFare) || 0) * 100) - Number(payment.amount || 0)) <= 1;
@@ -352,10 +360,17 @@ const recoverUnmatchedPayment = async (user, payment, now, dryRun) => {
     userId: user._id,
     $or: [{ paymentId: payment.id }, { paymentOrderId: payment.order_id }],
   });
+  const notes = payment.order?.notes || {};
+  const originalBookingId = String(notes.wallet_booking_id || '').trim();
+  const referenceHash = cleanText(notes.pricing_ref_hash, 100);
+  if (!booking && mongoose.isValidObjectId(originalBookingId) && referenceHash) {
+    booking = await Booking.findOne({ _id: originalBookingId, userId: user._id,
+      serviceType: 'bus', providerReferenceHash: referenceHash });
+  }
   if (booking && !['pending', 'failed'].includes(booking.status)) return { created: false, updated: false };
+  if (booking?.paymentStatus === 'refunded' || fullyRefundedPayment(payment)) return { created: false, updated: false };
 
   const paymentDate = toDate(Number(payment.created_at) * 1000) || now;
-  const notes = payment.order?.notes || {};
   const journeyDate = toDate(notes.travel_date) || paymentDate;
   const isNew = !booking;
   if (!booking) booking = new Booking();
@@ -520,6 +535,8 @@ module.exports = {
   reconcileAllUsers,
   _test: {
     mapProviderStatus,
+    capturedPayment,
+    recoverUnmatchedPayment,
     normalizePhone,
     parseProviderJourneyDate,
     sanitizeProviderTicket,

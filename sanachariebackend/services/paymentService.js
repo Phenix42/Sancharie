@@ -203,6 +203,7 @@ const fetchPaymentDetails = async (paymentId) => {
       status: payment.status,
       method: payment.method,
       captured: payment.captured,
+      amount_refunded: payment.amount_refunded,
       created_at: payment.created_at,
     };
   } catch (error) {
@@ -274,6 +275,7 @@ const listPayments = async ({ from, to, skip = 0, count = 100 } = {}) => {
       currency: payment.currency,
       status: payment.status,
       captured: payment.captured,
+      amount_refunded: payment.amount_refunded,
       method: payment.method,
       email: payment.email,
       contact: payment.contact,

@@ -289,7 +289,7 @@ export default function Payment() {
       bookingRecordId = bookingAttempt.booking.id;
       internalBookingReference = bookingAttempt.booking.bookingId || '';
 
-      if (busData?.isRTC) {
+      if (busData?.isRTC && !blockSeatData?.fareUpdatedByBlock) {
         console.log('[Booking Flow] Bus is RTC, refreshing fare before payment...');
         const rtcFareData = await bus.getRtcUpdatedFare(blockTicketKey);
         const refreshedAmount = Number(rtcFareData.requiredAmount || 0);

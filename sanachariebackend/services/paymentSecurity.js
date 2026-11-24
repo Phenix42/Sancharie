@@ -19,7 +19,9 @@ const toAmount = (value, fallback = 0) => {
 const toPaise = (amount) => Math.round(toAmount(amount) * 100);
 
 const isCaptured = (paymentDetails) => (
-  paymentDetails?.captured === true || paymentDetails?.status === 'captured'
+  (paymentDetails?.captured === true || paymentDetails?.status === 'captured') &&
+  paymentDetails?.status !== 'refunded' &&
+  !(Number(paymentDetails?.amount_refunded) > 0)
 );
 
 const assertCapturedPaymentCovers = (paymentDetails, requiredAmount, label = 'booking') => {

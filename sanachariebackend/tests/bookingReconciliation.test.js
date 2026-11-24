@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { _test } = require('../services/bookingReconciliationService');
+const Booking = require('../models/Booking');
 const { hashReference } = require('../services/paymentSecurity');
 
 test('provider statuses map to dashboard lifecycle states', () => {
@@ -8,6 +9,49 @@ test('provider statuses map to dashboard lifecycle states', () => {
   assert.equal(_test.mapProviderStatus('TRAVELLED'), 'completed');
   assert.equal(_test.mapProviderStatus('SERVICE_CANCELLED'), 'cancelled');
   assert.equal(_test.mapProviderStatus('FAILED'), 'failed');
+});
+
+test('refunded Razorpay payments are not treated as unmatched captured bookings', () => {
+  assert.equal(_test.capturedPayment({ amount: 99645, amount_refunded: 99645,
+    status: 'refunded', captured: true }), false);
+  assert.equal(_test.capturedPayment({ amount: 99645, amount_refunded: 0,
+    status: 'captured', captured: true }), true);
+  assert.equal(_test.capturedPayment({ amount: 99645, amount_refunded: 100,
+    status: 'refunded', captured: true }), true);
+});
+
+test('unmatched captured payment updates its original booking instead of creating a duplicate', async () => {
+  const originalFindOne = Booking.findOne;
+  const originalBookingId = '6b02e95b3e71f6e80b168cb1';
+  const userId = '6b02d19f3e71f6e80b1688bb';
+  const referenceHash = hashReference('bus-block');
+  const booking = { status: 'pending', paymentStatus: 'pending', providerStatus: 'payment_pending',
+    statusHistory: [], seats: [], selectedSeats: [], baseFare: 0, totalFare: 0 };
+  let lookups = 0;
+  try {
+    Booking.findOne = async (query) => {
+      lookups += 1;
+      if (lookups === 1) return null;
+      assert.equal(query._id, originalBookingId);
+      assert.equal(query.userId, userId);
+      assert.equal(query.providerReferenceHash, referenceHash);
+      return booking;
+    };
+    const payment = { id: 'pay_captured', order_id: 'order_captured', amount: 89680,
+      method: 'upi', created_at: 1795352931, order: { notes: {
+        wallet_booking_id: originalBookingId, pricing_ref_hash: referenceHash,
+        seats: 'C4', service_type: 'bus',
+      } } };
+    const result = await _test.recoverUnmatchedPayment({ _id: userId, phone: '9063351811' },
+      payment, new Date('2026-11-22T13:30:48Z'), true);
+    assert.equal(result.created, false);
+    assert.equal(result.updated, true);
+    assert.equal(booking.paymentId, 'pay_captured');
+    assert.equal(booking.status, 'failed');
+    assert.equal(lookups, 2);
+  } finally {
+    Booking.findOne = originalFindOne;
+  }
 });
 
 test('one provider ticket links duplicate captured payments and keeps the pre-booking payment primary', () => {

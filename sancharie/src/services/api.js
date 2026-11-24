@@ -674,6 +674,8 @@ export const bus = {
       requiredAmountPaise: data.requiredAmountPaise,
       seatFareAmount: data.seatFareAmount,
       assuranceAmount: data.assuranceAmount,
+      fareUpdatedByBlock: data.fareUpdatedByBlock === true,
+      blockExpiresAt: data.blockExpiresAt,
       success: data.apiStatus?.success || false,
       message: data.apiStatus?.message,
     };
@@ -700,6 +702,8 @@ export const bus = {
       requiredAmountPaise: data.requiredAmountPaise,
       seatFareAmount: data.seatFareAmount,
       assuranceAmount: data.assuranceAmount,
+      fareUpdatedByBlock: data.fareUpdatedByBlock === true,
+      blockExpiresAt: data.blockExpiresAt,
       success: data.apiStatus?.success || false,
       message: data.apiStatus?.message,
     };

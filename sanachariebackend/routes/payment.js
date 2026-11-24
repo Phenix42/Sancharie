@@ -17,9 +17,13 @@
  */
 
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const paymentService = require('../services/paymentService');
-const { hashReference } = require('../services/paymentSecurity');
+const Booking = require('../models/Booking');
+const { hashReference, toPaise } = require('../services/paymentSecurity');
+const { getBusBlock } = require('../services/busBlockStore');
+const { getBookingAdjustments, requiredBusCardPaise } = require('../services/busPaymentQuote');
 const { requireBookingAvailability } = require('../middleware/runtimeSettings');
 
 // ============================================
@@ -161,6 +165,50 @@ router.post('/create-order', requireBookingAvailability, validateCreateOrder, as
         success: false,
         message: 'Payment service not configured',
       });
+    }
+
+    if (String(bookingDetails?.serviceType || '').toLowerCase() === 'bus') {
+      const blockTicketKey = String(bookingDetails.pricingRef || bookingDetails.blockTicketKey || '').trim();
+      const bookingId = String(bookingDetails.wallet_booking_id || '').trim();
+      const block = getBusBlock(blockTicketKey);
+      if (!block || !mongoose.isValidObjectId(bookingId)) {
+        return res.status(409).json({ success: false, code: 'BUS_BOOKING_EXPIRED',
+          message: 'Bus booking session expired. Please select seats again before paying.' });
+      }
+      if (block.expiresAt - Date.now() < 2 * 60 * 1000) {
+        return res.status(409).json({ success: false, code: 'BUS_BOOKING_EXPIRED',
+          message: 'The seat hold is about to expire. Please select seats again before paying.' });
+      }
+      if (block.isRTC && !block.rtcFareUpdatedAt) {
+        return res.status(409).json({ success: false, code: 'BUS_FARE_REFRESH_REQUIRED',
+          message: 'The bus fare must be refreshed before payment. Please try again.' });
+      }
+      const booking = await Booking.findOne({ _id: bookingId, serviceType: 'bus', status: 'pending',
+        providerReferenceHash: hashReference(blockTicketKey) }).select('_id paymentStatus');
+      if (!booking || booking.paymentStatus !== 'pending') {
+        return res.status(409).json({ success: false, code: 'BUS_BOOKING_UNAVAILABLE',
+          message: 'This bus booking is no longer available for payment. Please select seats again.' });
+      }
+      let adjustments;
+      try {
+        adjustments = await getBookingAdjustments({ bookingId,
+          walletAmount: bookingDetails.wallet_amount,
+          promoCode: bookingDetails.promo_code,
+          promotionId: bookingDetails.promotion_id,
+          blockAmount: block.requiredAmount, blockTicketKey });
+      } catch (error) {
+        return res.status(409).json({ success: false, code: 'BUS_FARE_RECHECK_FAILED',
+          message: error.message || 'The bus fare could not be verified. Please review the booking before paying.' });
+      }
+      const expectedPaise = requiredBusCardPaise(block.requiredAmount, adjustments);
+      if (expectedPaise <= 0 || expectedPaise !== toPaise(amount)) {
+        console.warn('[BUS PAYMENT] Fare mismatch before order creation:', {
+          bookingId, requestedPaise: toPaise(amount), expectedPaise,
+        });
+        return res.status(409).json({ success: false, code: 'BUS_FARE_CHANGED',
+          message: 'Bus fare changed. Please review the updated fare before paying.',
+          expectedAmount: expectedPaise / 100 });
+      }
     }
 
     // Prepare notes with booking details
